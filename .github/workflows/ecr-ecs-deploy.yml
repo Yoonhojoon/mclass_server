@@ -56,81 +56,15 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
     
-    - name: Check existing resources
+    - name: Verify existing infrastructure
       run: |
-        echo "✅ ECR 리포지토리와 ECS 클러스터가 이미 존재합니다."
+        echo "✅ Terraform으로 생성된 인프라 확인:"
         echo "📦 ECR Repository: ${{ env.ECR_REPOSITORY }}"
         echo "🏗️  ECS Cluster: ${{ env.ECS_CLUSTER }}"
-    
-    - name: Create CloudWatch log group if not exists
-      run: |
-        aws logs describe-log-groups --log-group-name-prefix /ecs/mclass-task --region ${{ env.AWS_REGION }} | grep -q /ecs/mclass-task || \
-        aws logs create-log-group --log-group-name /ecs/mclass-task --region ${{ env.AWS_REGION }}
-    
-    - name: Create ECS Task Execution Role if not exists
-      run: |
-        # ECS Task Execution Role 생성
-        aws iam get-role --role-name ecsTaskExecutionRole --region ${{ env.AWS_REGION }} 2>/dev/null || \
-        aws iam create-role \
-          --role-name ecsTaskExecutionRole \
-          --assume-role-policy-document '{
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Principal": {
-                  "Service": "ecs-tasks.amazonaws.com"
-                },
-                "Action": "sts:AssumeRole"
-              }
-            ]
-          }' \
-          --region ${{ env.AWS_REGION }}
-        
-        # ECS Task Execution Role에 정책 연결
-        aws iam attach-role-policy \
-          --role-name ecsTaskExecutionRole \
-          --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy \
-          --region ${{ env.AWS_REGION }}
-    
-    - name: Create ECS Task Role if not exists
-      run: |
-        # ECS Task Role 생성
-        aws iam get-role --role-name ecsTaskRole --region ${{ env.AWS_REGION }} 2>/dev/null || \
-        aws iam create-role \
-          --role-name ecsTaskRole \
-          --assume-role-policy-document '{
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Principal": {
-                  "Service": "ecs-tasks.amazonaws.com"
-                },
-                "Action": "sts:AssumeRole"
-              }
-            ]
-          }' \
-          --region ${{ env.AWS_REGION }}
-        
-        # ECS Task Role에 기본 정책 연결
-        aws iam put-role-policy \
-          --role-name ecsTaskRole \
-          --policy-name ecsTaskRolePolicy \
-          --policy-document '{
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Action": [
-                  "logs:CreateLogStream",
-                  "logs:PutLogEvents"
-                ],
-                "Resource": "*"
-              }
-            ]
-          }' \
-          --region ${{ env.AWS_REGION }}
+        echo "🔗 ECS Service: ${{ env.ECS_SERVICE }}"
+        echo "📋 Task Definition: ${{ env.ECS_TASK_DEFINITION }}"
+        echo ""
+        echo "ℹ️  모든 인프라는 Terraform으로 관리됩니다."
     
     - name: Login to Amazon ECR
       id: login-ecr
@@ -181,14 +115,12 @@ jobs:
       run: |
         aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --task-definition ${{ env.ECS_TASK_DEFINITION }} --region ${{ env.AWS_REGION }}
     
-    - name: Create new ECS service
+    - name: Verify ECS service exists
       if: steps.check-service.outputs.exists == 'false'
       run: |
-        echo "⚠️  ECS 서비스가 존재하지 않습니다."
-        echo "📝 다음 중 하나를 선택하세요:"
-        echo "1. AWS 콘솔에서 수동으로 ECS 서비스를 생성"
-        echo "2. Terraform을 사용하여 인프라 생성"
-        echo "3. GitHub Secrets에 서브넷/보안그룹 정보 추가 후 재실행"
+        echo "❌ ECS 서비스가 존재하지 않습니다."
+        echo "📝 Terraform을 실행하여 인프라를 생성하세요:"
+        echo "   cd infrastructure && terraform apply"
         echo ""
         echo "서비스 이름: ${{ env.ECS_SERVICE }}"
         echo "클러스터: ${{ env.ECS_CLUSTER }}"
