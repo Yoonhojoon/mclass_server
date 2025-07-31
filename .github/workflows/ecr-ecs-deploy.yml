@@ -67,6 +67,71 @@ jobs:
         aws logs describe-log-groups --log-group-name-prefix /ecs/mclass-task --region ${{ env.AWS_REGION }} | grep -q /ecs/mclass-task || \
         aws logs create-log-group --log-group-name /ecs/mclass-task --region ${{ env.AWS_REGION }}
     
+    - name: Create ECS Task Execution Role if not exists
+      run: |
+        # ECS Task Execution Role 생성
+        aws iam get-role --role-name ecsTaskExecutionRole --region ${{ env.AWS_REGION }} 2>/dev/null || \
+        aws iam create-role \
+          --role-name ecsTaskExecutionRole \
+          --assume-role-policy-document '{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "ecs-tasks.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+              }
+            ]
+          }' \
+          --region ${{ env.AWS_REGION }}
+        
+        # ECS Task Execution Role에 정책 연결
+        aws iam attach-role-policy \
+          --role-name ecsTaskExecutionRole \
+          --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy \
+          --region ${{ env.AWS_REGION }}
+    
+    - name: Create ECS Task Role if not exists
+      run: |
+        # ECS Task Role 생성
+        aws iam get-role --role-name ecsTaskRole --region ${{ env.AWS_REGION }} 2>/dev/null || \
+        aws iam create-role \
+          --role-name ecsTaskRole \
+          --assume-role-policy-document '{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "ecs-tasks.amazonaws.com"
+                },
+                "Action": "sts:AssumeRole"
+              }
+            ]
+          }' \
+          --region ${{ env.AWS_REGION }}
+        
+        # ECS Task Role에 기본 정책 연결
+        aws iam put-role-policy \
+          --role-name ecsTaskRole \
+          --policy-name ecsTaskRolePolicy \
+          --policy-document '{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "logs:CreateLogStream",
+                  "logs:PutLogEvents"
+                ],
+                "Resource": "*"
+              }
+            ]
+          }' \
+          --region ${{ env.AWS_REGION }}
+    
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
