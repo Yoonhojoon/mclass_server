@@ -1,0 +1,152 @@
+name: ECR + ECS Deployment
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: mclass-server
+  ECS_CLUSTER: mclass-cluster
+  ECS_SERVICE: mclass-service
+  ECS_TASK_DEFINITION: mclass-task
+  ECS_DESIRED_COUNT: 2
+  ECS_LAUNCH_TYPE: FARGATE
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Security audit
+      run: npm audit --audit-level moderate
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Check existing resources
+      run: |
+        echo "✅ ECR 리포지토리와 ECS 클러스터가 이미 존재합니다."
+        echo "📦 ECR Repository: ${{ env.ECR_REPOSITORY }}"
+        echo "🏗️  ECS Cluster: ${{ env.ECS_CLUSTER }}"
+    
+    - name: Create CloudWatch log group if not exists
+      run: |
+        aws logs describe-log-groups --log-group-name-prefix /ecs/mclass-task --region ${{ env.AWS_REGION }} | grep -q /ecs/mclass-task || \
+        aws logs create-log-group --log-group-name /ecs/mclass-task --region ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+    
+    - name: Create or update task definition
+      run: |
+        if aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} --region ${{ env.AWS_REGION }} 2>/dev/null; then
+          aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} --region ${{ env.AWS_REGION }} --query taskDefinition > task-definition.json
+        else
+          cp task-definition.json task-definition.json.backup
+        fi
+    
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v2
+      with:
+        task-definition: task-definition.json
+        container-name: mclass-server
+        image: ${{ steps.build-image.outputs.image }}
+    
+    - name: Register task definition
+      run: aws ecs register-task-definition --cli-input-json file://${{ steps.task-def.outputs.task-definition }} --region ${{ env.AWS_REGION }}
+    
+    - name: Check if ECS service exists
+      id: check-service
+      run: |
+        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }} 2>/dev/null | grep -q "SERVICES"; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Update existing ECS service
+      if: steps.check-service.outputs.exists == 'true'
+      run: |
+        aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --task-definition ${{ env.ECS_TASK_DEFINITION }} --region ${{ env.AWS_REGION }}
+    
+    - name: Create new ECS service
+      if: steps.check-service.outputs.exists == 'false'
+      run: |
+        echo "⚠️  ECS 서비스가 존재하지 않습니다."
+        echo "📝 다음 중 하나를 선택하세요:"
+        echo "1. AWS 콘솔에서 수동으로 ECS 서비스를 생성"
+        echo "2. Terraform을 사용하여 인프라 생성"
+        echo "3. GitHub Secrets에 서브넷/보안그룹 정보 추가 후 재실행"
+        echo ""
+        echo "서비스 이름: ${{ env.ECS_SERVICE }}"
+        echo "클러스터: ${{ env.ECS_CLUSTER }}"
+        echo "Task Definition: ${{ env.ECS_TASK_DEFINITION }}"
+        exit 1
+    
+    - name: Wait for service stability
+      run: aws ecs wait services-stable --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }}
+    
+    - name: Deployment Status
+      run: |
+        echo "🚀 Deployment completed successfully!"
+        echo "📦 Image: ${{ steps.build-image.outputs.image }}"
+        echo "🔗 ECS Service: ${{ env.ECS_SERVICE }}"
+        echo "🏗️  Cluster: ${{ env.ECS_CLUSTER }}"
+        echo "⏰ Deployment Time: $(date)"
+    
+    - name: Notify deployment
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Deployment successful!"
+        else
+          echo "❌ Deployment failed!"
+          exit 1
+        fi 
