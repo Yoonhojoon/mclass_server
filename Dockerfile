@@ -32,8 +32,8 @@ WORKDIR /app
 # package.json과 package-lock.json 복사
 COPY package*.json ./
 
-# 프로덕션 의존성만 설치
-RUN npm ci --only=production && npm cache clean --force
+# 프로덕션 의존성만 설치 (Husky 제외)
+RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 
 # 빌드된 파일들을 복사
 COPY --from=builder /app/dist ./dist
