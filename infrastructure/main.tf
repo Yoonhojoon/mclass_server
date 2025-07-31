@@ -6,10 +6,28 @@ terraform {
       version = "~> 5.0"
     }
   }
+  
+
 }
 
 provider "aws" {
   region = "ap-northeast-2"
+}
+
+# S3 Bucket for Terraform State
+resource "aws_s3_bucket" "terraform_state" {
+  bucket = "mclass-terraform-state"
+
+  tags = {
+    Name = "mclass-terraform-state"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "terraform_state" {
+  bucket = aws_s3_bucket.terraform_state.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 # VPC
