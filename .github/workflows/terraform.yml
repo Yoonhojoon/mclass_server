@@ -56,3 +56,35 @@ jobs:
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -lock=false
+
+      - name: Show Terraform Outputs
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "🚀 Terraform으로 생성된 리소스들:"
+          echo "📦 S3 Bucket: mclass-terraform-state-20250731"
+          echo "🔒 DynamoDB Table: terraform-lock"
+          echo "🏗️  VPC: $(terraform output -raw vpc_id 2>/dev/null || echo 'N/A')"
+          echo "🌐 ALB DNS: $(terraform output -raw alb_dns_name 2>/dev/null || echo 'N/A')"
+          echo "📦 ECR Repository: $(terraform output -raw ecr_repository_url 2>/dev/null || echo 'N/A')"
+          echo "🔗 ECS Cluster: mclass-cluster"
+          echo "⚙️  ECS Service: mclass-service"
+          echo "📋 Task Definition: mclass-task"
+          echo ""
+          echo "✅ 모든 인프라가 Terraform으로 관리됩니다!"
+
+      - name: Verify AWS Resources
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "🔍 AWS에서 실제 생성된 리소스 확인:"
+          echo ""
+          echo "📦 ECR Repository:"
+          aws ecr describe-repositories --repository-names mclass-server --region ap-northeast-2 --query 'repositories[0].repositoryUri' --output text || echo "❌ ECR Repository not found"
+          echo ""
+          echo "🔗 ECS Cluster:"
+          aws ecs describe-clusters --clusters mclass-cluster --region ap-northeast-2 --query 'clusters[0].clusterName' --output text || echo "❌ ECS Cluster not found"
+          echo ""
+          echo "⚙️  ECS Service:"
+          aws ecs describe-services --cluster mclass-cluster --services mclass-service --region ap-northeast-2 --query 'services[0].serviceName' --output text || echo "❌ ECS Service not found"
+          echo ""
+          echo "🌐 ALB:"
+          aws elbv2 describe-load-balancers --region ap-northeast-2 --query 'LoadBalancers[?contains(LoadBalancerName, `mclass`)].DNSName' --output text || echo "❌ ALB not found"
