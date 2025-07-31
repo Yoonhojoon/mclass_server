@@ -58,6 +58,7 @@ jspm_packages/
 
 # Terraform files
 .terraform/
+infrastructure/.terraform/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
