@@ -104,9 +104,24 @@ jobs:
     - name: Check if ECS service exists
       id: check-service
       run: |
-        if aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }} 2>/dev/null | grep -q "SERVICES"; then
+        echo "🔍 ECS 서비스 확인 중..."
+        echo "클러스터: ${{ env.ECS_CLUSTER }}"
+        echo "서비스: ${{ env.ECS_SERVICE }}"
+        echo "리전: ${{ env.AWS_REGION }}"
+        
+        # AWS CLI 명령어 실행 결과 확인
+        echo "=== AWS CLI 명령어 실행 ==="
+        aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }} || echo "AWS CLI 명령어 실패"
+        
+        # 더 정확한 확인 방법
+        SERVICE_STATUS=$(aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }} --query 'services[0].status' --output text 2>/dev/null || echo "NONE")
+        echo "서비스 상태: $SERVICE_STATUS"
+        
+        if [ "$SERVICE_STATUS" = "ACTIVE" ] || [ "$SERVICE_STATUS" = "DRAINING" ]; then
+          echo "✅ ECS 서비스가 존재합니다: $SERVICE_STATUS"
           echo "exists=true" >> $GITHUB_OUTPUT
         else
+          echo "❌ ECS 서비스가 존재하지 않습니다: $SERVICE_STATUS"
           echo "exists=false" >> $GITHUB_OUTPUT
         fi
     
@@ -119,17 +134,22 @@ jobs:
       if: steps.check-service.outputs.exists == 'false'
       run: |
         echo "❌ ECS 서비스가 존재하지 않습니다."
-        echo "📝 Terraform을 실행하여 인프라를 생성하세요:"
-        echo "   cd infrastructure && terraform apply"
+        echo "📝 Terraform을 먼저 실행하여 인프라를 생성하세요:"
+        echo "   GitHub Actions → Terraform CI 워크플로우 실행"
         echo ""
         echo "서비스 이름: ${{ env.ECS_SERVICE }}"
         echo "클러스터: ${{ env.ECS_CLUSTER }}"
         echo "Task Definition: ${{ env.ECS_TASK_DEFINITION }}"
+        echo ""
+        echo "💡 해결 방법:"
+        echo "1. GitHub Actions에서 'Terraform CI' 워크플로우 실행"
+        echo "2. main 브랜치에 머지 후 자동 실행"
+        echo "3. Terraform으로 모든 인프라 생성 후 재시도"
         exit 1
-    
+
     - name: Wait for service stability
       run: aws ecs wait services-stable --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }}
-    
+
     - name: Deployment Status
       run: |
         echo "🚀 Deployment completed successfully!"
@@ -137,7 +157,7 @@ jobs:
         echo "🔗 ECS Service: ${{ env.ECS_SERVICE }}"
         echo "🏗️  Cluster: ${{ env.ECS_CLUSTER }}"
         echo "⏰ Deployment Time: $(date)"
-    
+
     - name: Notify deployment
       if: always()
       run: |
