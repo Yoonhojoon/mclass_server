@@ -48,11 +48,11 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -no-color
+        run: terraform plan -no-color -lock=false
 
 
 
       # 실제 배포는 main 브랜치에서만 실행되도록 조건 분기
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -lock=false
