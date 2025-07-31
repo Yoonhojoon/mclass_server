@@ -55,3 +55,10 @@ jspm_packages/
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+terraform.tfstate.backup
