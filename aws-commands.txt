@@ -1,0 +1,13 @@
+aws ecr create-repository --repository-name mclass-server --region ap-northeast-2
+
+aws iam create-role --role-name ecsTaskExecutionRole --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+
+aws iam create-role --role-name ecsTaskRole --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"ecs-tasks.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
+
+aws iam attach-role-policy --role-name ecsTaskExecutionRole --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+aws ecs create-cluster --cluster-name mclass-cluster --region ap-northeast-2
+
+aws logs create-log-group --log-group-name /ecs/mclass-task --region ap-northeast-2
+
+aws ecs register-task-definition --cli-input-json file://task-definition.json --region ap-northeast-2 
