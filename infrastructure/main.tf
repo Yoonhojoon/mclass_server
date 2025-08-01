@@ -376,7 +376,7 @@ output "grafana_endpoint" {
 # AWS Managed Prometheus 워크스페이스
 resource "aws_prometheus_workspace" "main" {
   alias = "mclass-prometheus"
-  
+
   tags = {
     Name = "mclass-prometheus-workspace"
   }
@@ -386,11 +386,11 @@ resource "aws_prometheus_workspace" "main" {
 resource "aws_grafana_workspace" "main" {
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"]
-  permission_type         = "SERVICE_MANAGED"
-  role_arn                = aws_iam_role.grafana_role.arn
-  
+  permission_type          = "SERVICE_MANAGED"
+  role_arn                 = aws_iam_role.grafana_role.arn
+
   data_sources = ["PROMETHEUS"]
-  
+
   tags = {
     Name = "mclass-grafana-workspace"
   }
@@ -425,7 +425,7 @@ resource "aws_grafana_data_source" "prometheus" {
   workspace_id = aws_grafana_workspace.main.id
   name         = "AMP"
   type         = "prometheus"
-  
+
   prometheus_config {
     workspace_id = aws_prometheus_workspace.main.id
   }
