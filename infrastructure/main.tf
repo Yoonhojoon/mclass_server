@@ -365,12 +365,8 @@ output "prometheus_workspace_id" {
   value = aws_prometheus_workspace.main.id
 }
 
-output "grafana_workspace_id" {
-  value = aws_grafana_workspace.main.id
-}
-
-output "grafana_endpoint" {
-  value = aws_grafana_workspace.main.endpoint
+output "prometheus_endpoint" {
+  value = aws_prometheus_workspace.main.prometheus_endpoint
 }
 
 # AWS Managed Prometheus 워크스페이스
@@ -380,42 +376,4 @@ resource "aws_prometheus_workspace" "main" {
   tags = {
     Name = "mclass-prometheus-workspace"
   }
-}
-
-# Grafana 워크스페이스
-resource "aws_grafana_workspace" "main" {
-  account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["AWS_SSO"]
-  permission_type          = "SERVICE_MANAGED"
-  role_arn                 = aws_iam_role.grafana_role.arn
-
-  data_sources = ["PROMETHEUS"]
-
-  tags = {
-    Name = "mclass-grafana-workspace"
-  }
-}
-
-# Grafana IAM 역할
-resource "aws_iam_role" "grafana_role" {
-  name = "grafana-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "grafana.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# Grafana 정책
-resource "aws_iam_role_policy_attachment" "grafana_policy" {
-  role       = aws_iam_role.grafana_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGrafanaAccountRole"
 } 
