@@ -418,15 +418,4 @@ resource "aws_iam_role" "grafana_role" {
 resource "aws_iam_role_policy_attachment" "grafana_policy" {
   role       = aws_iam_role.grafana_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGrafanaAccountRole"
-}
-
-# AMP 데이터 소스
-resource "aws_grafana_data_source" "prometheus" {
-  workspace_id = aws_grafana_workspace.main.id
-  name         = "AMP"
-  type         = "prometheus"
-
-  prometheus_config {
-    workspace_id = aws_prometheus_workspace.main.id
-  }
 } 
