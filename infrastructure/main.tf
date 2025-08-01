@@ -347,6 +347,146 @@ resource "aws_cloudwatch_log_group" "ecs" {
   retention_in_days = 7
 }
 
+# Grafana ECR Repository
+resource "aws_ecr_repository" "grafana" {
+  name                 = "mclass-grafana"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
+# Grafana ECS Task Definition
+resource "aws_ecs_task_definition" "grafana" {
+  family                   = "mclass-grafana-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name  = "grafana"
+      image = "grafana/grafana:latest"
+      portMappings = [
+        {
+          containerPort = 3000
+          protocol      = "tcp"
+        }
+      ]
+      essential = true
+      environment = [
+        {
+          name  = "GF_SECURITY_ADMIN_PASSWORD"
+          value = "admin123"
+        },
+        {
+          name  = "GF_INSTALL_PLUGINS"
+          value = "grafana-piechart-panel"
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/mclass-grafana-task"
+          awslogs-region        = "ap-northeast-2"
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+}
+
+# Grafana ECS Service
+resource "aws_ecs_service" "grafana" {
+  name            = "mclass-grafana-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.grafana.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.public[*].id
+    security_groups  = [aws_security_group.grafana.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.grafana.arn
+    container_name   = "grafana"
+    container_port   = 3000
+  }
+
+  depends_on = [aws_lb_listener.grafana]
+}
+
+# Grafana Security Group
+resource "aws_security_group" "grafana" {
+  name        = "mclass-grafana-sg"
+  description = "Security group for Grafana"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "mclass-grafana-sg"
+  }
+}
+
+# Grafana Target Group
+resource "aws_lb_target_group" "grafana" {
+  name        = "mclass-grafana-tg"
+  port        = 3000
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    enabled             = true
+    healthy_threshold   = 2
+    interval            = 30
+    matcher             = "200"
+    path                = "/api/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    timeout             = 5
+    unhealthy_threshold = 2
+  }
+}
+
+# Grafana ALB Listener
+resource "aws_lb_listener" "grafana" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "3001"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.grafana.arn
+  }
+}
+
+# Grafana CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "grafana" {
+  name              = "/ecs/mclass-grafana-task"
+  retention_in_days = 7
+}
+
 # Data source for availability zones
 data "aws_availability_zones" "available" {
   state = "available"
