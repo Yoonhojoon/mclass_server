@@ -1,0 +1,149 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "MClass 서버 모니터링",
+    "tags": ["mclass", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "HTTP 요청 수",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{method}} {{route}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "요청/초",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "응답 시간",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "targets": [
+          {
+            "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+            "legendFormat": "평균 응답 시간"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "초",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "HTTP 상태 코드 분포",
+        "type": "piechart",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[5m])) by (status_code)",
+            "legendFormat": "{{status_code}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "메모리 사용률",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "메모리 사용량 (MB)"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "MB",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "CPU 사용률",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[5m]) * 100",
+            "legendFormat": "CPU 사용률 (%)"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "%",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "요청 크기",
+        "type": "graph",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "targets": [
+          {
+            "expr": "rate(http_request_size_bytes_sum[5m]) / rate(http_request_size_bytes_count[5m])",
+            "legendFormat": "평균 요청 크기"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "바이트",
+            "min": 0
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "5s"
+  }
+} 
