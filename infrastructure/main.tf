@@ -347,13 +347,84 @@ resource "aws_cloudwatch_log_group" "ecs" {
   retention_in_days = 7
 }
 
-# Grafana ECR Repository
-resource "aws_ecr_repository" "grafana" {
-  name                 = "mclass-grafana"
-  image_tag_mutability = "MUTABLE"
+# 무료 모니터링 스택 (ECS에서 실행)
 
-  image_scanning_configuration {
-    scan_on_push = true
+# Prometheus ECS Task Definition
+resource "aws_ecs_task_definition" "prometheus" {
+  family                   = "mclass-prometheus-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name  = "prometheus"
+      image = "prom/prometheus:latest"
+      portMappings = [
+        {
+          containerPort = 9090
+          protocol      = "tcp"
+        }
+      ]
+      essential = true
+      command = [
+        "--config.file=/etc/prometheus/prometheus.yml",
+        "--storage.tsdb.path=/prometheus",
+        "--web.console.libraries=/etc/prometheus/console_libraries",
+        "--web.console.templates=/etc/prometheus/consoles"
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = "/ecs/mclass-prometheus-task"
+          awslogs-region        = "ap-northeast-2"
+          awslogs-stream-prefix = "ecs"
+        }
+      }
+    }
+  ])
+}
+
+# Prometheus ECS Service
+resource "aws_ecs_service" "prometheus" {
+  name            = "mclass-prometheus-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.prometheus.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.public[*].id
+    security_groups  = [aws_security_group.prometheus.id]
+    assign_public_ip = true
+  }
+}
+
+# Prometheus Security Group
+resource "aws_security_group" "prometheus" {
+  name        = "mclass-prometheus-sg"
+  description = "Security group for Prometheus"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "mclass-prometheus-sg"
   }
 }
 
@@ -413,14 +484,6 @@ resource "aws_ecs_service" "grafana" {
     security_groups  = [aws_security_group.grafana.id]
     assign_public_ip = true
   }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.grafana.arn
-    container_name   = "grafana"
-    container_port   = 3000
-  }
-
-  depends_on = [aws_lb_listener.grafana]
 }
 
 # Grafana Security Group
@@ -430,10 +493,10 @@ resource "aws_security_group" "grafana" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -448,37 +511,10 @@ resource "aws_security_group" "grafana" {
   }
 }
 
-# Grafana Target Group
-resource "aws_lb_target_group" "grafana" {
-  name        = "mclass-grafana-tg"
-  port        = 3000
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
-
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    interval            = 30
-    matcher             = "200"
-    path                = "/api/health"
-    port                = "traffic-port"
-    protocol            = "HTTP"
-    timeout             = 5
-    unhealthy_threshold = 2
-  }
-}
-
-# Grafana ALB Listener
-resource "aws_lb_listener" "grafana" {
-  load_balancer_arn = aws_lb.main.arn
-  port              = "3001"
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.grafana.arn
-  }
+# Prometheus CloudWatch Log Group
+resource "aws_cloudwatch_log_group" "prometheus" {
+  name              = "/ecs/mclass-prometheus-task"
+  retention_in_days = 7
 }
 
 # Grafana CloudWatch Log Group
@@ -501,19 +537,80 @@ output "ecr_repository_url" {
   value = aws_ecr_repository.app.repository_url
 }
 
-output "prometheus_workspace_id" {
-  value = aws_prometheus_workspace.main.id
-}
+# output "prometheus_workspace_id" {
+#   value = aws_prometheus_workspace.main.id
+# }
 
-output "prometheus_endpoint" {
-  value = aws_prometheus_workspace.main.prometheus_endpoint
-}
+# output "prometheus_endpoint" {
+#   value = aws_prometheus_workspace.main.prometheus_endpoint
+# }
 
-# AWS Managed Prometheus 워크스페이스
-resource "aws_prometheus_workspace" "main" {
-  alias = "mclass-prometheus"
+# output "grafana_workspace_url" {
+#   value = aws_grafana_workspace.main.endpoint
+# }
 
-  tags = {
-    Name = "mclass-prometheus-workspace"
-  }
-} 
+# AWS Managed Prometheus 워크스페이스 (비용 발생 - 주석 처리)
+# resource "aws_prometheus_workspace" "main" {
+#   alias = "mclass-prometheus"
+
+#   tags = {
+#     Name = "mclass-prometheus-workspace"
+#   }
+# }
+
+# AWS Managed Grafana 워크스페이스 (비용 발생 - 주석 처리)
+# resource "aws_grafana_workspace" "main" {
+#   account_access_type      = "CURRENT_ACCOUNT"
+#   authentication_providers = ["AWS_SSO"]
+#   permission_type         = "SERVICE_MANAGED"
+#   role_arn                = aws_iam_role.grafana_role.arn
+
+#   tags = {
+#     Name = "mclass-grafana-workspace"
+#   }
+# }
+
+# Grafana IAM Role (비용 발생 - 주석 처리)
+# resource "aws_iam_role" "grafana_role" {
+#   name = "grafana-role"
+
+#   assume_role_policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Action = "sts:AssumeRole"
+#         Effect = "Allow"
+#         Principal = {
+#           Service = "grafana.amazonaws.com"
+#         }
+#       }
+#     ]
+#   })
+# }
+
+# Grafana IAM Role Policy (비용 발생 - 주석 처리)
+# resource "aws_iam_role_policy" "grafana_policy" {
+#   name = "grafana-policy"
+#   role = aws_iam_role.grafana_role.id
+
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Effect = "Allow"
+#         Action = [
+#           "aps:QueryMetrics",
+#           "aps:GetLabels",
+#           "aps:GetMetricMetadata",
+#           "aps:GetSeries",
+#           "logs:DescribeLogGroups",
+#           "logs:GetLogEvents",
+#           "logs:StartQuery",
+#           "logs:GetQueryResults",
+#           "logs:StopQuery"
+#         ]
+#         Resource = "*"
+#       }
+#     ]
+#   })
+# } 
