@@ -42,9 +42,9 @@ COPY --from=builder /app/dist ./dist
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# 헬스체크 추가
+# 헬스체크 추가 (ES 모듈 문법)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "import('http').then(http => http.get('http://localhost:3000/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }))"
 
 # 포트 노출
 EXPOSE 3000
@@ -53,5 +53,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 애플리케이션 시작
-CMD ["node", "dist/index.js"] 
+# 애플리케이션 시작 (ES 모듈)
+CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js"] 
