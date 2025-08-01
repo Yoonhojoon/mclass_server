@@ -117,6 +117,24 @@ jobs:
         SERVICE_STATUS=$(aws ecs describe-services --cluster ${{ env.ECS_CLUSTER }} --services ${{ env.ECS_SERVICE }} --region ${{ env.AWS_REGION }} --query 'services[0].status' --output text 2>/dev/null || echo "NONE")
         echo "서비스 상태: $SERVICE_STATUS"
         
+        # 서비스 설정 확인 (desired count 등)
+        echo "📊 서비스 설정 확인:"
+        aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'services[0].{status:status,desiredCount:desiredCount,runningCount:runningCount,pendingCount:pendingCount,deploymentConfiguration:deploymentConfiguration}' \
+          --output table
+        
+        # 배포 상태도 확인
+        echo "📊 현재 배포 상태:"
+        aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'services[0].deployments[].{id:id,status:status,failedTasks:failedTasks,runningCount:runningCount,desiredCount:desiredCount}' \
+          --output table
+        
         if [ "$SERVICE_STATUS" = "ACTIVE" ] || [ "$SERVICE_STATUS" = "DRAINING" ]; then
           echo "✅ ECS 서비스가 존재합니다: $SERVICE_STATUS"
           echo "exists=true" >> $GITHUB_OUTPUT
@@ -128,7 +146,130 @@ jobs:
     - name: Update existing ECS service
       if: steps.check-service.outputs.exists == 'true'
       run: |
-        aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --task-definition ${{ env.ECS_TASK_DEFINITION }} --region ${{ env.AWS_REGION }}
+        echo "🧹 실패한 배포 정리 중..."
+        
+        # 현재 서비스의 모든 배포 상태 확인
+        DEPLOYMENTS=$(aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'services[0].deployments[?failedTasks>`0`].id' \
+          --output text)
+        
+        if [ ! -z "$DEPLOYMENTS" ]; then
+          echo "❌ 실패한 배포 발견: $DEPLOYMENTS"
+          echo "🔧 실패한 배포 정리 중..."
+          
+          # 실패한 배포가 있는 경우 서비스 업데이트로 정리
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --region ${{ env.AWS_REGION }} \
+            --force-new-deployment
+          
+          echo "⏳ 실패한 배포 정리 대기 중..."
+          sleep 30
+        else
+          echo "✅ 실패한 배포 없음"
+        fi
+        
+        # Unknown 상태의 태스크들 확인 및 정리
+        echo "🔍 Unknown 상태 태스크 확인 중..."
+        UNKNOWN_TASKS=$(aws ecs list-tasks \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service-name ${{ env.ECS_SERVICE }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'taskArns' \
+          --output text)
+        
+        if [ ! -z "$UNKNOWN_TASKS" ]; then
+          echo "⚠️  Unknown 상태 태스크 발견: $UNKNOWN_TASKS"
+          echo "🔧 태스크 상태 확인:"
+          aws ecs describe-tasks \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --tasks $UNKNOWN_TASKS \
+            --region ${{ env.AWS_REGION }} \
+            --query 'tasks[].{taskArn:taskArn,lastStatus:lastStatus,desiredStatus:desiredStatus,healthStatus:healthStatus}' \
+            --output table
+          
+          echo "🛑 Unknown 태스크들 강제 중지 중..."
+          aws ecs stop-task \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --task $UNKNOWN_TASKS \
+            --region ${{ env.AWS_REGION }} \
+            --reason "강제 정리: Unknown 상태 태스크" || echo "일부 태스크 중지 실패 (이미 중지됨)"
+          
+          echo "⏳ 태스크 정리 대기 중..."
+          sleep 60
+        else
+          echo "✅ Unknown 상태 태스크 없음"
+        fi
+        
+        echo "🚀 새로운 배포 시작..."
+        aws ecs update-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE }} \
+          --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+          --region ${{ env.AWS_REGION }}
+        
+        # 서비스 desired count 확인 및 수정
+        echo "🔍 서비스 desired count 확인 중..."
+        CURRENT_DESIRED_COUNT=$(aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'services[0].desiredCount' \
+          --output text)
+        
+        echo "현재 desired count: $CURRENT_DESIRED_COUNT"
+        
+        if [ "$CURRENT_DESIRED_COUNT" = "0" ]; then
+          echo "⚠️  서비스가 중지 상태입니다! desired count를 2로 설정 중..."
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --desired-count 2 \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ desired count를 2로 설정했습니다"
+        else
+          echo "✅ desired count가 올바르게 설정되어 있습니다: $CURRENT_DESIRED_COUNT"
+        fi
+        
+        # 만약 여전히 문제가 있다면 서비스를 일시적으로 중지했다가 재시작
+        echo "🔍 배포 후 상태 확인 중..."
+        sleep 30
+        
+        CURRENT_STATUS=$(aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'services[0].status' \
+          --output text)
+        
+        if [ "$CURRENT_STATUS" != "ACTIVE" ]; then
+          echo "⚠️  서비스가 안정적이지 않음. 강제 재시작 시도..."
+          
+          # 서비스 desired count를 0으로 설정
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --desired-count 0 \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "⏳ 모든 태스크 종료 대기 중..."
+          sleep 120
+          
+          # 서비스 desired count를 다시 2로 설정
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --desired-count 2 \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ 서비스 재시작 완료"
+        fi
     
     - name: Verify ECS service exists
       if: steps.check-service.outputs.exists == 'false'
