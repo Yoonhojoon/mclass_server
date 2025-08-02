@@ -82,6 +82,29 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
     
+    - name: Verify image build
+      run: |
+        echo "🔍 이미지 빌드 검증 중..."
+        ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG=${{ github.sha }}
+        
+        # 이미지가 제대로 푸시되었는지 확인
+        echo "📦 이미지 목록 확인:"
+        aws ecr describe-images \
+          --repository-name ${{ env.ECR_REPOSITORY }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'imageDetails[].{imageTag:imageTags[0],imageDigest:imageDigest,pushedAt:imagePushedAt}' \
+          --output table
+        
+        # 최신 이미지 정보 확인
+        echo "✅ 최신 이미지 정보:"
+        aws ecr describe-images \
+          --repository-name ${{ env.ECR_REPOSITORY }} \
+          --image-ids imageTag=latest \
+          --region ${{ env.AWS_REGION }} \
+          --query 'imageDetails[0].{imageTag:imageTags[0],imageDigest:imageDigest,pushedAt:imagePushedAt}' \
+          --output table
+    
     - name: Create or update task definition
       run: |
         if aws ecs describe-task-definition --task-definition ${{ env.ECS_TASK_DEFINITION }} --region ${{ env.AWS_REGION }} 2>/dev/null; then
@@ -306,14 +329,14 @@ jobs:
           --output table
         
         echo ""
-        echo "⏳ 서비스 안정화 대기 중... (최대 15분)"
+        echo "⏳ 서비스 안정화 대기 중... (최대 20분)"
         
-        # 타임아웃 설정과 함께 안정화 대기
+        # 더 긴 타임아웃과 함께 안정화 대기
         aws ecs wait services-stable \
           --cluster ${{ env.ECS_CLUSTER }} \
           --services ${{ env.ECS_SERVICE }} \
           --region ${{ env.AWS_REGION }} \
-          --cli-read-timeout 900 || {
+          --cli-read-timeout 1200 || {
             echo "❌ 서비스 안정화 대기 실패!"
             echo ""
             echo "🔍 문제 진단을 위한 추가 정보:"
@@ -331,8 +354,54 @@ jobs:
               --cluster ${{ env.ECS_CLUSTER }} \
               --services ${{ env.ECS_SERVICE }} \
               --region ${{ env.AWS_REGION }} \
-              --query 'services[0].events[0:5].{createdAt:createdAt,message:message}' \
+              --query 'services[0].events[0:10].{createdAt:createdAt,message:message}' \
               --output table
+            
+            echo ""
+            echo "3. 태스크 상태 확인:"
+            TASK_ARNS=$(aws ecs list-tasks \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --service-name ${{ env.ECS_SERVICE }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'taskArns' \
+              --output text)
+            
+            if [ ! -z "$TASK_ARNS" ]; then
+              echo "📋 태스크 상세 정보:"
+              aws ecs describe-tasks \
+                --cluster ${{ env.ECS_CLUSTER }} \
+                --tasks $TASK_ARNS \
+                --region ${{ env.AWS_REGION }} \
+                --query 'tasks[].{taskArn:taskArn,lastStatus:lastStatus,desiredStatus:desiredStatus,healthStatus:healthStatus,stoppedReason:stoppedReason}' \
+                --output table
+              
+              echo ""
+              echo "📋 컨테이너 상태:"
+              aws ecs describe-tasks \
+                --cluster ${{ env.ECS_CLUSTER }} \
+                --tasks $TASK_ARNS \
+                --region ${{ env.AWS_REGION }} \
+                --query 'tasks[].containers[].{name:name,lastStatus:lastStatus,healthStatus:healthStatus,exitCode:exitCode,reason:reason}' \
+                --output table
+            fi
+            
+            echo ""
+            echo "4. 로드밸런서 상태:"
+            SERVICE_ARN=$(aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --services ${{ env.ECS_SERVICE }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].loadBalancers[0].targetGroupArn' \
+              --output text)
+            
+            if [ "$SERVICE_ARN" != "None" ] && [ ! -z "$SERVICE_ARN" ]; then
+              echo "🎯 타겟 그룹 상태:"
+              aws elbv2 describe-target-health \
+                --target-group-arn $SERVICE_ARN \
+                --region ${{ env.AWS_REGION }} \
+                --query 'TargetHealthDescriptions[].{Target:Target.Id,Port:Target.Port,Health:TargetHealth.State,Description:TargetHealth.Description}' \
+                --output table
+            fi
             
             echo ""
             echo "💡 가능한 원인:"
@@ -340,11 +409,22 @@ jobs:
             echo "- 헬스체크 실패 (애플리케이션 시작 실패)"
             echo "- 네트워크 설정 문제"
             echo "- 보안 그룹 설정 문제"
+            echo "- 로드밸런서 타겟 그룹 등록 실패"
             
             exit 1
           }
         
         echo "✅ 서비스 안정화 완료!"
+        
+        # 최종 상태 확인
+        echo ""
+        echo "🎉 배포 완료! 최종 상태:"
+        aws ecs describe-services \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --services ${{ env.ECS_SERVICE }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'services[0].{status:status,desiredCount:desiredCount,runningCount:runningCount,pendingCount:pendingCount}' \
+          --output table
 
     - name: Deployment Status
       run: |
