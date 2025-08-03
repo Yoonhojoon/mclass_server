@@ -1,11 +1,16 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger.js';
 import usersRouter from './routes/users.js';
+import authRouter from './routes/auth.routes.js';
 import {
   prometheusMiddleware,
   metricsEndpoint,
 } from './middleware/monitoring.js';
+import { ErrorHandler } from './common/exception/ErrorHandler.js';
+import { prisma } from './config/prisma.config.js';
+import passport from './config/passport.config.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,6 +18,9 @@ const PORT = process.env.PORT || 3000;
 // 미들웨어 설정
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Passport 초기화
+app.use(passport.initialize());
 
 // Prometheus 메트릭 수집 미들웨어
 app.use(prometheusMiddleware);
@@ -22,6 +30,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // 라우트 설정
 app.use('/api/users', usersRouter);
+app.use('/api/auth', authRouter);
 
 // Prometheus 메트릭 엔드포인트
 app.get('/metrics', metricsEndpoint);
@@ -44,11 +53,73 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// 서버 시작
-app.listen(PORT, () => {
-  console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-  console.log(`http://localhost:${PORT}`);
-  console.log(`API 문서: http://localhost:${PORT}/api-docs`);
-  console.log(`메트릭: http://localhost:${PORT}/metrics`);
-  console.log(`헬스체크: http://localhost:${PORT}/health`);
+// 데이터베이스 연결 상태 확인 엔드포인트
+app.get('/db-status', async (req: Request, res: Response) => {
+  try {
+    // 데이터베이스 연결 테스트
+    await prisma.$queryRaw`SELECT 1`;
+
+    // 테이블 목록 조회
+    const tables = await prisma.$queryRaw`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `;
+
+    res.json({
+      status: 'connected',
+      database: 'mclass_db',
+      tables: tables,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Database connection failed',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
+
+// 404 에러 핸들러
+app.use(ErrorHandler.notFound);
+
+// 전역 에러 핸들러 (반드시 마지막에 위치해야 함)
+app.use(ErrorHandler.handle);
+
+// 서버 시작
+const startServer = async () => {
+  try {
+    // Prisma 클라이언트 연결 테스트
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+
+    app.listen(PORT, () => {
+      console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+      console.log(`http://localhost:${PORT}`);
+      console.log(`API 문서: http://localhost:${PORT}/api-docs`);
+      console.log(`메트릭: http://localhost:${PORT}/metrics`);
+      console.log(`헬스체크: http://localhost:${PORT}/health`);
+      console.log(`DB 상태: http://localhost:${PORT}/db-status`);
+    });
+  } catch (error) {
+    console.error('서버 시작 실패:', error);
+    process.exit(1);
+  }
+};
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('서버를 종료합니다...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+// Export app for testing
+export { app };
+
+// Only start server if this file is run directly
+if (process.argv[1] && process.argv[1].endsWith('index.ts')) {
+  startServer();
+}

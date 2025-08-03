@@ -8,6 +8,32 @@ export default [
   {
     files: ['**/*.ts'],
     ignores: ['**/__tests__/**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
+      },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+      prettier: prettier,
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      'prettier/prettier': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { 'argsIgnorePattern': '^_' }],
+      '@typescript-eslint/explicit-function-return-type': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-console': 'off',
+      'no-debugger': 'error',
+    },
   },
   {
     files: ['**/__tests__/**/*.ts'],
