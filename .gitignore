@@ -63,3 +63,5 @@ infrastructure/.terraform/
 *.tfstate.*
 .terraform.lock.hcl
 terraform.tfstate.backup
+
+/src/generated/prisma
