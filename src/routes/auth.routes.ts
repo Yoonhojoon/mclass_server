@@ -1,6 +1,10 @@
 import { Router } from 'express';
 import { AuthController } from '../domains/auth/auth.controller.js';
-import { authenticateToken, requireSignUpCompleted, AuthenticatedRequest } from '../middleware/auth.middleware.js';
+import {
+  authenticateToken,
+  requireSignUpCompleted,
+} from '../middleware/auth.middleware.js';
+import passport from '../config/passport.config.js';
 
 const router = Router();
 const authController = new AuthController();
@@ -247,7 +251,9 @@ router.post('/social', (req, res) => authController.socialLogin(req, res));
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/complete-signup', authenticateToken, (req, res) => authController.completeSignUp(req, res));
+router.post('/complete-signup', authenticateToken, (req, res) =>
+  authController.completeSignUp(req, res)
+);
 
 /**
  * @swagger
@@ -277,7 +283,9 @@ router.post('/complete-signup', authenticateToken, (req, res) => authController.
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/logout', authenticateToken, (req, res) => authController.logout(req, res));
+router.post('/logout', authenticateToken, (req, res) =>
+  authController.logout(req, res)
+);
 
 /**
  * @swagger
@@ -388,6 +396,61 @@ router.post('/refresh', (req, res) => authController.refreshToken(req, res));
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.put('/change-password', authenticateToken, requireSignUpCompleted, (req, res) => authController.changePassword(req, res));
+router.put(
+  '/change-password',
+  authenticateToken,
+  requireSignUpCompleted,
+  (req, res) => authController.changePassword(req, res)
+);
 
-export default router; 
+/**
+ * @swagger
+ * /api/auth/google:
+ *   get:
+ *     summary: Google OAuth 로그인
+ *     description: Google OAuth를 통해 로그인합니다.
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Google OAuth 페이지로 리다이렉트
+ */
+router.get(
+  '/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+/**
+ * @swagger
+ * /api/auth/google/callback:
+ *   get:
+ *     summary: Google OAuth 콜백
+ *     description: Google OAuth 인증 후 콜백을 처리합니다.
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: Google OAuth 로그인 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: 인증 실패
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  (req, res) => {
+    // 성공적으로 인증된 경우 처리
+    res.json({
+      success: true,
+      message: 'Google OAuth 로그인 성공',
+      user: req.user,
+    });
+  }
+);
+
+export default router;

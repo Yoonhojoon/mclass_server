@@ -1,16 +1,15 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import session from 'express-session';
 import swaggerUi from 'swagger-ui-express';
-import { specs } from './config/swagger.js';
-import usersRouter from './routes/users.js';
-import authRouter from './routes/auth.routes.js';
-import {
-  prometheusMiddleware,
-  metricsEndpoint,
-} from './middleware/monitoring.js';
-import { ErrorHandler } from './common/exception/ErrorHandler.js';
-import { prisma } from './config/prisma.config.js';
-import passport from './config/passport.config.js';
+import { specs } from './config/swagger';
+import usersRouter from './routes/users';
+import authRouter from './routes/auth.routes';
+import { prometheusMiddleware, metricsEndpoint } from './middleware/monitoring';
+import { ErrorHandler } from './common/exception/ErrorHandler';
+import { prisma } from './config/prisma.config';
+import passport from './config/passport.config';
+import logger from './config/logger.config';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,8 +18,22 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 세션 설정
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // 24시간
+    },
+  })
+);
+
 // Passport 초기화
 app.use(passport.initialize());
+app.use(passport.session());
 
 // Prometheus 메트릭 수집 미들웨어
 app.use(prometheusMiddleware);
@@ -93,25 +106,25 @@ const startServer = async () => {
   try {
     // Prisma 클라이언트 연결 테스트
     await prisma.$connect();
-    console.log('✅ Database connected successfully');
+    logger.info('✅ Database connected successfully');
 
     app.listen(PORT, () => {
-      console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-      console.log(`http://localhost:${PORT}`);
-      console.log(`API 문서: http://localhost:${PORT}/api-docs`);
-      console.log(`메트릭: http://localhost:${PORT}/metrics`);
-      console.log(`헬스체크: http://localhost:${PORT}/health`);
-      console.log(`DB 상태: http://localhost:${PORT}/db-status`);
+      logger.info(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+      logger.info(`http://localhost:${PORT}`);
+      logger.info(`API 문서: http://localhost:${PORT}/api-docs`);
+      logger.info(`메트릭: http://localhost:${PORT}/metrics`);
+      logger.info(`헬스체크: http://localhost:${PORT}/health`);
+      logger.info(`DB 상태: http://localhost:${PORT}/db-status`);
     });
   } catch (error) {
-    console.error('서버 시작 실패:', error);
+    logger.error('서버 시작 실패:', error);
     process.exit(1);
   }
 };
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('서버를 종료합니다...');
+process.on('SIGINT', async (): Promise<void> => {
+  logger.info('서버를 종료합니다...');
   await prisma.$disconnect();
   process.exit(0);
 });
