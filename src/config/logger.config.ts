@@ -1,5 +1,6 @@
 import winston from 'winston';
 import path from 'path';
+import fs from 'fs';
 
 // 로그 레벨 정의
 const levels = {
@@ -33,6 +34,11 @@ const format = winston.format.combine(
 
 // 로그 파일 경로 설정
 const logDir = path.join(process.cwd(), 'logs');
+
+// 로그 디렉토리가 없으면 생성
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
 
 // 트랜스포트 설정
 const transports = [
