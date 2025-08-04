@@ -309,10 +309,19 @@ export class AuthService {
       logger.info('📋 약관 동의 완료 처리', { userId, termIds });
 
       // 1. 약관 동의 처리
-      for (const termId of termIds) {
-        await this.userService.agreeToTerm(userId, termId);
-        logger.debug('✅ 약관 동의 완료', { userId, termId });
+      // Validate termIds first
+      const validTerms = await this.userService.validateTermIds(termIds);
+      if (validTerms.length !== termIds.length) {
+        throw AuthError.invalidRequest('유효하지 않은 약관 ID가 포함되어 있습니다.');
       }
+
+      // Process agreements in parallel
+      await Promise.all(
+        termIds.map(async (termId) => {
+          await this.userService.agreeToTerm(userId, termId);
+          logger.debug('✅ 약관 동의 완료', { userId, termId });
+        })
+      );
 
       // 2. 사용자 상태 업데이트
       const user = await this.userService.updateSignUpStatus(userId, true);
