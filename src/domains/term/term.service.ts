@@ -19,8 +19,8 @@ export class TermService {
           created_at: 'desc',
         },
       });
-    } catch (error) {
-      throw new TermError('약관 목록 조회에 실패했습니다.', error);
+    } catch {
+      throw TermError.listRetrievalFailed('약관 목록 조회에 실패했습니다.');
     }
   }
 
@@ -29,11 +29,20 @@ export class TermService {
    */
   async getTermById(id: string): Promise<Term | null> {
     try {
-      return await this.prisma.term.findUnique({
+      const term = await this.prisma.term.findUnique({
         where: { id },
       });
+
+      if (!term) {
+        throw TermError.notFound(id);
+      }
+
+      return term;
     } catch (error) {
-      throw new TermError('약관 조회에 실패했습니다.', error);
+      if (error instanceof BaseError) {
+        throw error;
+      }
+      throw TermError.databaseError('조회', error);
     }
   }
 
@@ -44,14 +53,23 @@ export class TermService {
     type: 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
   ): Promise<Term[]> {
     try {
-      return await this.prisma.term.findMany({
+      const terms = await this.prisma.term.findMany({
         where: { type },
         orderBy: {
           created_at: 'desc',
         },
       });
+
+      if (terms.length === 0) {
+        throw TermError.typeNotFound(type);
+      }
+
+      return terms;
     } catch (error) {
-      throw new TermError('약관 유형별 조회에 실패했습니다.', error);
+      if (error instanceof BaseError) {
+        throw error;
+      }
+      throw TermError.databaseError('유형별 조회', error);
     }
   }
 
@@ -60,14 +78,23 @@ export class TermService {
    */
   async getRequiredTerms(): Promise<Term[]> {
     try {
-      return await this.prisma.term.findMany({
+      const terms = await this.prisma.term.findMany({
         where: { is_required: true },
         orderBy: {
           created_at: 'desc',
         },
       });
+
+      if (terms.length === 0) {
+        throw TermError.requiredTermsNotFound();
+      }
+
+      return terms;
     } catch (error) {
-      throw new TermError('필수 약관 조회에 실패했습니다.', error);
+      if (error instanceof BaseError) {
+        throw error;
+      }
+      throw TermError.databaseError('필수 약관 조회', error);
     }
   }
 
@@ -78,14 +105,23 @@ export class TermService {
     type: 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
   ): Promise<Term | null> {
     try {
-      return await this.prisma.term.findFirst({
+      const term = await this.prisma.term.findFirst({
         where: { type },
         orderBy: {
           created_at: 'desc',
         },
       });
+
+      if (!term) {
+        throw TermError.latestVersionNotFound(type);
+      }
+
+      return term;
     } catch (error) {
-      throw new TermError('최신 약관 조회에 실패했습니다.', error);
+      if (error instanceof BaseError) {
+        throw error;
+      }
+      throw TermError.databaseError('최신 약관 조회', error);
     }
   }
 
@@ -100,11 +136,26 @@ export class TermService {
     version: string;
   }): Promise<Term> {
     try {
+      // 동일한 유형과 버전이 이미 존재하는지 확인
+      const existingTerm = await this.prisma.term.findFirst({
+        where: {
+          type: termData.type,
+          version: termData.version,
+        },
+      });
+
+      if (existingTerm) {
+        throw TermError.duplicateVersion(termData.version, termData.type);
+      }
+
       return await this.prisma.term.create({
         data: termData,
       });
     } catch (error) {
-      throw new TermError('약관 생성에 실패했습니다.', error);
+      if (error instanceof BaseError) {
+        throw error;
+      }
+      throw TermError.creationFailed('약관 생성에 실패했습니다.');
     }
   }
 
@@ -126,7 +177,25 @@ export class TermService {
       });
 
       if (!existingTerm) {
-        throw new TermError('존재하지 않는 약관입니다.');
+        throw TermError.notFound(id);
+      }
+
+      // 버전이 변경되는 경우 중복 확인
+      if (updateData.version && updateData.version !== existingTerm.version) {
+        const duplicateVersion = await this.prisma.term.findFirst({
+          where: {
+            type: existingTerm.type,
+            version: updateData.version,
+            id: { not: id },
+          },
+        });
+
+        if (duplicateVersion) {
+          throw TermError.duplicateVersion(
+            updateData.version,
+            existingTerm.type
+          );
+        }
       }
 
       return await this.prisma.term.update({
@@ -137,7 +206,7 @@ export class TermService {
       if (error instanceof BaseError) {
         throw error;
       }
-      throw new TermError('약관 수정에 실패했습니다.', error);
+      throw TermError.updateFailed('약관 수정에 실패했습니다.');
     }
   }
 
@@ -154,14 +223,12 @@ export class TermService {
       });
 
       if (!existingTerm) {
-        throw new TermError('존재하지 않는 약관입니다.');
+        throw TermError.notFound(id);
       }
 
       // 동의 기록이 있으면 삭제 불가
       if (existingTerm.user_term_agreements.length > 0) {
-        throw new TermError(
-          '사용자 동의 기록이 있는 약관은 삭제할 수 없습니다.'
-        );
+        throw TermError.cannotDeleteWithAgreements();
       }
 
       await this.prisma.term.delete({
@@ -171,7 +238,7 @@ export class TermService {
       if (error instanceof BaseError) {
         throw error;
       }
-      throw new TermError('약관 삭제에 실패했습니다.', error);
+      throw TermError.deletionFailed('약관 삭제에 실패했습니다.');
     }
   }
 
@@ -189,7 +256,7 @@ export class TermService {
       });
 
       if (!term) {
-        throw new TermError('존재하지 않는 약관입니다.');
+        throw TermError.notFound(termId);
       }
 
       // 이미 동의했는지 확인
@@ -203,7 +270,7 @@ export class TermService {
       });
 
       if (existingAgreement) {
-        throw new TermError('이미 동의한 약관입니다.');
+        throw TermError.alreadyAgreed(userId, termId);
       }
 
       return await this.prisma.userTermAgreement.create({
@@ -226,7 +293,7 @@ export class TermService {
       if (error instanceof BaseError) {
         throw error;
       }
-      throw new TermError('약관 동의에 실패했습니다.', error);
+      throw TermError.agreementFailed('약관 동의에 실패했습니다.');
     }
   }
 
@@ -244,8 +311,10 @@ export class TermService {
           agreed_at: 'desc',
         },
       });
-    } catch (error) {
-      throw new TermError('사용자 약관 동의 목록 조회에 실패했습니다.', error);
+    } catch {
+      throw TermError.userAgreementsRetrievalFailed(
+        '사용자 약관 동의 목록 조회에 실패했습니다.'
+      );
     }
   }
 
@@ -264,8 +333,8 @@ export class TermService {
       });
 
       return !!agreement;
-    } catch (error) {
-      throw new TermError('약관 동의 확인에 실패했습니다.', error);
+    } catch {
+      throw TermError.agreementCheckFailed('약관 동의 확인에 실패했습니다.');
     }
   }
 
@@ -292,8 +361,10 @@ export class TermService {
       });
 
       return userAgreements.length === requiredTerms.length;
-    } catch (error) {
-      throw new TermError('필수 약관 동의 확인에 실패했습니다.', error);
+    } catch {
+      throw TermError.requiredAgreementCheckFailed(
+        '필수 약관 동의 확인에 실패했습니다.'
+      );
     }
   }
 }
