@@ -7,9 +7,10 @@ import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 export class AuthController {
   private authService: AuthService;
 
-  constructor() {
-    this.authService = new AuthService();
+  constructor(authService?: AuthService) {
+    this.authService = authService || new AuthService();
   }
+}
 
   /**
    * 사용자 로그인
