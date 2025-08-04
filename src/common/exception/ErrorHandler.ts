@@ -8,6 +8,11 @@ export interface ErrorResponse {
   timestamp: string;
   path: string;
   method: string;
+  stack?: string;
+}
+
+interface ExtendedError extends Error {
+  statusCode?: number;
 }
 
 export class ErrorHandler {
@@ -15,7 +20,7 @@ export class ErrorHandler {
     error: Error,
     req: Request,
     res: Response,
-    next: NextFunction
+    _next: NextFunction
   ): void {
     let statusCode = 500;
     let message = '서버 내부 오류가 발생했습니다.';
@@ -45,21 +50,33 @@ export class ErrorHandler {
 
     // 개발 환경에서는 스택 트레이스도 포함
     if (process.env.NODE_ENV === 'development') {
-      (errorResponse as any).stack = error.stack;
+      errorResponse.stack = error.stack;
     }
 
     res.status(statusCode).json(errorResponse);
   }
 
-  public static notFound(req: Request, res: Response, next: NextFunction): void {
-    const error = new Error(`경로를 찾을 수 없습니다: ${req.originalUrl}`);
-    (error as any).statusCode = 404;
+  public static notFound(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): void {
+    const error = new Error(
+      `경로를 찾을 수 없습니다: ${req.originalUrl}`
+    ) as ExtendedError;
+    error.statusCode = 404;
     next(error);
   }
 
-  public static asyncHandler(fn: Function) {
-    return (req: Request, res: Response, next: NextFunction) => {
+  public static asyncHandler(
+    fn: (
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ) => Promise<unknown> | unknown
+  ) {
+    return (req: Request, res: Response, next: NextFunction): void => {
       Promise.resolve(fn(req, res, next)).catch(next);
     };
   }
-} 
+}

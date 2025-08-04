@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 
-// 테스트 환경에서 .env 파일 로드
-config({ path: '.env.test' });
+// 테스트 환경에서 .env 파일 로드 (로그 억제)
+config({ path: '.env.test', debug: false });
 
 // 테스트 환경 변수 설정
 process.env.NODE_ENV = 'test';

@@ -39,6 +39,7 @@ describe('AuthService', () => {
       agreeToTerm: jest.fn(),
       updateSignUpStatus: jest.fn(),
       changePassword: jest.fn(),
+      validateTermIds: jest.fn(),
     } as any;
 
     // Mock TokenService
@@ -53,9 +54,8 @@ describe('AuthService', () => {
     (UserService as jest.MockedClass<typeof UserService>).mockImplementation(
       () => mockUserService
     );
--    (TokenService as unknown as any) = mockTokenService;
-+    // Mock TokenService static methods directly
-+    Object.assign(TokenService, mockTokenService);
+    // Mock TokenService static methods directly
+    Object.assign(TokenService, mockTokenService);
 
     // Mock logger
     const logger = require('../../config/logger.config').default;
@@ -538,6 +538,7 @@ describe('AuthService', () => {
 
     it('✅ 회원가입 완료 성공 시 사용자 정보와 토큰을 반환해야 함', async () => {
       // Arrange
+      mockUserService.validateTermIds.mockResolvedValue(termIds);
       mockUserService.agreeToTerm.mockResolvedValue(undefined);
       mockUserService.updateSignUpStatus.mockResolvedValue(mockUser);
       mockTokenService.generateAccessToken.mockReturnValue(

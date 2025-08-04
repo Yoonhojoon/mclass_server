@@ -56,7 +56,7 @@ if (process.env.NODE_ENV === 'production') {
         winston.format.timestamp(),
         winston.format.json()
       ),
-    }) as any,
+    }) as any, // Winston 타입 호환성을 위해 any 사용
 
     // 전체 로그 파일
     new winston.transports.File({
@@ -65,7 +65,7 @@ if (process.env.NODE_ENV === 'production') {
         winston.format.timestamp(),
         winston.format.json()
       ),
-    }) as any
+    }) as any // Winston 타입 호환성을 위해 any 사용
   );
 }
 

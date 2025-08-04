@@ -102,7 +102,7 @@ app.use(ErrorHandler.notFound);
 app.use(ErrorHandler.handle);
 
 // 서버 시작
-const startServer = async () => {
+const startServer = async (): Promise<void> => {
   try {
     // Prisma 클라이언트 연결 테스트
     await prisma.$connect();

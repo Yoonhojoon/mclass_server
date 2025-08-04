@@ -1,4 +1,4 @@
-import { User, Prisma } from '@prisma/client';
+import { User } from '@prisma/client';
 import { prisma } from '../../config/prisma.config.js';
 import { UserError } from '../../common/exception/user/UserError.js';
 import bcrypt from 'bcrypt';
@@ -31,7 +31,7 @@ export class UserService {
    */
   async createUser(userData: CreateUserDto): Promise<User> {
     const existingUser = await this.prisma.user.findUnique({
-      where: { email: userData.email }
+      where: { email: userData.email },
     });
 
     if (existingUser) {
@@ -44,7 +44,9 @@ export class UserService {
     }
 
     // 비밀번호 해시화 (LOCAL 로그인인 경우만)
-    const hashedPassword = userData.password ? await bcrypt.hash(userData.password, 10) : null;
+    const hashedPassword = userData.password
+      ? await bcrypt.hash(userData.password, 10)
+      : null;
 
     return await this.prisma.user.create({
       data: {
@@ -55,7 +57,7 @@ export class UserService {
         provider: userData.provider || 'LOCAL',
         social_id: userData.social_id,
         isSignUpCompleted: userData.isSignUpCompleted || false,
-      }
+      },
     });
   }
 
@@ -64,7 +66,7 @@ export class UserService {
    */
   async findByEmail(email: string): Promise<User | null> {
     return await this.prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
   }
 
@@ -73,16 +75,17 @@ export class UserService {
    */
   async findById(id: string): Promise<User | null> {
     return await this.prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
   }
-
-
 
   /**
    * 사용자 인증 (LOCAL 로그인)
    */
-  async authenticateUser(email: string, password: string): Promise<User | null> {
+  async authenticateUser(
+    email: string,
+    password: string
+  ): Promise<User | null> {
     const user = await this.findByEmail(email);
 
     if (!user) {
@@ -111,7 +114,7 @@ export class UserService {
    */
   async updateUser(id: string, updateData: UpdateUserDto): Promise<User> {
     const existingUser = await this.prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingUser) {
@@ -120,7 +123,7 @@ export class UserService {
 
     return await this.prisma.user.update({
       where: { id },
-      data: updateData
+      data: updateData,
     });
   }
 
@@ -129,7 +132,7 @@ export class UserService {
    */
   async changePassword(id: string, newPassword: string): Promise<boolean> {
     const existingUser = await this.prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingUser) {
@@ -144,7 +147,7 @@ export class UserService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { password: hashedPassword }
+      data: { password: hashedPassword },
     });
 
     return true;
@@ -155,7 +158,7 @@ export class UserService {
    */
   async findAllUsers(): Promise<User[]> {
     return await this.prisma.user.findMany({
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
     });
   }
 
@@ -164,7 +167,7 @@ export class UserService {
    */
   async deactivateUser(id: string): Promise<boolean> {
     const existingUser = await this.prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingUser) {
@@ -173,7 +176,7 @@ export class UserService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { is_admin: false }
+      data: { is_admin: false },
     });
 
     return true;
@@ -184,7 +187,7 @@ export class UserService {
    */
   async activateUser(id: string): Promise<boolean> {
     const existingUser = await this.prisma.user.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!existingUser) {
@@ -193,7 +196,7 @@ export class UserService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { is_admin: true }
+      data: { is_admin: true },
     });
 
     return true;
@@ -286,7 +289,11 @@ export class UserService {
 
     if (user) {
       // 기존 사용자가 있으면 소셜 정보 업데이트
-      return await this.updateUserProvider(user.id, socialData.provider, socialData.social_id);
+      return await this.updateUserProvider(
+        user.id,
+        socialData.provider,
+        socialData.social_id
+      );
     } else {
       // 새 사용자 생성
       return await this.createSocialUser(socialData);
@@ -296,12 +303,15 @@ export class UserService {
   /**
    * 소셜 ID로 사용자 찾기 (provider 포함)
    */
-  async findBySocialId(socialId: string, provider: string): Promise<User | null> {
+  async findBySocialId(
+    socialId: string,
+    provider: string
+  ): Promise<User | null> {
     return await this.prisma.user.findFirst({
       where: {
         social_id: socialId,
-        provider: provider as 'LOCAL' | 'KAKAO' | 'GOOGLE' | 'NAVER'
-      }
+        provider: provider as 'LOCAL' | 'KAKAO' | 'GOOGLE' | 'NAVER',
+      },
     });
   }
 
@@ -320,14 +330,18 @@ export class UserService {
       name: socialData.name,
       provider: socialData.provider,
       social_id: socialData.social_id,
-      isSignUpCompleted: socialData.isSignUpCompleted || false
+      isSignUpCompleted: socialData.isSignUpCompleted || false,
     });
   }
 
   /**
    * 사용자 소셜 로그인 정보 업데이트
    */
-  async updateUserProvider(userId: string, provider: 'KAKAO' | 'GOOGLE' | 'NAVER', socialId: string): Promise<User> {
+  async updateUserProvider(
+    userId: string,
+    provider: 'KAKAO' | 'GOOGLE' | 'NAVER',
+    socialId: string
+  ): Promise<User> {
     const existingUser = await this.findById(userId);
 
     if (!existingUser) {
@@ -346,7 +360,10 @@ export class UserService {
   /**
    * 회원가입 완료 상태 업데이트
    */
-  async updateSignUpStatus(userId: string, isSignUpCompleted: boolean): Promise<User> {
+  async updateSignUpStatus(
+    userId: string,
+    isSignUpCompleted: boolean
+  ): Promise<User> {
     const existingUser = await this.findById(userId);
 
     if (!existingUser) {
@@ -355,7 +372,7 @@ export class UserService {
 
     return await this.prisma.user.update({
       where: { id: userId },
-      data: { isSignUpCompleted }
+      data: { isSignUpCompleted },
     });
   }
 
@@ -368,4 +385,26 @@ export class UserService {
     const termService = new TermService(prisma);
     await termService.agreeToTerm(userId, termId);
   }
-} 
+
+  /**
+   * 약관 ID 목록 검증
+   */
+  async validateTermIds(termIds: string[]): Promise<string[]> {
+    try {
+      const validTerms = await this.prisma.term.findMany({
+        where: {
+          id: {
+            in: termIds,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return validTerms.map(term => term.id);
+    } catch {
+      throw UserError.notFound('약관 ID 검증 중 오류가 발생했습니다.');
+    }
+  }
+}

@@ -3,6 +3,20 @@ import { jwtConfig } from '../../config/jwt.config.js';
 import { TokenError } from '../../common/exception/token/TokenError.js';
 import { redis } from '../../config/redis.config.js';
 
+// JWT 관련 타입 정의
+interface JWTDecodedPayload {
+  userId: string;
+  email: string;
+  role: string;
+  signUpCompleted: boolean;
+  provider?: string;
+  exp?: number;
+  iat?: number;
+  iss?: string;
+  aud?: string;
+  [key: string]: unknown;
+}
+
 export interface TokenPayload {
   userId: string;
   email: string;
@@ -16,10 +30,11 @@ export class TokenService {
    * 액세스 토큰 생성
    */
   static generateAccessToken(payload: TokenPayload): string {
+    // JWT 라이브러리 타입 호환성을 위해 any 사용
     return (jwt.sign as any)(payload, jwtConfig.secret, {
       expiresIn: jwtConfig.expiresIn,
       issuer: jwtConfig.issuer,
-      audience: jwtConfig.audience
+      audience: jwtConfig.audience,
     });
   }
 
@@ -27,10 +42,11 @@ export class TokenService {
    * 리프레시 토큰 생성
    */
   static generateRefreshToken(payload: TokenPayload): string {
+    // JWT 라이브러리 타입 호환성을 위해 any 사용
     return (jwt.sign as any)(payload, jwtConfig.secret, {
       expiresIn: jwtConfig.refreshExpiresIn,
       issuer: jwtConfig.issuer,
-      audience: jwtConfig.audience
+      audience: jwtConfig.audience,
     });
   }
 
@@ -39,9 +55,10 @@ export class TokenService {
    */
   static verifyAccessToken(token: string): TokenPayload {
     try {
+      // JWT 라이브러리 타입 호환성을 위해 any 사용
       return (jwt.verify as any)(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
-        audience: jwtConfig.audience
+        audience: jwtConfig.audience,
       }) as TokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
@@ -59,9 +76,10 @@ export class TokenService {
    */
   static verifyRefreshToken(token: string): TokenPayload {
     try {
+      // JWT 라이브러리 타입 호환성을 위해 any 사용
       return (jwt.verify as any)(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
-        audience: jwtConfig.audience
+        audience: jwtConfig.audience,
       }) as TokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
@@ -79,12 +97,13 @@ export class TokenService {
    */
   static isTokenValid(token: string): boolean {
     try {
+      // JWT 라이브러리 타입 호환성을 위해 any 사용
       (jwt.verify as any)(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
-        audience: jwtConfig.audience
+        audience: jwtConfig.audience,
       });
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -94,12 +113,12 @@ export class TokenService {
    */
   static getTokenExpiration(token: string): Date | null {
     try {
-      const decoded = jwt.decode(token) as any;
+      const decoded = jwt.decode(token) as JWTDecodedPayload | null;
       if (decoded && decoded.exp) {
         return new Date(decoded.exp * 1000);
       }
       return null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -110,7 +129,7 @@ export class TokenService {
   static decodeToken(token: string): TokenPayload | null {
     try {
       return jwt.decode(token) as TokenPayload;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -120,21 +139,22 @@ export class TokenService {
    */
   static getTokenType(token: string): 'access' | 'refresh' | 'unknown' {
     try {
-      const decoded = jwt.decode(token) as any;
+      const decoded = jwt.decode(token) as JWTDecodedPayload | null;
       if (decoded && decoded.exp) {
         const expiration = new Date(decoded.exp * 1000);
         const now = new Date();
         const timeDiff = expiration.getTime() - now.getTime();
 
         // 리프레시 토큰은 더 긴 만료 시간을 가짐 (7일 vs 24시간)
-        if (timeDiff > 24 * 60 * 60 * 1000) { // 24시간 이상
+        if (timeDiff > 24 * 60 * 60 * 1000) {
+          // 24시간 이상
           return 'refresh';
         } else {
           return 'access';
         }
       }
       return 'unknown';
-    } catch (error) {
+    } catch {
       return 'unknown';
     }
   }
@@ -142,7 +162,10 @@ export class TokenService {
   /**
    * 토큰 갱신 (리프레시 토큰으로 새로운 액세스/리프레시 토큰 생성)
    */
-  static refreshTokens(refreshToken: string): { accessToken: string; refreshToken: string } {
+  static refreshTokens(refreshToken: string): {
+    accessToken: string;
+    refreshToken: string;
+  } {
     try {
       const payload = this.verifyRefreshToken(refreshToken);
 
@@ -151,7 +174,7 @@ export class TokenService {
         email: payload.email,
         role: payload.role,
         signUpCompleted: payload.signUpCompleted,
-        provider: payload.provider
+        provider: payload.provider,
       };
 
       const newAccessToken = this.generateAccessToken(newTokenPayload);
@@ -159,9 +182,9 @@ export class TokenService {
 
       return {
         accessToken: newAccessToken,
-        refreshToken: newRefreshToken
+        refreshToken: newRefreshToken,
       };
-    } catch (error) {
+    } catch {
       throw TokenError.expiredToken('리프레시 토큰이 만료되었습니다');
     }
   }
@@ -172,7 +195,7 @@ export class TokenService {
   static async invalidateToken(token: string): Promise<void> {
     try {
       // 토큰의 만료 시간을 계산하여 그 시간까지 블랙리스트에 저장
-      const decoded = jwt.decode(token) as any;
+      const decoded = jwt.decode(token) as JWTDecodedPayload | null;
       if (decoded && decoded.exp) {
         const expirationTime = decoded.exp - Math.floor(Date.now() / 1000);
         if (expirationTime > 0) {
@@ -200,7 +223,9 @@ export class TokenService {
   /**
    * 토큰 검증 (블랙리스트 확인 포함)
    */
-  static async verifyAccessTokenWithBlacklist(token: string): Promise<TokenPayload> {
+  static async verifyAccessTokenWithBlacklist(
+    token: string
+  ): Promise<TokenPayload> {
     // 먼저 블랙리스트 확인
     const isBlacklisted = await this.isTokenBlacklisted(token);
     if (isBlacklisted) {
@@ -210,4 +235,4 @@ export class TokenService {
     // 기존 검증 로직
     return this.verifyAccessToken(token);
   }
-} 
+}

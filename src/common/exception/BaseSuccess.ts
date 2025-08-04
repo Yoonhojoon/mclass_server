@@ -1,4 +1,4 @@
-export abstract class BaseSuccess<T = any> {
+export abstract class BaseSuccess<T = unknown> {
   public readonly message: string;
   public readonly statusCode: number;
   public readonly successCode: string;
@@ -15,16 +15,15 @@ export abstract class BaseSuccess<T = any> {
     this.successCode = successCode;
     this.data = data;
   }
-}
 
-  toJSON() {
+  toJSON(): Record<string, unknown> {
     return {
       success: true,
       message: this.message,
       statusCode: this.statusCode,
       successCode: this.successCode,
       data: this.data,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
-} 
+}

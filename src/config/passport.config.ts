@@ -17,8 +17,8 @@ async function handleOAuthCallback(
     socialId: string;
   },
   provider: 'GOOGLE' | 'KAKAO' | 'NAVER',
-  done: any
-) {
+  done: any // Passport.js 타입 호환성을 위해 any 사용
+): Promise<void> {
   try {
     logger.info(`🔐 ${provider} OAuth 인증 시작`);
     logger.info(`✅ ${provider}에서 파싱된 정보:`, {
@@ -91,6 +91,7 @@ passport.use(
         process.env.GOOGLE_CALLBACK_URL ||
         'http://localhost:3000/auth/google/callback',
     },
+    // Passport.js 타입 호환성을 위해 any 사용
     async (accessToken: any, refreshToken: any, profile: any, done: any) => {
       // Google 프로필 파싱
       const parsedData = {

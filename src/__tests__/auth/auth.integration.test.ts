@@ -1,6 +1,7 @@
 import { AuthController } from '../../domains/auth/auth.controller';
 import { AuthError } from '../../common/exception/auth/AuthError';
 import { Request, Response } from 'express';
+import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 
 // Mock external dependencies only
 jest.mock('../../config/logger.config', () => ({
@@ -239,8 +240,13 @@ describe('Auth API Integration Tests', () => {
         // Create mock request and response
         const mockRequest = {
           body: completeSignUpData,
-          user: { userId: 'user-123' },
-        } as unknown as Request;
+          user: {
+            userId: 'user-123',
+            email: 'test@example.com',
+            role: 'USER',
+            signUpCompleted: true,
+          },
+        } as unknown as AuthenticatedRequest;
 
         const mockResponse = {
           json: jest.fn(),
@@ -266,7 +272,7 @@ describe('Auth API Integration Tests', () => {
         const mockRequest = {
           body: completeSignUpData,
           user: undefined,
-        } as unknown as Request;
+        } as unknown as AuthenticatedRequest;
 
         const mockResponse = {
           json: jest.fn(),
@@ -302,8 +308,13 @@ describe('Auth API Integration Tests', () => {
         // Create mock request and response
         const mockRequest = {
           body: changePasswordData,
-          user: { userId: 'user-123' },
-        } as unknown as Request;
+          user: {
+            userId: 'user-123',
+            email: 'test@example.com',
+            role: 'USER',
+            signUpCompleted: true,
+          },
+        } as unknown as AuthenticatedRequest;
 
         const mockResponse = {
           json: jest.fn(),
@@ -330,7 +341,7 @@ describe('Auth API Integration Tests', () => {
         const mockRequest = {
           body: changePasswordData,
           user: undefined,
-        } as unknown as Request;
+        } as unknown as AuthenticatedRequest;
 
         const mockResponse = {
           json: jest.fn(),

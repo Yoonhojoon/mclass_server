@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AuthController } from '../../domains/auth/auth.controller';
 import { AuthService } from '../../domains/auth/auth.service';
 import { AuthError } from '../../common/exception/auth/AuthError';
+import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 
 // Mock dependencies
 jest.mock('../../domains/auth/auth.service');
@@ -18,7 +19,7 @@ jest.mock('../../config/logger.config', () => ({
 describe('AuthController', () => {
   let authController: AuthController;
   let mockAuthService: jest.Mocked<AuthService>;
-  let mockRequest: Partial<Request>;
+  let mockRequest: Partial<AuthenticatedRequest>;
   let mockResponse: Partial<Response>;
   let mockJson: jest.Mock;
   let mockStatus: jest.Mock;
@@ -326,7 +327,12 @@ describe('AuthController', () => {
     beforeEach(() => {
       mockRequest = {
         body: mockCompleteSignUpData,
-        user: { userId: 'user-123' },
+        user: {
+          userId: 'user-123',
+          email: 'test@example.com',
+          role: 'USER',
+          signUpCompleted: true,
+        },
       };
     });
 
@@ -338,7 +344,7 @@ describe('AuthController', () => {
 
       // Act
       await authController.completeSignUp(
-        mockRequest as Request,
+        mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
@@ -360,7 +366,7 @@ describe('AuthController', () => {
 
       // Act
       await authController.completeSignUp(
-        mockRequest as Request,
+        mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
@@ -380,7 +386,7 @@ describe('AuthController', () => {
 
       // Act
       await authController.completeSignUp(
-        mockRequest as Request,
+        mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
@@ -405,7 +411,7 @@ describe('AuthController', () => {
 
       // Act
       await authController.completeSignUp(
-        mockRequest as Request,
+        mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
@@ -565,7 +571,12 @@ describe('AuthController', () => {
     beforeEach(() => {
       mockRequest = {
         body: mockChangePasswordData,
-        user: { userId: 'user-123' },
+        user: {
+          userId: 'user-123',
+          email: 'test@example.com',
+          role: 'USER',
+          signUpCompleted: true,
+        },
       };
     });
 
@@ -575,7 +586,7 @@ describe('AuthController', () => {
 
       // Act
       await authController.changePassword(
-        mockRequest as Request,
+        mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
@@ -598,7 +609,7 @@ describe('AuthController', () => {
 
       // Act
       await authController.changePassword(
-        mockRequest as Request,
+        mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 
@@ -623,7 +634,7 @@ describe('AuthController', () => {
 
       // Act
       await authController.changePassword(
-        mockRequest as Request,
+        mockRequest as AuthenticatedRequest,
         mockResponse as Response
       );
 

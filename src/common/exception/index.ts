@@ -9,4 +9,4 @@ export * from './enrollment/EnrollmentError';
 export * from './enrollment/EnrollmentSuccess';
 export * from './auth/AuthError';
 export * from './auth/AuthSuccess';
-export * from './token/TokenError'; 
+export * from './token/TokenError';

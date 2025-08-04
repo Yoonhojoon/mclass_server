@@ -23,6 +23,27 @@ export interface TokenPayload {
   provider?: string; // 소셜 로그인 제공자
 }
 
+export interface UserResponse {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  is_admin: boolean;
+  isSignUpCompleted: boolean;
+  provider?: string;
+}
+
+export interface OAuthProfile {
+  id: string;
+  displayName?: string;
+  username?: string;
+  emails?: Array<{ value: string; type?: string }>;
+  photos?: Array<{ value: string }>;
+  provider: string;
+  _json?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export class AuthService {
   private userService: UserService;
 
@@ -33,14 +54,23 @@ export class AuthService {
   /**
    * 사용자 로그인
    */
-  async login(loginData: LoginDto): Promise<{ user: any; accessToken: string; refreshToken: string }> {
+  async login(loginData: LoginDto): Promise<{
+    user: UserResponse;
+    accessToken: string;
+    refreshToken: string;
+  }> {
     try {
       logger.info('🔐 로그인 시도', { email: loginData.email });
 
-      const user = await this.userService.authenticateUser(loginData.email, loginData.password);
+      const user = await this.userService.authenticateUser(
+        loginData.email,
+        loginData.password
+      );
 
       if (!user) {
-        logger.warn('❌ 로그인 실패: 잘못된 인증 정보', { email: loginData.email });
+        logger.warn('❌ 로그인 실패: 잘못된 인증 정보', {
+          email: loginData.email,
+        });
         throw AuthError.invalidCredentials();
       }
 
@@ -48,7 +78,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
-        signUpCompleted: user.isSignUpCompleted || false
+        signUpCompleted: user.isSignUpCompleted || false,
       };
 
       const accessToken = TokenService.generateAccessToken(tokenPayload);
@@ -58,7 +88,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
-        signUpCompleted: user.isSignUpCompleted || false
+        signUpCompleted: user.isSignUpCompleted || false,
       });
 
       return {
@@ -68,16 +98,18 @@ export class AuthService {
           name: user.name,
           role: user.role,
           is_admin: user.is_admin,
-          isSignUpCompleted: user.isSignUpCompleted || false
+          isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
-        refreshToken
+        refreshToken,
       };
     } catch (error) {
       if (error instanceof AuthError) {
         throw error;
       }
-      logger.error('❌ 로그인 처리 중 오류', { error: error instanceof Error ? error.message : 'Unknown error' });
+      logger.error('❌ 로그인 처리 중 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       throw AuthError.loginFailed('로그인 처리 중 오류가 발생했습니다.');
     }
   }
@@ -85,9 +117,16 @@ export class AuthService {
   /**
    * 사용자 회원가입
    */
-  async register(registerData: RegisterDto): Promise<{ user: any; accessToken: string; refreshToken: string }> {
+  async register(registerData: RegisterDto): Promise<{
+    user: UserResponse;
+    accessToken: string;
+    refreshToken: string;
+  }> {
     try {
-      logger.info('📝 회원가입 시도', { email: registerData.email, name: registerData.name });
+      logger.info('📝 회원가입 시도', {
+        email: registerData.email,
+        name: registerData.name,
+      });
 
       // 사용자 검증
       await this.userService.validateUser(registerData);
@@ -99,7 +138,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
-        signUpCompleted: user.isSignUpCompleted || false
+        signUpCompleted: user.isSignUpCompleted || false,
       };
 
       const accessToken = TokenService.generateAccessToken(tokenPayload);
@@ -109,7 +148,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
-        signUpCompleted: user.isSignUpCompleted || false
+        signUpCompleted: user.isSignUpCompleted || false,
       });
 
       return {
@@ -119,17 +158,21 @@ export class AuthService {
           name: user.name,
           role: user.role,
           is_admin: user.is_admin,
-          isSignUpCompleted: user.isSignUpCompleted || false
+          isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
-        refreshToken
+        refreshToken,
       };
     } catch (error) {
       if (error instanceof AuthError) {
         throw error;
       }
-      logger.error('❌ 회원가입 처리 중 오류', { error: error instanceof Error ? error.message : 'Unknown error' });
-      throw AuthError.registrationFailed('회원가입 처리 중 오류가 발생했습니다.');
+      logger.error('❌ 회원가입 처리 중 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw AuthError.registrationFailed(
+        '회원가입 처리 중 오류가 발생했습니다.'
+      );
     }
   }
 
@@ -143,7 +186,9 @@ export class AuthService {
       await TokenService.invalidateToken(token);
       logger.info('✅ 로그아웃 완료');
     } catch (error) {
-      logger.error('❌ 로그아웃 처리 중 오류', { error: error instanceof Error ? error.message : 'Unknown error' });
+      logger.error('❌ 로그아웃 처리 중 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       throw error;
     }
   }
@@ -151,7 +196,11 @@ export class AuthService {
   /**
    * 비밀번호 변경
    */
-  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<boolean> {
     try {
       logger.info('🔑 비밀번호 변경 시도', { userId });
 
@@ -163,7 +212,10 @@ export class AuthService {
       }
 
       // 현재 비밀번호 확인
-      const isCurrentPasswordValid = await this.userService.authenticateUser(user.email, currentPassword);
+      const isCurrentPasswordValid = await this.userService.authenticateUser(
+        user.email,
+        currentPassword
+      );
 
       if (!isCurrentPasswordValid) {
         logger.warn('❌ 비밀번호 변경 실패: 현재 비밀번호 불일치', { userId });
@@ -179,15 +231,22 @@ export class AuthService {
       if (error instanceof AuthError) {
         throw error;
       }
-      logger.error('❌ 비밀번호 변경 중 오류', { userId, error: error instanceof Error ? error.message : 'Unknown error' });
-      throw AuthError.passwordChangeFailed('비밀번호 변경 중 오류가 발생했습니다.');
+      logger.error('❌ 비밀번호 변경 중 오류', {
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw AuthError.passwordChangeFailed(
+        '비밀번호 변경 중 오류가 발생했습니다.'
+      );
     }
   }
 
   /**
    * 토큰 갱신
    */
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async refreshToken(
+    refreshToken: string
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     try {
       logger.info('🔄 토큰 갱신 시도');
 
@@ -196,7 +255,9 @@ export class AuthService {
       const user = await this.userService.findById(decoded.userId);
 
       if (!user) {
-        logger.warn('❌ 토큰 갱신 실패: 사용자를 찾을 수 없음', { userId: decoded.userId });
+        logger.warn('❌ 토큰 갱신 실패: 사용자를 찾을 수 없음', {
+          userId: decoded.userId,
+        });
         throw AuthError.authenticationFailed('사용자를 찾을 수 없습니다.');
       }
 
@@ -204,7 +265,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
-        signUpCompleted: user.isSignUpCompleted || false
+        signUpCompleted: user.isSignUpCompleted || false,
       };
 
       const newAccessToken = TokenService.generateAccessToken(tokenPayload);
@@ -213,13 +274,15 @@ export class AuthService {
       logger.info('✅ 토큰 갱신 성공', { userId: user.id });
       return {
         accessToken: newAccessToken,
-        refreshToken: newRefreshToken
+        refreshToken: newRefreshToken,
       };
     } catch (error) {
       if (error instanceof AuthError) {
         throw error;
       }
-      logger.error('❌ 토큰 갱신 중 오류', { error: error instanceof Error ? error.message : 'Unknown error' });
+      logger.error('❌ 토큰 갱신 중 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       throw AuthError.tokenRefreshFailed('토큰 갱신 중 오류가 발생했습니다.');
     }
   }
@@ -227,21 +290,30 @@ export class AuthService {
   /**
    * 소셜 로그인 처리
    */
-  async handleSocialLogin(profile: any): Promise<{ user: any; accessToken: string; refreshToken: string }> {
+  async handleSocialLogin(
+    profile: any // OAuth 프로필 타입이 복잡하여 any 사용
+  ): Promise<{
+    user: UserResponse;
+    accessToken: string;
+    refreshToken: string;
+  }> {
     try {
       logger.info('🔗 소셜 로그인 처리', {
         provider: profile.provider,
         email: profile.email,
-        socialId: profile.id
+        socialId: profile.id,
       });
 
       // 1. 기존 사용자 확인
-      let user = await this.userService.findBySocialId(profile.id, profile.provider);
+      let user = await this.userService.findBySocialId(
+        profile.id,
+        profile.provider
+      );
 
       if (!user) {
         logger.info('👤 새 소셜 사용자 생성', {
           provider: profile.provider,
-          email: profile.email
+          email: profile.email,
         });
 
         // 2. 새 사용자 생성 (준회원 상태)
@@ -250,12 +322,12 @@ export class AuthService {
           name: profile.name,
           provider: profile.provider,
           social_id: profile.id,
-          isSignUpCompleted: false // 준회원 상태로 생성
+          isSignUpCompleted: false, // 준회원 상태로 생성
         });
       } else {
         logger.info('👤 기존 소셜 사용자 로그인', {
           userId: user.id,
-          provider: profile.provider
+          provider: profile.provider,
         });
       }
 
@@ -264,7 +336,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         signUpCompleted: user.isSignUpCompleted || false,
-        provider: user.provider
+        provider: user.provider,
       };
 
       const accessToken = TokenService.generateAccessToken(tokenPayload);
@@ -273,7 +345,7 @@ export class AuthService {
       logger.info('✅ 소셜 로그인 성공', {
         userId: user.id,
         provider: profile.provider,
-        signUpCompleted: user.isSignUpCompleted || false
+        signUpCompleted: user.isSignUpCompleted || false,
       });
 
       return {
@@ -284,10 +356,10 @@ export class AuthService {
           role: user.role,
           is_admin: user.is_admin,
           provider: user.provider,
-          isSignUpCompleted: user.isSignUpCompleted || false
+          isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
-        refreshToken
+        refreshToken,
       };
     } catch (error) {
       if (error instanceof AuthError) {
@@ -295,7 +367,7 @@ export class AuthService {
       }
       logger.error('❌ 소셜 로그인 처리 중 오류', {
         provider: profile.provider,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw AuthError.loginFailed('소셜 로그인 처리 중 오류가 발생했습니다.');
     }
@@ -304,7 +376,14 @@ export class AuthService {
   /**
    * 약관 동의 완료 처리
    */
-  async completeSignUp(userId: string, termIds: string[]): Promise<{ user: any; accessToken: string; refreshToken: string }> {
+  async completeSignUp(
+    userId: string,
+    termIds: string[]
+  ): Promise<{
+    user: UserResponse;
+    accessToken: string;
+    refreshToken: string;
+  }> {
     try {
       logger.info('📋 약관 동의 완료 처리', { userId, termIds });
 
@@ -312,12 +391,14 @@ export class AuthService {
       // Validate termIds first
       const validTerms = await this.userService.validateTermIds(termIds);
       if (validTerms.length !== termIds.length) {
-        throw AuthError.invalidRequest('유효하지 않은 약관 ID가 포함되어 있습니다.');
+        throw AuthError.invalidRequest(
+          '유효하지 않은 약관 ID가 포함되어 있습니다.'
+        );
       }
 
       // Process agreements in parallel
       await Promise.all(
-        termIds.map(async (termId) => {
+        termIds.map(async termId => {
           await this.userService.agreeToTerm(userId, termId);
           logger.debug('✅ 약관 동의 완료', { userId, termId });
         })
@@ -332,7 +413,7 @@ export class AuthService {
         email: user.email,
         role: user.role,
         signUpCompleted: true,
-        provider: user.provider
+        provider: user.provider,
       };
 
       const accessToken = TokenService.generateAccessToken(tokenPayload);
@@ -341,7 +422,7 @@ export class AuthService {
       logger.info('✅ 회원가입 완료', {
         userId: user.id,
         email: user.email,
-        termCount: termIds.length
+        termCount: termIds.length,
       });
 
       return {
@@ -352,10 +433,10 @@ export class AuthService {
           role: user.role,
           is_admin: user.is_admin,
           provider: user.provider,
-          isSignUpCompleted: true
+          isSignUpCompleted: true,
         },
         accessToken,
-        refreshToken
+        refreshToken,
       };
     } catch (error) {
       if (error instanceof AuthError) {
@@ -363,9 +444,11 @@ export class AuthService {
       }
       logger.error('❌ 회원가입 완료 처리 중 오류', {
         userId,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
-      throw AuthError.registrationFailed('회원가입 완료 처리 중 오류가 발생했습니다.');
+      throw AuthError.registrationFailed(
+        '회원가입 완료 처리 중 오류가 발생했습니다.'
+      );
     }
   }
-} 
+}
