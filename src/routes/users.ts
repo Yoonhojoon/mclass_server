@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
+import { UserService } from '../domains/user/user.service';
 
 const router = express.Router();
+const userService = new UserService();
 
 /**
  * @swagger
@@ -25,14 +27,14 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/', (req: Request, res: Response) => {
-  // 임시 사용자 데이터
-  const users = [
-    { id: 1, name: '홍길동', email: 'hong@example.com' },
-    { id: 2, name: '김철수', email: 'kim@example.com' },
-  ];
-
-  res.json(users);
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const users = await userService.findAllUsers();
+    res.json(users);
+  } catch (error) {
+    console.error('Failed to fetch users:', error);
+    res.status(500).json({ message: 'Failed to fetch users' });
+  }
 });
 
 /**
@@ -63,17 +65,20 @@ router.get('/', (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/:id', (req: Request, res: Response) => {
-  const userId = parseInt(req.params.id);
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.id;
+    const user = await userService.findById(userId);
 
-  // 임시 사용자 데이터
-  const user = { id: userId, name: '홍길동', email: 'hong@example.com' };
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
 
-  if (userId > 10) {
-    return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    return res.json(user);
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    res.status(500).json({ message: 'Failed to fetch user' });
   }
-
-  return res.json(user);
 });
 
 /**
@@ -114,21 +119,28 @@ router.get('/:id', (req: Request, res: Response) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/', (req: Request, res: Response) => {
-  const { name, email } = req.body;
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { email, password, name, role } = req.body;
 
-  if (!name || !email) {
-    return res.status(400).json({ message: '이름과 이메일은 필수입니다.' });
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: '이메일과 비밀번호는 필수입니다.' });
+    }
+
+    const user = await userService.createUser({
+      email,
+      password,
+      name,
+      role: role || 'USER',
+    });
+
+    return res.status(201).json(user);
+  } catch (error) {
+    console.error('Failed to create user:', error);
+    res.status(500).json({ message: 'Failed to create user' });
   }
-
-  // 새 사용자 생성 (실제로는 데이터베이스에 저장)
-  const newUser = {
-    id: Math.floor(Math.random() * 1000),
-    name,
-    email,
-  };
-
-  return res.status(201).json(newUser);
 });
 
 export default router;
