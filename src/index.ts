@@ -67,22 +67,22 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // 데이터베이스 연결 상태 확인 엔드포인트
-app.get('/db-status', async (req: Request, res: Response) => {
+app.get('/db-status', authenticate, authorizeAdmin, async (req: Request, res: Response) => {
   try {
     // 데이터베이스 연결 테스트
     await prisma.$queryRaw`SELECT 1`;
 
-    // 테이블 목록 조회
-    const tables = await prisma.$queryRaw`
-      SELECT table_name 
+    // Only include table count, not names
+    const tableCount = await prisma.$queryRaw`
+      SELECT COUNT(*) as count
       FROM information_schema.tables 
       WHERE table_schema = 'public'
     `;
 
     res.json({
       status: 'connected',
-      database: 'mclass_db',
-      tables: tables,
+      database: process.env.DATABASE_NAME || 'mclass_db',
+      tableCount: tableCount[0].count,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
