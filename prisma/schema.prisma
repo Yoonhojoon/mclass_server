@@ -19,12 +19,12 @@ model User {
   is_admin   Boolean  @default(false)
   provider   Provider @default(LOCAL)
   social_id  String?
--  isSignUpCompleted Boolean @default(false) // 회원가입 완료 여부
-+  is_signup_completed Boolean @default(false) @map("is_signup_completed") // 회원가입 완료 여부
+  isSignUpCompleted Boolean @default(false) // 회원가입 완료 여부
+  is_signup_completed Boolean @default(false) @map("is_signup_completed") // 회원가입 완료 여부
   created_at DateTime @default(now())
 
   // Add compound unique constraint
-+  @@unique([provider, social_id])
+  @@unique([provider, social_id])
 
   // Relations
   mclasses              MClass[]
