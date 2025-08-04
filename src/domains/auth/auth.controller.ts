@@ -114,10 +114,10 @@ export class AuthController {
   /**
    * 약관 동의 완료 (회원가입 완료)
    */
-  async completeSignUp(req: Request, res: Response): Promise<void> {
+  async completeSignUp(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { termIds } = req.body;
-      const userId = (req as any).user?.userId;
+      const userId = req.user?.userId;
 
       if (!userId) {
         res.status(401).json({
