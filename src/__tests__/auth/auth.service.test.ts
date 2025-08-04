@@ -53,7 +53,9 @@ describe('AuthService', () => {
     (UserService as jest.MockedClass<typeof UserService>).mockImplementation(
       () => mockUserService
     );
-    (TokenService as unknown as any) = mockTokenService;
+-    (TokenService as unknown as any) = mockTokenService;
++    // Mock TokenService static methods directly
++    Object.assign(TokenService, mockTokenService);
 
     // Mock logger
     const logger = require('../../config/logger.config').default;
