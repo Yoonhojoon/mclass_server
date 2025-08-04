@@ -227,10 +227,10 @@ export class AuthController {
   /**
    * 비밀번호 변경
    */
-  async changePassword(req: Request, res: Response): Promise<void> {
+  async changePassword(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { currentPassword, newPassword } = req.body;
-      const userId = (req as any).user?.userId;
+      const userId = req.user?.userId;
 
       if (!userId) {
         res.status(401).json({
@@ -240,7 +240,6 @@ export class AuthController {
         });
         return;
       }
-
       logger.info('🔑 비밀번호 변경 컨트롤러 호출', { userId });
 
       await this.authService.changePassword(userId, currentPassword, newPassword);
