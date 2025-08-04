@@ -10,6 +10,10 @@ import { ErrorHandler } from './common/exception/ErrorHandler';
 import { prisma } from './config/prisma.config';
 import passport from './config/passport.config';
 import logger from './config/logger.config';
+import {
+  authenticateToken as authenticate,
+  requireAdmin as authorizeAdmin,
+} from './middleware/auth.middleware';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,33 +71,38 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // 데이터베이스 연결 상태 확인 엔드포인트
-app.get('/db-status', authenticate, authorizeAdmin, async (req: Request, res: Response) => {
-  try {
-    // 데이터베이스 연결 테스트
-    await prisma.$queryRaw`SELECT 1`;
+app.get(
+  '/db-status',
+  authenticate,
+  authorizeAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      // 데이터베이스 연결 테스트
+      await prisma.$queryRaw`SELECT 1`;
 
-    // Only include table count, not names
-    const tableCount = await prisma.$queryRaw`
+      // Only include table count, not names
+      const tableCount = await prisma.$queryRaw`
       SELECT COUNT(*) as count
       FROM information_schema.tables 
       WHERE table_schema = 'public'
     `;
 
-    res.json({
-      status: 'connected',
-      database: process.env.DATABASE_NAME || 'mclass_db',
-      tableCount: tableCount[0].count,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: 'Database connection failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-    });
+      res.json({
+        status: 'connected',
+        database: process.env.DATABASE_NAME || 'mclass_db',
+        tableCount: (tableCount as any)[0].count,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        message: 'Database connection failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
-});
+);
 
 // 404 에러 핸들러
 app.use(ErrorHandler.notFound);

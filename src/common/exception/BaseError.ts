@@ -2,10 +2,15 @@ export abstract class BaseError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
 
-  constructor(message: string, statusCode: number, isOperational = true) {
+  constructor(
+    message: string,
+    statusCode: number,
+    isOperational: boolean | unknown = true
+  ) {
     super(message);
     this.statusCode = statusCode;
-    this.isOperational = isOperational;
+    this.isOperational =
+      typeof isOperational === 'boolean' ? isOperational : true;
 
     Error.captureStackTrace(this, this.constructor);
   }

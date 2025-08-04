@@ -135,7 +135,7 @@ passport.use(
 
       await handleOAuthCallback(parsedData, 'KAKAO', done);
     }
-  )
+  ) as any
 );
 
 // Naver OAuth 설정
@@ -168,7 +168,7 @@ passport.use(
 
       await handleOAuthCallback(parsedData, 'NAVER', done);
     }
-  )
+  ) as any
 );
 
 // 사용자 직렬화

@@ -3,6 +3,7 @@ import { AuthController } from '../domains/auth/auth.controller.js';
 import {
   authenticateToken,
   requireSignUpCompleted,
+  AuthenticatedRequest,
 } from '../middleware/auth.middleware.js';
 import passport from '../config/passport.config.js';
 
@@ -252,7 +253,7 @@ router.post('/social', (req, res) => authController.socialLogin(req, res));
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/complete-signup', authenticateToken, (req, res) =>
-  authController.completeSignUp(req, res)
+  authController.completeSignUp(req as AuthenticatedRequest, res)
 );
 
 /**
@@ -400,7 +401,7 @@ router.put(
   '/change-password',
   authenticateToken,
   requireSignUpCompleted,
-  (req, res) => authController.changePassword(req, res)
+  (req, res) => authController.changePassword(req as AuthenticatedRequest, res)
 );
 
 /**
