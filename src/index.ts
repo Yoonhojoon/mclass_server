@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger';
 import usersRouter from './routes/users';
 import authRouter from './routes/auth.routes';
+import termRouter from './routes/term.routes';
 import { prometheusMiddleware, metricsEndpoint } from './middleware/monitoring';
 import { ErrorHandler } from './common/exception/ErrorHandler';
 import { prisma } from './config/prisma.config';
@@ -48,6 +49,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 // 라우트 설정
 app.use('/api/users', usersRouter);
 app.use('/api/auth', authRouter);
+app.use('/api', termRouter);
 
 // Prometheus 메트릭 엔드포인트
 app.get('/metrics', metricsEndpoint);
