@@ -3,6 +3,7 @@ import { TermController } from '../domains/term/term.controller';
 import { TermService } from '../domains/term/term.service';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
+import { validateId } from '../middleware/validation.middleware';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -11,7 +12,9 @@ const termController = new TermController(termService);
 
 // 약관 관리 라우트
 router.get('/terms', (req, res) => termController.getAllTerms(req, res));
-router.get('/terms/:id', (req, res) => termController.getTermById(req, res));
+router.get('/terms/:id', validateId, (req, res) =>
+  termController.getTermById(req, res)
+);
 
 // 관리자 전용 라우트 (인증 및 관리자 권한 필요)
 router.post('/terms', authenticateToken, requireAdmin, (req, res) =>
