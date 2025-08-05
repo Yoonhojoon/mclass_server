@@ -1,5 +1,4 @@
 import { PrismaClient, Term, UserTermAgreement } from '@prisma/client';
-import { BaseError } from '../../common/exception/BaseError';
 import { TermError } from '../../common/exception/term/TermError';
 
 export class TermService {
@@ -19,15 +18,15 @@ export class TermService {
           created_at: 'desc',
         },
       });
-    } catch {
-      throw TermError.listRetrievalFailed('약관 목록 조회에 실패했습니다.');
+    } catch (error) {
+      throw TermError.databaseError('약관 목록 조회', error);
     }
   }
 
   /**
    * 특정 약관 조회
    */
-  async getTermById(id: string): Promise<Term | null> {
+  async getTermById(id: string): Promise<Term> {
     try {
       const term = await this.prisma.term.findUnique({
         where: { id },
@@ -39,10 +38,10 @@ export class TermService {
 
       return term;
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
-      throw TermError.databaseError('조회', error);
+      throw TermError.databaseError('약관 조회', error);
     }
   }
 
@@ -66,10 +65,10 @@ export class TermService {
 
       return terms;
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
-      throw TermError.databaseError('유형별 조회', error);
+      throw TermError.databaseError('약관 유형별 조회', error);
     }
   }
 
@@ -91,7 +90,7 @@ export class TermService {
 
       return terms;
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
       throw TermError.databaseError('필수 약관 조회', error);
@@ -103,7 +102,7 @@ export class TermService {
    */
   async getLatestTermsByType(
     type: 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
-  ): Promise<Term | null> {
+  ): Promise<Term> {
     try {
       const term = await this.prisma.term.findFirst({
         where: { type },
@@ -118,7 +117,7 @@ export class TermService {
 
       return term;
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
       throw TermError.databaseError('최신 약관 조회', error);
@@ -152,10 +151,10 @@ export class TermService {
         data: termData,
       });
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
-      throw TermError.creationFailed('약관 생성에 실패했습니다.');
+      throw TermError.databaseError('약관 생성', error);
     }
   }
 
@@ -203,10 +202,10 @@ export class TermService {
         data: updateData,
       });
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
-      throw TermError.updateFailed('약관 수정에 실패했습니다.');
+      throw TermError.databaseError('약관 수정', error);
     }
   }
 
@@ -235,10 +234,10 @@ export class TermService {
         where: { id },
       });
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
-      throw TermError.deletionFailed('약관 삭제에 실패했습니다.');
+      throw TermError.databaseError('약관 삭제', error);
     }
   }
 
@@ -290,10 +289,10 @@ export class TermService {
         },
       });
     } catch (error) {
-      if (error instanceof BaseError) {
+      if (error instanceof TermError) {
         throw error;
       }
-      throw TermError.agreementFailed('약관 동의에 실패했습니다.');
+      throw TermError.databaseError('약관 동의', error);
     }
   }
 
@@ -311,10 +310,8 @@ export class TermService {
           agreed_at: 'desc',
         },
       });
-    } catch {
-      throw TermError.userAgreementsRetrievalFailed(
-        '사용자 약관 동의 목록 조회에 실패했습니다.'
-      );
+    } catch (error) {
+      throw TermError.databaseError('사용자 약관 동의 목록 조회', error);
     }
   }
 
@@ -333,8 +330,8 @@ export class TermService {
       });
 
       return !!agreement;
-    } catch {
-      throw TermError.agreementCheckFailed('약관 동의 확인에 실패했습니다.');
+    } catch (error) {
+      throw TermError.databaseError('약관 동의 확인', error);
     }
   }
 
@@ -361,10 +358,8 @@ export class TermService {
       });
 
       return userAgreements.length === requiredTerms.length;
-    } catch {
-      throw TermError.requiredAgreementCheckFailed(
-        '필수 약관 동의 확인에 실패했습니다.'
-      );
+    } catch (error) {
+      throw TermError.databaseError('필수 약관 동의 확인', error);
     }
   }
 }

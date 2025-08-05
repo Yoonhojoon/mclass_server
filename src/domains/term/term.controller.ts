@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { TermService } from './term.service';
+import { TermSuccessResponse } from '../../common/exception/term/TermSuccess';
 import { TermError } from '../../common/exception/term/TermError';
 import logger from '../../config/logger.config.js';
 
@@ -20,308 +21,184 @@ export class TermController {
    * 모든 약관 목록 조회
    */
   async getAllTerms(req: Request, res: Response): Promise<void> {
-    try {
-      const terms = await this.termService.getAllTerms();
-
-      res.status(200).json({
-        success: true,
-        data: terms,
-      });
-    } catch (error) {
-      logger.error('약관 목록 조회 실패:', error);
-
-      if (error instanceof TermError) {
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '서버 오류가 발생했습니다.',
-          },
-        });
-      }
-    }
+    const terms = await this.termService.getAllTerms();
+    const response = TermSuccessResponse.termsRetrieved(terms);
+    res.json(response);
   }
 
   /**
    * 특정 약관 조회
    */
   async getTermById(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const term = await this.termService.getTermById(id);
+    const { id } = req.params;
+    const term = await this.termService.getTermById(id);
+    const response = TermSuccessResponse.termRetrieved(term);
+    res.json(response);
+  }
 
-      if (!term) {
-        res.status(404).json({
-          success: false,
-          error: {
-            code: 'TERM_NOT_FOUND',
-            message: '약관을 찾을 수 없습니다.',
-          },
-        });
-        return;
-      }
+  /**
+   * 약관 유형별 조회
+   */
+  async getTermsByType(req: Request, res: Response): Promise<void> {
+    const { type } = req.params;
+    const terms = await this.termService.getTermsByType(type as any);
+    const response = TermSuccessResponse.termTypeRetrieved(terms);
+    res.json(response);
+  }
 
-      res.status(200).json({
-        success: true,
-        data: term,
-      });
-    } catch (error) {
-      logger.error('약관 조회 실패:', error);
+  /**
+   * 필수 약관 조회
+   */
+  async getRequiredTerms(req: Request, res: Response): Promise<void> {
+    const terms = await this.termService.getRequiredTerms();
+    const response = TermSuccessResponse.requiredTermsRetrieved(terms);
+    res.json(response);
+  }
 
-      if (error instanceof TermError) {
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '서버 오류가 발생했습니다.',
-          },
-        });
-      }
-    }
+  /**
+   * 최신 버전의 약관 조회
+   */
+  async getLatestTermsByType(req: Request, res: Response): Promise<void> {
+    const { type } = req.params;
+    const term = await this.termService.getLatestTermsByType(type as any);
+    const response = TermSuccessResponse.latestTermRetrieved(term);
+    res.json(response);
   }
 
   /**
    * 약관 생성 (관리자 전용)
    */
   async createTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      const { type, title, content, is_required, version } = req.body;
-      const adminId = req.user?.id;
+    const { type, title, content, is_required, version } = req.body;
+    const adminId = req.user?.id;
 
-      // 관리자 권한 확인
-      if (!req.user?.is_admin) {
-        res.status(403).json({
-          success: false,
-          error: {
-            code: 'FORBIDDEN',
-            message: '관리자 권한이 필요합니다.',
-          },
-        });
-        return;
-      }
-
-      const term = await this.termService.createTerm({
-        type,
-        title,
-        content,
-        is_required: is_required || false,
-        version,
+    // 관리자 권한 확인
+    if (!req.user?.is_admin) {
+      const error = TermError.insufficientPermissions('약관 생성');
+      res.status(error.statusCode).json({
+        success: false,
+        error: {
+          code: error.errorCode,
+          message: error.message,
+        },
       });
-
-      logger.info('약관이 생성되었습니다.', {
-        termId: term.id,
-        adminId,
-        termType: type,
-      });
-
-      res.status(201).json({
-        success: true,
-        data: term,
-      });
-    } catch (error) {
-      logger.error('약관 생성 실패:', error);
-
-      if (error instanceof TermError) {
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '서버 오류가 발생했습니다.',
-          },
-        });
-      }
+      return;
     }
+
+    const term = await this.termService.createTerm({
+      type,
+      title,
+      content,
+      is_required: is_required || false,
+      version,
+    });
+
+    logger.info('약관이 생성되었습니다.', {
+      termId: term.id,
+      adminId,
+      termType: type,
+    });
+
+    const response = TermSuccessResponse.termCreated(term);
+    res.status(201).json(response);
   }
 
   /**
    * 약관 수정 (관리자 전용)
    */
   async updateTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { title, content, is_required, version } = req.body;
-      const adminId = req.user?.id;
+    const { id } = req.params;
+    const { title, content, is_required, version } = req.body;
+    const adminId = req.user?.id;
 
-      // 관리자 권한 확인
-      if (!req.user?.is_admin) {
-        res.status(403).json({
-          success: false,
-          error: {
-            code: 'FORBIDDEN',
-            message: '관리자 권한이 필요합니다.',
-          },
-        });
-        return;
-      }
-
-      const term = await this.termService.updateTerm(id, {
-        title,
-        content,
-        is_required,
-        version,
+    // 관리자 권한 확인
+    if (!req.user?.is_admin) {
+      const error = TermError.insufficientPermissions('약관 수정');
+      res.status(error.statusCode).json({
+        success: false,
+        error: {
+          code: error.errorCode,
+          message: error.message,
+        },
       });
-
-      logger.info('약관이 수정되었습니다.', {
-        termId: id,
-        adminId,
-      });
-
-      res.status(200).json({
-        success: true,
-        data: term,
-      });
-    } catch (error) {
-      logger.error('약관 수정 실패:', error);
-
-      if (error instanceof TermError) {
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '서버 오류가 발생했습니다.',
-          },
-        });
-      }
+      return;
     }
+
+    const term = await this.termService.updateTerm(id, {
+      title,
+      content,
+      is_required,
+      version,
+    });
+
+    logger.info('약관이 수정되었습니다.', {
+      termId: id,
+      adminId,
+    });
+
+    const response = TermSuccessResponse.termUpdated(term);
+    res.json(response);
   }
 
   /**
    * 약관 삭제 (관리자 전용)
    */
   async deleteTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const adminId = req.user?.id;
+    const { id } = req.params;
+    const adminId = req.user?.id;
 
-      // 관리자 권한 확인
-      if (!req.user?.is_admin) {
-        res.status(403).json({
-          success: false,
-          error: {
-            code: 'FORBIDDEN',
-            message: '관리자 권한이 필요합니다.',
-          },
-        });
-        return;
-      }
-
-      await this.termService.deleteTerm(id);
-
-      logger.info('약관이 삭제되었습니다.', {
-        termId: id,
-        adminId,
+    // 관리자 권한 확인
+    if (!req.user?.is_admin) {
+      const error = TermError.insufficientPermissions('약관 삭제');
+      res.status(error.statusCode).json({
+        success: false,
+        error: {
+          code: error.errorCode,
+          message: error.message,
+        },
       });
-
-      res.status(200).json({
-        success: true,
-        message: '약관이 삭제되었습니다.',
-      });
-    } catch (error) {
-      logger.error('약관 삭제 실패:', error);
-
-      if (error instanceof TermError) {
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '서버 오류가 발생했습니다.',
-          },
-        });
-      }
+      return;
     }
+
+    await this.termService.deleteTerm(id);
+
+    logger.info('약관이 삭제되었습니다.', {
+      termId: id,
+      adminId,
+    });
+
+    const response = TermSuccessResponse.termDeleted();
+    res.json(response);
   }
 
   /**
    * 사용자 약관 동의
    */
   async agreeToTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
-    try {
-      const { termId } = req.body;
-      const userId = req.user?.id;
+    const { termId } = req.body;
+    const userId = req.user?.id;
 
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: '인증이 필요합니다.',
-          },
-        });
-        return;
-      }
-
-      const agreement = await this.termService.agreeToTerm(userId, termId);
-
-      logger.info('사용자가 약관에 동의했습니다.', {
-        userId,
-        termId,
+    if (!userId) {
+      const error = TermError.insufficientPermissions('약관 동의');
+      res.status(error.statusCode).json({
+        success: false,
+        error: {
+          code: error.errorCode,
+          message: error.message,
+        },
       });
-
-      res.status(201).json({
-        success: true,
-        data: agreement,
-      });
-    } catch (error) {
-      logger.error('약관 동의 실패:', error);
-
-      if (error instanceof TermError) {
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '서버 오류가 발생했습니다.',
-          },
-        });
-      }
+      return;
     }
+
+    const agreement = await this.termService.agreeToTerm(userId, termId);
+
+    logger.info('사용자가 약관에 동의했습니다.', {
+      userId,
+      termId,
+    });
+
+    const response = TermSuccessResponse.termAgreed(agreement);
+    res.status(201).json(response);
   }
 
   /**
@@ -331,46 +208,22 @@ export class TermController {
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
-    try {
-      const userId = req.user?.id;
+    const userId = req.user?.id;
 
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: '인증이 필요합니다.',
-          },
-        });
-        return;
-      }
-
-      const agreements = await this.termService.getUserAgreements(userId);
-
-      res.status(200).json({
-        success: true,
-        data: agreements,
+    if (!userId) {
+      const error = TermError.insufficientPermissions('사용자 약관 동의 조회');
+      res.status(error.statusCode).json({
+        success: false,
+        error: {
+          code: error.errorCode,
+          message: error.message,
+        },
       });
-    } catch (error) {
-      logger.error('사용자 약관 동의 목록 조회 실패:', error);
-
-      if (error instanceof TermError) {
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
-      } else {
-        res.status(500).json({
-          success: false,
-          error: {
-            code: 'INTERNAL_SERVER_ERROR',
-            message: '서버 오류가 발생했습니다.',
-          },
-        });
-      }
+      return;
     }
+
+    const agreements = await this.termService.getUserAgreements(userId);
+    const response = TermSuccessResponse.userAgreementsRetrieved(agreements);
+    res.json(response);
   }
 }
