@@ -12,7 +12,7 @@
     "dev:db:reset": "docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d",
     "studio": "npx prisma studio",
     "dev:full": "npm run dev:db && npm run dev",
-    "dev:all": "concurrently \"npm run dev\" \"npm run studio\"",
+    "dev:all": "concurrently \"npm run dev:full\" \"npm run studio\"",
     "dev:server": "npm run dev:db && nodemon",
     "dev:studio": "npm run dev:db && npx prisma studio",
     "test": "jest",

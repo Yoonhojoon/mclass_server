@@ -25,7 +25,7 @@ const userService = new UserService();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -63,7 +63,7 @@ router.get('/', async (req: Request, res: Response) => {
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -117,7 +117,7 @@ router.get('/:id', async (req: Request, res: Response) => {
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/', async (req: Request, res: Response) => {
   try {

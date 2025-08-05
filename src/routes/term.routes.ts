@@ -30,21 +30,13 @@ const termController = new TermController(termService);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Term'
+ *               $ref: '#/components/schemas/TermListResponse'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get('/terms', (req, res) => termController.getAllTerms(req, res));
 
@@ -69,31 +61,40 @@ router.get('/terms', (req, res) => termController.getAllTerms(req, res));
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Term'
+ *               $ref: '#/components/schemas/TermResponse'
  *       400:
  *         description: 잘못된 ID 형식
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'VALIDATION_ERROR'
+ *                 message: '잘못된 ID 형식입니다.'
  *       404:
- *         description: 약관을 찾을 수 없음
+ *         description: 약관을 찾을 수 없음 (TERM_NOT_FOUND)
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/TermError'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'TERM_NOT_FOUND'
+ *                 message: '약관을 찾을 수 없습니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.get('/terms/:id', validateId, (req, res) =>
   termController.getTermById(req, res)
@@ -134,13 +135,23 @@ router.get('/terms/:id', validateId, (req, res) =>
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/TermError'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'TERM_NOT_FOUND'
+ *                 message: '해당 유형의 약관을 찾을 수 없습니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.get('/terms/type/:type', (req, res) =>
   termController.getTermsByType(req, res)
@@ -173,13 +184,23 @@ router.get('/terms/type/:type', (req, res) =>
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/TermError'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'TERM_NOT_FOUND'
+ *                 message: '필수 약관을 찾을 수 없습니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.get('/terms/required', (req, res) =>
   termController.getRequiredTerms(req, res)
@@ -218,13 +239,23 @@ router.get('/terms/required', (req, res) =>
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/TermError'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'TERM_NOT_FOUND'
+ *                 message: '최신 버전 약관을 찾을 수 없습니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.get('/terms/latest/:type', (req, res) =>
   termController.getLatestTermsByType(req, res)
@@ -287,24 +318,44 @@ router.get('/terms/latest/:type', (req, res) =>
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'VALIDATION_ERROR'
+ *                 message: '필수 필드가 누락되었습니다.'
  *       401:
  *         description: 인증 실패
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'UNAUTHORIZED'
+ *                 message: '인증이 필요합니다.'
  *       403:
  *         description: 권한 부족
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'FORBIDDEN'
+ *                 message: '관리자 권한이 필요합니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.post('/terms', authenticateToken, requireAdmin, (req, res) =>
   termController.createTerm(req, res)
@@ -365,30 +416,55 @@ router.post('/terms', authenticateToken, requireAdmin, (req, res) =>
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'VALIDATION_ERROR'
+ *                 message: '수정할 데이터가 올바르지 않습니다.'
  *       401:
  *         description: 인증 실패
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'UNAUTHORIZED'
+ *                 message: '인증이 필요합니다.'
  *       403:
  *         description: 권한 부족
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'FORBIDDEN'
+ *                 message: '관리자 권한이 필요합니다.'
  *       404:
  *         description: 약관을 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'TERM_NOT_FOUND'
+ *                 message: '수정할 약관을 찾을 수 없습니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.put('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
   termController.updateTerm(req, res)
@@ -431,30 +507,55 @@ router.put('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'VALIDATION_ERROR'
+ *                 message: '잘못된 약관 ID 형식입니다.'
  *       401:
  *         description: 인증 실패
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'UNAUTHORIZED'
+ *                 message: '인증이 필요합니다.'
  *       403:
  *         description: 권한 부족
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'FORBIDDEN'
+ *                 message: '관리자 권한이 필요합니다.'
  *       404:
  *         description: 약관을 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'TERM_NOT_FOUND'
+ *                 message: '삭제할 약관을 찾을 수 없습니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.delete('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
   termController.deleteTerm(req, res)
@@ -501,30 +602,55 @@ router.delete('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'VALIDATION_ERROR'
+ *                 message: '약관 ID가 올바르지 않습니다.'
  *       401:
  *         description: 인증 실패
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'UNAUTHORIZED'
+ *                 message: '인증이 필요합니다.'
  *       404:
  *         description: 약관을 찾을 수 없음
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'TERM_NOT_FOUND'
+ *                 message: '동의할 약관을 찾을 수 없습니다.'
  *       409:
  *         description: 이미 동의한 약관
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'ALREADY_AGREED'
+ *                 message: '이미 동의한 약관입니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.post('/users/agreements', authenticateToken, (req, res) =>
   termController.agreeToTerm(req, res)
@@ -560,12 +686,22 @@ router.post('/users/agreements', authenticateToken, (req, res) =>
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'UNAUTHORIZED'
+ *                 message: '인증이 필요합니다.'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
+ *             example:
+ *               success: false
+ *               error:
+ *                 code: 'INTERNAL_SERVER_ERROR'
+ *                 message: '서버 내부 오류가 발생했습니다.'
  */
 router.get('/users/agreements', authenticateToken, (req, res) =>
   termController.getUserAgreements(req, res)

@@ -81,22 +81,11 @@ const authController = new AuthController();
  *             format: uuid
  *           description: 동의할 약관 ID 목록
  *     AuthResponse:
- *       type: object
- *       properties:
- *         success:
- *           type: boolean
- *           description: 성공 여부
- *         data:
- *           type: object
- *           properties:
- *             user:
- *               $ref: '#/components/schemas/User'
- *             accessToken:
- *               type: string
- *               description: JWT Access Token
- *             refreshToken:
- *               type: string
- *               description: JWT Refresh Token
+ *       $ref: '#/components/schemas/AuthLoginResponse'
+ *     AuthLogoutResponse:
+ *       $ref: '#/components/schemas/AuthLogoutResponse'
+ *     AuthErrorResponse:
+ *       $ref: '#/components/schemas/AuthError'
  */
 
 /**
@@ -131,13 +120,19 @@ const authController = new AuthController();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
+ *       401:
+ *         description: 인증 실패
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthError'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/login', (req, res) => authController.login(req, res));
 
@@ -166,13 +161,19 @@ router.post('/login', (req, res) => authController.login(req, res));
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
+ *       409:
+ *         description: 이미 존재하는 사용자
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthError'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/register', (req, res) => authController.register(req, res));
 
@@ -201,13 +202,19 @@ router.post('/register', (req, res) => authController.register(req, res));
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
+ *       401:
+ *         description: 소셜 로그인 실패
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthError'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/social', (req, res) => authController.socialLogin(req, res));
 
@@ -238,19 +245,19 @@ router.post('/social', (req, res) => authController.socialLogin(req, res));
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
  *       401:
  *         description: 인증 실패
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/complete-signup', authenticateToken, (req, res) =>
   authController.completeSignUp(req as AuthenticatedRequest, res)
@@ -271,18 +278,13 @@ router.post('/complete-signup', authenticateToken, (req, res) =>
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/AuthLogoutResponse'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/logout', authenticateToken, (req, res) =>
   authController.logout(req, res)
@@ -331,13 +333,19 @@ router.post('/logout', authenticateToken, (req, res) =>
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
+ *       401:
+ *         description: 토큰 만료 또는 유효하지 않음
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthError'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/refresh', (req, res) => authController.refreshToken(req, res));
 
@@ -383,19 +391,19 @@ router.post('/refresh', (req, res) => authController.refreshToken(req, res));
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
  *       401:
  *         description: 인증 실패
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/AuthError'
  *       500:
  *         description: 서버 오류
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.put(
   '/change-password',
