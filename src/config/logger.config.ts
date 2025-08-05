@@ -83,7 +83,4 @@ const logger = winston.createLogger({
   transports,
 });
 
-// 테스트 로그 (서버 시작 시 한 번만 출력)
-logger.info('🚀 Winston 로거 초기화 완료');
-
 export default logger;

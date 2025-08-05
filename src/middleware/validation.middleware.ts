@@ -21,13 +21,7 @@ export const validateId = (
     });
 
     const termError = TermError.validationError('ID가 유효하지 않습니다.');
-    res.status(termError.statusCode).json({
-      success: false,
-      error: {
-        code: termError.errorCode,
-        message: termError.message,
-      },
-    });
+    res.status(termError.statusCode).json(termError.toResponse());
     return;
   }
 
@@ -56,13 +50,7 @@ export const validateUuid = (
     });
 
     const termError = TermError.validationError('올바르지 않은 ID 형식입니다.');
-    res.status(termError.statusCode).json({
-      success: false,
-      error: {
-        code: termError.errorCode,
-        message: termError.message,
-      },
-    });
+    res.status(termError.statusCode).json(termError.toResponse());
     return;
   }
 

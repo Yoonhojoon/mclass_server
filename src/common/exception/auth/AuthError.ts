@@ -1,5 +1,6 @@
 import { BaseError } from '../BaseError.js';
 import { TokenError } from '../token/TokenError.js';
+import { ErrorResponse } from '../../types/api.js';
 
 // TokenError를 재export하여 AuthError에서도 사용할 수 있도록 함
 export { TokenError };
@@ -18,6 +19,25 @@ export class AuthError extends BaseError {
     this.errorCode = errorCode;
     this.details = details;
     this.name = 'AuthError';
+  }
+
+  /**
+   * 표준 응답 형식으로 변환
+   */
+  toResponse(): ErrorResponse {
+    const response: ErrorResponse = {
+      success: false,
+      error: {
+        code: this.errorCode,
+        message: this.message,
+      },
+    };
+
+    if (this.details !== undefined) {
+      response.error.details = this.details;
+    }
+
+    return response;
   }
 
   static invalidCredentials(): AuthError {

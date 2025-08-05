@@ -1,4 +1,5 @@
 import { BaseError } from '../BaseError';
+import { ErrorResponse } from '../../types/api.js';
 
 export class TermError extends BaseError {
   public readonly errorCode: string;
@@ -14,6 +15,25 @@ export class TermError extends BaseError {
     this.errorCode = errorCode;
     this.details = details;
     this.name = 'TermError';
+  }
+
+  /**
+   * 표준 응답 형식으로 변환
+   */
+  toResponse(): ErrorResponse {
+    const response: ErrorResponse = {
+      success: false,
+      error: {
+        code: this.errorCode,
+        message: this.message,
+      },
+    };
+
+    if (this.details !== undefined) {
+      response.error.details = this.details;
+    }
+
+    return response;
   }
 
   // 약관 조회 관련 에러

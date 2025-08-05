@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { TermService } from './term.service';
-import { TermSuccessResponse } from '../../common/exception/term/TermSuccess';
 import { TermError } from '../../common/exception/term/TermError';
+import { createSuccessResponse } from '../../common/utils/responseUtils.js';
 import logger from '../../config/logger.config.js';
 
 // 사용자 타입 정의
@@ -23,18 +23,12 @@ export class TermController {
   async getAllTerms(req: Request, res: Response): Promise<void> {
     try {
       const terms = await this.termService.getAllTerms();
-      const response = TermSuccessResponse.termsRetrieved(terms);
-      res.json(response);
+      logger.info('✅ 모든 약관 목록 응답 성공', { count: terms.length });
+      res.json(createSuccessResponse(terms));
     } catch (error) {
       logger.error('약관 목록 조회 중 오류 발생:', error);
       const termError = TermError.listRetrievalFailed('약관 목록 조회 실패');
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -45,18 +39,16 @@ export class TermController {
     try {
       const { id } = req.params;
       const term = await this.termService.getTermById(id);
-      const response = TermSuccessResponse.termRetrieved(term);
-      res.json(response);
+      logger.info('✅ 특정 약관 조회 성공', {
+        termId: id,
+        type: term.type,
+        version: term.version,
+      });
+      res.json(createSuccessResponse(term));
     } catch (error) {
       logger.error('약관 조회 중 오류 발생:', error);
       const termError = TermError.notFound(req.params.id);
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -67,18 +59,15 @@ export class TermController {
     try {
       const { type } = req.params;
       const terms = await this.termService.getTermsByType(type as any);
-      const response = TermSuccessResponse.termTypeRetrieved(terms);
-      res.json(response);
+      logger.info('✅ 약관 유형별 목록 응답 성공', {
+        type,
+        count: terms.length,
+      });
+      res.json(createSuccessResponse(terms));
     } catch (error) {
       logger.error('약관 유형별 조회 중 오류 발생:', error);
       const termError = TermError.typeNotFound(req.params.type);
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -88,18 +77,12 @@ export class TermController {
   async getRequiredTerms(req: Request, res: Response): Promise<void> {
     try {
       const terms = await this.termService.getRequiredTerms();
-      const response = TermSuccessResponse.requiredTermsRetrieved(terms);
-      res.json(response);
+      logger.info('✅ 필수 약관 목록 응답 성공', { count: terms.length });
+      res.json(createSuccessResponse(terms));
     } catch (error) {
       logger.error('필수 약관 조회 중 오류 발생:', error);
       const termError = TermError.requiredTermsNotFound();
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -110,18 +93,16 @@ export class TermController {
     try {
       const { type } = req.params;
       const term = await this.termService.getLatestTermsByType(type as any);
-      const response = TermSuccessResponse.latestTermRetrieved(term);
-      res.json(response);
+      logger.info('✅ 최신 약관 조회 성공', {
+        type,
+        termId: term.id,
+        version: term.version,
+      });
+      res.json(createSuccessResponse(term));
     } catch (error) {
       logger.error('최신 약관 조회 중 오류 발생:', error);
       const termError = TermError.latestVersionNotFound(req.params.type);
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -154,24 +135,17 @@ export class TermController {
         version,
       });
 
-      logger.info('약관이 생성되었습니다.', {
+      logger.info('✅ 약관 생성 성공', {
         termId: term.id,
         adminId,
-        termType: type,
+        type,
+        version,
       });
-
-      const response = TermSuccessResponse.termCreated(term);
-      res.status(201).json(response);
+      res.status(201).json(createSuccessResponse(term));
     } catch (error) {
       logger.error('약관 생성 중 오류 발생:', error);
       const termError = TermError.creationFailed('약관 생성에 실패했습니다.');
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -187,13 +161,7 @@ export class TermController {
       // 관리자 권한 확인
       if (!req.user?.is_admin) {
         const error = TermError.insufficientPermissions('약관 수정');
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
+        res.status(error.statusCode).json(error.toResponse());
         return;
       }
 
@@ -204,23 +172,16 @@ export class TermController {
         version,
       });
 
-      logger.info('약관이 수정되었습니다.', {
+      logger.info('✅ 약관 수정 성공', {
         termId: id,
         adminId,
+        version: term.version,
       });
-
-      const response = TermSuccessResponse.termUpdated(term);
-      res.json(response);
+      res.json(createSuccessResponse(term));
     } catch (error) {
       logger.error('약관 수정 중 오류 발생:', error);
       const termError = TermError.updateFailed('약관 수정에 실패했습니다.');
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -235,35 +196,17 @@ export class TermController {
       // 관리자 권한 확인
       if (!req.user?.is_admin) {
         const error = TermError.insufficientPermissions('약관 삭제');
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
+        res.status(error.statusCode).json(error.toResponse());
         return;
       }
 
       await this.termService.deleteTerm(id);
-
-      logger.info('약관이 삭제되었습니다.', {
-        termId: id,
-        adminId,
-      });
-
-      const response = TermSuccessResponse.termDeleted();
-      res.json(response);
+      logger.info('✅ 약관 삭제 성공', { termId: id, adminId });
+      res.json(createSuccessResponse(null, '약관이 삭제되었습니다.'));
     } catch (error) {
       logger.error('약관 삭제 중 오류 발생:', error);
       const termError = TermError.deletionFailed('약관 삭제에 실패했습니다.');
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -277,35 +220,21 @@ export class TermController {
 
       if (!userId) {
         const error = TermError.insufficientPermissions('약관 동의');
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
+        res.status(error.statusCode).json(error.toResponse());
         return;
       }
 
       const agreement = await this.termService.agreeToTerm(userId, termId);
-
-      logger.info('사용자가 약관에 동의했습니다.', {
+      logger.info('✅ 사용자 약관 동의 성공', {
         userId,
         termId,
+        agreedAt: agreement.agreed_at,
       });
-
-      const response = TermSuccessResponse.termAgreed(agreement);
-      res.status(201).json(response);
+      res.status(201).json(createSuccessResponse(agreement));
     } catch (error) {
       logger.error('약관 동의 중 오류 발생:', error);
       const termError = TermError.agreementFailed('약관 동의에 실패했습니다.');
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 
@@ -322,31 +251,22 @@ export class TermController {
       if (!userId) {
         const error =
           TermError.insufficientPermissions('사용자 약관 동의 조회');
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
+        res.status(error.statusCode).json(error.toResponse());
         return;
       }
 
       const agreements = await this.termService.getUserAgreements(userId);
-      const response = TermSuccessResponse.userAgreementsRetrieved(agreements);
-      res.json(response);
+      logger.info('✅ 사용자 약관 동의 목록 응답 성공', {
+        userId,
+        count: agreements.length,
+      });
+      res.json(createSuccessResponse(agreements));
     } catch (error) {
       logger.error('사용자 약관 동의 목록 조회 중 오류 발생:', error);
       const termError = TermError.userAgreementsRetrievalFailed(
         '사용자 약관 동의 목록 조회에 실패했습니다.'
       );
-      res.status(termError.statusCode).json({
-        success: false,
-        error: {
-          code: termError.errorCode,
-          message: termError.message,
-        },
-      });
+      res.status(termError.statusCode).json(termError.toResponse());
     }
   }
 }

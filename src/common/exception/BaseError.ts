@@ -1,3 +1,5 @@
+import { ErrorResponse } from '../types/api.js';
+
 export abstract class BaseError extends Error {
   public readonly statusCode: number;
   public readonly isOperational: boolean;
@@ -13,6 +15,19 @@ export abstract class BaseError extends Error {
       typeof isOperational === 'boolean' ? isOperational : true;
 
     Error.captureStackTrace(this, this.constructor);
+  }
+
+  /**
+   * 표준 응답 형식으로 변환
+   */
+  toResponse(): ErrorResponse {
+    return {
+      success: false,
+      error: {
+        code: this.constructor.name.toUpperCase(),
+        message: this.message,
+      },
+    };
   }
 }
 

@@ -1,4 +1,5 @@
 import { BaseError } from '../BaseError.js';
+import { ErrorResponse } from '../../types/api.js';
 
 export class UserError extends BaseError {
   public readonly errorCode: string;
@@ -14,6 +15,25 @@ export class UserError extends BaseError {
     this.errorCode = errorCode;
     this.details = details;
     this.name = 'UserError';
+  }
+
+  /**
+   * 표준 응답 형식으로 변환
+   */
+  toResponse(): ErrorResponse {
+    const response: ErrorResponse = {
+      success: false,
+      error: {
+        code: this.errorCode,
+        message: this.message,
+      },
+    };
+
+    if (this.details !== undefined) {
+      response.error.details = this.details;
+    }
+
+    return response;
   }
 
   static notFound(userId?: string): UserError {

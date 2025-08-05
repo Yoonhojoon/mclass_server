@@ -121,11 +121,6 @@ const startServer = async (): Promise<void> => {
 
     app.listen(PORT, () => {
       logger.info(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-      logger.info(`http://localhost:${PORT}`);
-      logger.info(`API 문서: http://localhost:${PORT}/api-docs`);
-      logger.info(`메트릭: http://localhost:${PORT}/metrics`);
-      logger.info(`헬스체크: http://localhost:${PORT}/health`);
-      logger.info(`DB 상태: http://localhost:${PORT}/db-status`);
     });
   } catch (error) {
     logger.error('서버 시작 실패:', error);
