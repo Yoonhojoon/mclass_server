@@ -1,23 +1,26 @@
-export interface ApiResponse<T = any> {
+// 기본 응답 타입 (공통 필드)
+export interface BaseResponse {
   success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
 }
 
-export interface SuccessResponse<T> extends ApiResponse<T> {
+// 성공 응답
+export interface SuccessResponse<T = any> extends BaseResponse {
   success: true;
   data: T;
+  message?: string;
 }
 
-export interface ErrorResponse extends ApiResponse {
+// 에러 응답
+export interface ErrorResponse<T = unknown> extends BaseResponse {
   success: false;
   error: {
     code: string;
     message: string;
-    details?: unknown;
+    details?: T;
   };
 }
+
+// 유니온 타입 (성공 또는 에러)
+export type ApiResponse<T = any, E = unknown> =
+  | SuccessResponse<T>
+  | ErrorResponse<E>;

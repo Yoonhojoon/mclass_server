@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { TermService } from './term.service';
 import { TermError } from '../../common/exception/term/TermError';
-import { createSuccessResponse } from '../../common/utils/responseUtils.js';
+import { ValidationError } from '../../common/exception/ValidationError.js';
+import { TermSuccess } from '../../common/exception/term/TermSuccess.js';
 import logger from '../../config/logger.config.js';
 
 // 사용자 타입 정의
@@ -24,7 +25,7 @@ export class TermController {
     try {
       const terms = await this.termService.getAllTerms();
       logger.info('✅ 모든 약관 목록 응답 성공', { count: terms.length });
-      res.json(createSuccessResponse(terms));
+      res.json(TermSuccess.termsRetrieved(terms).toResponse());
     } catch (error) {
       logger.error('약관 목록 조회 중 오류 발생:', error);
       const termError = TermError.listRetrievalFailed('약관 목록 조회 실패');
@@ -44,7 +45,7 @@ export class TermController {
         type: term.type,
         version: term.version,
       });
-      res.json(createSuccessResponse(term));
+      res.json(TermSuccess.termRetrieved(term).toResponse());
     } catch (error) {
       logger.error('약관 조회 중 오류 발생:', error);
       const termError = TermError.notFound(req.params.id);
@@ -63,7 +64,7 @@ export class TermController {
         type,
         count: terms.length,
       });
-      res.json(createSuccessResponse(terms));
+      res.json(TermSuccess.termTypeRetrieved(terms).toResponse());
     } catch (error) {
       logger.error('약관 유형별 조회 중 오류 발생:', error);
       const termError = TermError.typeNotFound(req.params.type);
@@ -78,7 +79,7 @@ export class TermController {
     try {
       const terms = await this.termService.getRequiredTerms();
       logger.info('✅ 필수 약관 목록 응답 성공', { count: terms.length });
-      res.json(createSuccessResponse(terms));
+      res.json(TermSuccess.requiredTermsRetrieved(terms).toResponse());
     } catch (error) {
       logger.error('필수 약관 조회 중 오류 발생:', error);
       const termError = TermError.requiredTermsNotFound();
@@ -98,7 +99,7 @@ export class TermController {
         termId: term.id,
         version: term.version,
       });
-      res.json(createSuccessResponse(term));
+      res.json(TermSuccess.latestTermRetrieved(term).toResponse());
     } catch (error) {
       logger.error('최신 약관 조회 중 오류 발생:', error);
       const termError = TermError.latestVersionNotFound(req.params.type);
@@ -116,14 +117,8 @@ export class TermController {
 
       // 관리자 권한 확인
       if (!req.user?.is_admin) {
-        const error = TermError.insufficientPermissions('약관 생성');
-        res.status(error.statusCode).json({
-          success: false,
-          error: {
-            code: error.errorCode,
-            message: error.message,
-          },
-        });
+        const error = ValidationError.forbidden('관리자 권한이 필요합니다.');
+        res.status(error.statusCode).json(error.toResponse());
         return;
       }
 
@@ -141,7 +136,7 @@ export class TermController {
         type,
         version,
       });
-      res.status(201).json(createSuccessResponse(term));
+      res.status(201).json(TermSuccess.termCreated(term).toResponse());
     } catch (error) {
       logger.error('약관 생성 중 오류 발생:', error);
       const termError = TermError.creationFailed('약관 생성에 실패했습니다.');
@@ -160,7 +155,7 @@ export class TermController {
 
       // 관리자 권한 확인
       if (!req.user?.is_admin) {
-        const error = TermError.insufficientPermissions('약관 수정');
+        const error = ValidationError.forbidden('관리자 권한이 필요합니다.');
         res.status(error.statusCode).json(error.toResponse());
         return;
       }
@@ -177,7 +172,7 @@ export class TermController {
         adminId,
         version: term.version,
       });
-      res.json(createSuccessResponse(term));
+      res.json(TermSuccess.termUpdated(term).toResponse());
     } catch (error) {
       logger.error('약관 수정 중 오류 발생:', error);
       const termError = TermError.updateFailed('약관 수정에 실패했습니다.');
@@ -195,14 +190,14 @@ export class TermController {
 
       // 관리자 권한 확인
       if (!req.user?.is_admin) {
-        const error = TermError.insufficientPermissions('약관 삭제');
+        const error = ValidationError.forbidden('관리자 권한이 필요합니다.');
         res.status(error.statusCode).json(error.toResponse());
         return;
       }
 
       await this.termService.deleteTerm(id);
       logger.info('✅ 약관 삭제 성공', { termId: id, adminId });
-      res.json(createSuccessResponse(null, '약관이 삭제되었습니다.'));
+      res.json(TermSuccess.termDeleted().toResponse());
     } catch (error) {
       logger.error('약관 삭제 중 오류 발생:', error);
       const termError = TermError.deletionFailed('약관 삭제에 실패했습니다.');
@@ -219,7 +214,7 @@ export class TermController {
       const userId = req.user?.id;
 
       if (!userId) {
-        const error = TermError.insufficientPermissions('약관 동의');
+        const error = ValidationError.unauthorized();
         res.status(error.statusCode).json(error.toResponse());
         return;
       }
@@ -230,7 +225,7 @@ export class TermController {
         termId,
         agreedAt: agreement.agreed_at,
       });
-      res.status(201).json(createSuccessResponse(agreement));
+      res.status(201).json(TermSuccess.termAgreed(agreement).toResponse());
     } catch (error) {
       logger.error('약관 동의 중 오류 발생:', error);
       const termError = TermError.agreementFailed('약관 동의에 실패했습니다.');
@@ -249,8 +244,7 @@ export class TermController {
       const userId = req.user?.id;
 
       if (!userId) {
-        const error =
-          TermError.insufficientPermissions('사용자 약관 동의 조회');
+        const error = ValidationError.unauthorized();
         res.status(error.statusCode).json(error.toResponse());
         return;
       }
@@ -260,7 +254,7 @@ export class TermController {
         userId,
         count: agreements.length,
       });
-      res.json(createSuccessResponse(agreements));
+      res.json(TermSuccess.userAgreementsRetrieved(agreements).toResponse());
     } catch (error) {
       logger.error('사용자 약관 동의 목록 조회 중 오류 발생:', error);
       const termError = TermError.userAgreementsRetrievalFailed(

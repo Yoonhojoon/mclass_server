@@ -1,29 +1,27 @@
-export abstract class BaseSuccess<T = unknown> {
-  public readonly message: string;
-  public readonly statusCode: number;
-  public readonly successCode: string;
-  public readonly data?: T;
+import { SuccessResponse } from '../types/api.js';
 
-  constructor(
-    message: string,
-    statusCode: number = 200,
-    successCode: string = 'SUCCESS',
-    data?: T
-  ) {
-    this.message = message;
-    this.statusCode = statusCode;
-    this.successCode = successCode;
+export class BaseSuccess<T = any> {
+  protected data: T;
+  protected message?: string;
+
+  constructor(data: T, message?: string) {
     this.data = data;
+    this.message = message;
   }
 
-  toJSON(): Record<string, unknown> {
-    return {
+  /**
+   * 표준 응답 형식으로 변환
+   */
+  toResponse(): SuccessResponse<T> {
+    const response: SuccessResponse<T> = {
       success: true,
-      message: this.message,
-      statusCode: this.statusCode,
-      successCode: this.successCode,
       data: this.data,
-      timestamp: new Date().toISOString(),
     };
+
+    if (this.message) {
+      (response as any).message = this.message;
+    }
+
+    return response;
   }
 }
