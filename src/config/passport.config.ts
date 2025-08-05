@@ -17,7 +17,7 @@ async function handleOAuthCallback(
     socialId: string;
   },
   provider: 'GOOGLE' | 'KAKAO' | 'NAVER',
-  done: any // Passport.js 타입 호환성을 위해 any 사용
+  done: (error: Error | null, user?: any) => void
 ): Promise<void> {
   try {
     logger.info(`🔐 ${provider} OAuth 인증 시작`);
@@ -42,10 +42,10 @@ async function handleOAuthCallback(
       logger.info('🆕 새 사용자 생성 중...');
       // 새 사용자 생성
       user = await userService.createSocialUser({
-        email,
-        name,
-        provider,
-        social_id: socialId,
+        email: email,
+        name: name,
+        provider: provider,
+        socialId: socialId,
       });
       logger.info('✅ 새 사용자 생성 완료:', user.id);
     } else if (user.provider === 'LOCAL') {
@@ -67,7 +67,7 @@ async function handleOAuthCallback(
     return done(null, user);
   } catch (error) {
     logger.error(`❌ ${provider} OAuth 처리 중 오류 발생:`, error);
-    return done(error);
+    return done(error as Error);
   }
 }
 
@@ -91,8 +91,12 @@ passport.use(
         process.env.GOOGLE_CALLBACK_URL ||
         'http://localhost:3000/auth/google/callback',
     },
-    // Passport.js 타입 호환성을 위해 any 사용
-    async (accessToken: any, refreshToken: any, profile: any, done: any) => {
+    async (
+      accessToken: string,
+      refreshToken: string,
+      profile: any,
+      done: (error: Error | null, user?: any) => void
+    ) => {
       // Google 프로필 파싱
       const parsedData = {
         email: profile.emails?.[0]?.value,
@@ -125,7 +129,12 @@ passport.use(
         process.env.KAKAO_CALLBACK_URL ||
         'http://localhost:3000/auth/kakao/callback',
     },
-    async (accessToken: any, refreshToken: any, profile: any, done: any) => {
+    async (
+      accessToken: string,
+      refreshToken: string,
+      profile: any,
+      done: (error: Error | null, user?: any) => void
+    ) => {
       // Kakao 프로필 파싱
       const parsedData = {
         email: profile._json?.kakao_account?.email,
@@ -158,7 +167,12 @@ passport.use(
         process.env.NAVER_CALLBACK_URL ||
         'http://localhost:3000/auth/naver/callback',
     },
-    async (accessToken: any, refreshToken: any, profile: any, done: any) => {
+    async (
+      accessToken: string,
+      refreshToken: string,
+      profile: any,
+      done: (error: Error | null, user?: any) => void
+    ) => {
       // Naver 프로필 파싱
       const parsedData = {
         email: profile._json?.email,
@@ -172,17 +186,17 @@ passport.use(
 );
 
 // 사용자 직렬화
-passport.serializeUser((user: any, done) => {
+passport.serializeUser((user: any, done): void => {
   done(null, user.id);
 });
 
 // 사용자 역직렬화
-passport.deserializeUser(async (id: string, done) => {
+passport.deserializeUser(async (id: string, done): Promise<void> => {
   try {
     const user = await userService.findById(id);
     done(null, user);
   } catch (error) {
-    done(error);
+    done(error as Error);
   }
 });
 

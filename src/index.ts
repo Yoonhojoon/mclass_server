@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import session from 'express-session';
 import swaggerUi from 'swagger-ui-express';
+import cors from 'cors';
 import { specs } from './config/swagger';
 import usersRouter from './routes/users';
 import authRouter from './routes/auth.routes';
@@ -20,6 +21,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 미들웨어 설정
+app.use(
+  cors({
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -92,7 +101,7 @@ app.get(
       res.json({
         status: 'connected',
         database: process.env.DATABASE_NAME || 'mclass_db',
-        tableCount: (tableCount as any)[0].count,
+        tableCount: (tableCount as Array<{ count: string }>)[0].count,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

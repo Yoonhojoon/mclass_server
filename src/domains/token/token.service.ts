@@ -30,8 +30,7 @@ export class TokenService {
    * 액세스 토큰 생성
    */
   static generateAccessToken(payload: TokenPayload): string {
-    // JWT 라이브러리 타입 호환성을 위해 any 사용
-    return (jwt.sign as any)(payload, jwtConfig.secret, {
+    return jwt.sign(payload, jwtConfig.secret, {
       expiresIn: jwtConfig.expiresIn,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
@@ -42,8 +41,7 @@ export class TokenService {
    * 리프레시 토큰 생성
    */
   static generateRefreshToken(payload: TokenPayload): string {
-    // JWT 라이브러리 타입 호환성을 위해 any 사용
-    return (jwt.sign as any)(payload, jwtConfig.secret, {
+    return jwt.sign(payload, jwtConfig.secret, {
       expiresIn: jwtConfig.refreshExpiresIn,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
@@ -55,8 +53,7 @@ export class TokenService {
    */
   static verifyAccessToken(token: string): TokenPayload {
     try {
-      // JWT 라이브러리 타입 호환성을 위해 any 사용
-      return (jwt.verify as any)(token, jwtConfig.secret, {
+      return jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       }) as TokenPayload;
@@ -76,8 +73,7 @@ export class TokenService {
    */
   static verifyRefreshToken(token: string): TokenPayload {
     try {
-      // JWT 라이브러리 타입 호환성을 위해 any 사용
-      return (jwt.verify as any)(token, jwtConfig.secret, {
+      return jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       }) as TokenPayload;
@@ -97,8 +93,7 @@ export class TokenService {
    */
   static isTokenValid(token: string): boolean {
     try {
-      // JWT 라이브러리 타입 호환성을 위해 any 사용
-      (jwt.verify as any)(token, jwtConfig.secret, {
+      jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       });

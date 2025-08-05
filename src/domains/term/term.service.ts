@@ -96,7 +96,7 @@ export class TermService {
   async getRequiredTerms(): Promise<Term[]> {
     try {
       const terms = await this.prisma.term.findMany({
-        where: { is_required: true },
+        where: { isRequired: true },
         orderBy: {
           created_at: 'desc',
         },
@@ -159,7 +159,7 @@ export class TermService {
     type: 'SERVICE' | 'PRIVACY' | 'ENROLLMENT';
     title: string;
     content: string;
-    is_required?: boolean;
+    isRequired?: boolean;
     version: string;
   }): Promise<Term> {
     try {
@@ -183,7 +183,7 @@ export class TermService {
         termId: term.id,
         type: term.type,
         version: term.version,
-        isRequired: term.is_required,
+        isRequired: term.isRequired,
       });
 
       return term;
@@ -203,7 +203,7 @@ export class TermService {
     updateData: {
       title?: string;
       content?: string;
-      is_required?: boolean;
+      isRequired?: boolean;
       version?: string;
     }
   ): Promise<Term> {
@@ -407,7 +407,7 @@ export class TermService {
   async hasUserAgreedToAllRequired(userId: string): Promise<boolean> {
     try {
       const requiredTerms = await this.prisma.term.findMany({
-        where: { is_required: true },
+        where: { isRequired: true },
       });
 
       if (requiredTerms.length === 0) {
@@ -418,7 +418,7 @@ export class TermService {
         where: {
           user_id: userId,
           term: {
-            is_required: true,
+            isRequired: true,
           },
         },
       });

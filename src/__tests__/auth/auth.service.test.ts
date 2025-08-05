@@ -74,16 +74,16 @@ describe('AuthService', () => {
     };
 
     const mockUser = {
-      id: 'user-123',
+      id: 'test-user-id',
       email: 'test@example.com',
       name: 'Test User',
-      password: 'hashedpassword',
+      password: 'hashedPassword',
       role: 'USER' as const,
-      is_admin: false,
+      isAdmin: false,
       provider: 'LOCAL' as const,
-      social_id: null,
-      isSignUpCompleted: true,
-      created_at: new Date(),
+      socialId: null,
+      isSignUpCompleted: false,
+      createdAt: new Date(),
     };
 
     const mockTokens = {
@@ -127,7 +127,7 @@ describe('AuthService', () => {
           email: mockUser.email,
           name: mockUser.name,
           role: mockUser.role,
-          is_admin: mockUser.is_admin,
+          isAdmin: mockUser.isAdmin,
           isSignUpCompleted: mockUser.isSignUpCompleted,
         },
         accessToken: mockTokens.accessToken,
@@ -166,16 +166,16 @@ describe('AuthService', () => {
     };
 
     const mockUser = {
-      id: 'user-456',
-      email: 'newuser@example.com',
-      name: 'New User',
-      password: 'hashedpassword',
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
+      password: 'hashedPassword',
       role: 'USER' as const,
-      is_admin: false,
+      isAdmin: false,
       provider: 'LOCAL' as const,
-      social_id: null,
-      isSignUpCompleted: true,
-      created_at: new Date(),
+      socialId: null,
+      isSignUpCompleted: false,
+      createdAt: new Date(),
     };
 
     const mockTokens = {
@@ -218,7 +218,7 @@ describe('AuthService', () => {
           email: mockUser.email,
           name: mockUser.name,
           role: mockUser.role,
-          is_admin: mockUser.is_admin,
+          isAdmin: mockUser.isAdmin,
           isSignUpCompleted: mockUser.isSignUpCompleted,
         },
         accessToken: mockTokens.accessToken,
@@ -273,16 +273,16 @@ describe('AuthService', () => {
     const newPassword = 'newpassword';
 
     const mockUser = {
-      id: userId,
+      id: 'test-user-id',
       email: 'test@example.com',
       name: 'Test User',
-      password: 'hashedpassword',
+      password: 'hashedPassword',
       role: 'USER' as const,
-      is_admin: false,
+      isAdmin: false,
       provider: 'LOCAL' as const,
-      social_id: null,
-      isSignUpCompleted: true,
-      created_at: new Date(),
+      socialId: null,
+      isSignUpCompleted: false,
+      createdAt: new Date(),
     };
 
     it('✅ 비밀번호 변경 성공 시 true를 반환해야 함', async () => {
@@ -343,16 +343,16 @@ describe('AuthService', () => {
     };
 
     const mockUser = {
-      id: 'user-123',
+      id: 'test-user-id',
       email: 'test@example.com',
       name: 'Test User',
-      password: 'hashedpassword',
+      password: 'hashedPassword',
       role: 'USER' as const,
-      is_admin: false,
+      isAdmin: false,
       provider: 'LOCAL' as const,
-      social_id: null,
-      isSignUpCompleted: true,
-      created_at: new Date(),
+      socialId: null,
+      isSignUpCompleted: false,
+      createdAt: new Date(),
     };
 
     const mockNewTokens = {
@@ -415,16 +415,16 @@ describe('AuthService', () => {
     };
 
     const mockUser = {
-      id: 'user-789',
-      email: 'social@example.com',
-      name: 'Social User',
+      id: 'test-user-id',
+      email: 'test@example.com',
+      name: 'Test User',
       password: null,
       role: 'USER' as const,
-      is_admin: false,
+      isAdmin: false,
       provider: 'GOOGLE' as const,
-      social_id: 'social-123',
-      isSignUpCompleted: true,
-      created_at: new Date(),
+      socialId: 'social-123',
+      isSignUpCompleted: false,
+      createdAt: new Date(),
     };
 
     const mockTokens = {
@@ -463,7 +463,7 @@ describe('AuthService', () => {
           email: mockUser.email,
           name: mockUser.name,
           role: mockUser.role,
-          is_admin: mockUser.is_admin,
+          isAdmin: mockUser.isAdmin,
           provider: mockUser.provider,
           isSignUpCompleted: mockUser.isSignUpCompleted,
         },
@@ -495,7 +495,7 @@ describe('AuthService', () => {
         email: mockProfile.email,
         name: mockProfile.name,
         provider: mockProfile.provider,
-        social_id: mockProfile.id,
+        socialId: mockProfile.id,
         isSignUpCompleted: false,
       });
       expect(result).toEqual({
@@ -504,7 +504,7 @@ describe('AuthService', () => {
           email: mockUser.email,
           name: mockUser.name,
           role: mockUser.role,
-          is_admin: mockUser.is_admin,
+          isAdmin: mockUser.isAdmin,
           provider: mockUser.provider,
           isSignUpCompleted: mockUser.isSignUpCompleted,
         },
@@ -519,16 +519,16 @@ describe('AuthService', () => {
     const termIds = ['term-1', 'term-2'];
 
     const mockUser = {
-      id: userId,
+      id: 'test-user-id',
       email: 'test@example.com',
       name: 'Test User',
       password: null,
       role: 'USER' as const,
-      is_admin: false,
+      isAdmin: false,
       provider: 'GOOGLE' as const,
-      social_id: 'social-123',
-      isSignUpCompleted: true,
-      created_at: new Date(),
+      socialId: 'social-123',
+      isSignUpCompleted: false,
+      createdAt: new Date(),
     };
 
     const mockTokens = {
@@ -578,7 +578,7 @@ describe('AuthService', () => {
           email: mockUser.email,
           name: mockUser.name,
           role: mockUser.role,
-          is_admin: mockUser.is_admin,
+          isAdmin: mockUser.isAdmin,
           provider: mockUser.provider,
           isSignUpCompleted: true,
         },

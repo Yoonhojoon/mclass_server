@@ -49,7 +49,7 @@ const options = {
               enum: ['USER', 'ADMIN'],
               description: '사용자 역할',
             },
-            is_admin: {
+            isAdmin: {
               type: 'boolean',
               description: '관리자 여부',
             },

@@ -8,7 +8,7 @@ import logger from '../../config/logger.config.js';
 // 사용자 타입 정의
 interface AuthenticatedUser {
   id: string;
-  is_admin?: boolean;
+  isAdmin?: boolean;
 }
 
 interface AuthenticatedRequest extends Request {
@@ -59,7 +59,9 @@ export class TermController {
   async getTermsByType(req: Request, res: Response): Promise<void> {
     try {
       const { type } = req.params;
-      const terms = await this.termService.getTermsByType(type as any);
+      const terms = await this.termService.getTermsByType(
+        type as 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
+      );
       logger.info('✅ 약관 유형별 목록 응답 성공', {
         type,
         count: terms.length,
@@ -93,7 +95,9 @@ export class TermController {
   async getLatestTermsByType(req: Request, res: Response): Promise<void> {
     try {
       const { type } = req.params;
-      const term = await this.termService.getLatestTermsByType(type as any);
+      const term = await this.termService.getLatestTermsByType(
+        type as 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
+      );
       logger.info('✅ 최신 약관 조회 성공', {
         type,
         termId: term.id,
@@ -112,11 +116,11 @@ export class TermController {
    */
   async createTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const { type, title, content, is_required, version } = req.body;
+      const { type, title, content, isRequired, version } = req.body;
       const adminId = req.user?.id;
 
       // 관리자 권한 확인
-      if (!req.user?.is_admin) {
+      if (!req.user?.isAdmin) {
         const error = ValidationError.forbidden('관리자 권한이 필요합니다.');
         res.status(error.statusCode).json(error.toResponse());
         return;
@@ -126,7 +130,7 @@ export class TermController {
         type,
         title,
         content,
-        is_required: is_required || false,
+        isRequired: isRequired || false,
         version,
       });
 
@@ -150,11 +154,11 @@ export class TermController {
   async updateTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { title, content, is_required, version } = req.body;
+      const { title, content, isRequired, version } = req.body;
       const adminId = req.user?.id;
 
       // 관리자 권한 확인
-      if (!req.user?.is_admin) {
+      if (!req.user?.isAdmin) {
         const error = ValidationError.forbidden('관리자 권한이 필요합니다.');
         res.status(error.statusCode).json(error.toResponse());
         return;
@@ -163,7 +167,7 @@ export class TermController {
       const term = await this.termService.updateTerm(id, {
         title,
         content,
-        is_required,
+        isRequired,
         version,
       });
 
@@ -189,7 +193,7 @@ export class TermController {
       const adminId = req.user?.id;
 
       // 관리자 권한 확인
-      if (!req.user?.is_admin) {
+      if (!req.user?.isAdmin) {
         const error = ValidationError.forbidden('관리자 권한이 필요합니다.');
         res.status(error.statusCode).json(error.toResponse());
         return;
