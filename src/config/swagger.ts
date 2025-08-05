@@ -111,6 +111,56 @@ const options = {
             },
           },
         },
+        UpdateRoleRequest: {
+          type: 'object',
+          properties: {
+            role: {
+              type: 'string',
+              enum: ['USER', 'ADMIN'],
+              description: '사용자 역할',
+            },
+            isAdmin: {
+              type: 'boolean',
+              description: '관리자 여부',
+            },
+            reason: {
+              type: 'string',
+              description: '권한 변경 사유 (선택사항)',
+            },
+          },
+          required: ['role', 'isAdmin'],
+        },
+        UserRole: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+              description: '사용자 ID',
+            },
+            email: {
+              type: 'string',
+              description: '사용자 이메일',
+            },
+            name: {
+              type: 'string',
+              description: '사용자 이름',
+            },
+            role: {
+              type: 'string',
+              enum: ['USER', 'ADMIN'],
+              description: '사용자 역할',
+            },
+            isAdmin: {
+              type: 'boolean',
+              description: '관리자 여부',
+            },
+            isSignUpCompleted: {
+              type: 'boolean',
+              description: '회원가입 완료 여부',
+            },
+          },
+        },
         Term: {
           type: 'object',
           properties: {

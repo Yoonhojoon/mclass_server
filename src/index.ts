@@ -7,6 +7,7 @@ import { specs } from './config/swagger';
 import usersRouter from './routes/users';
 import authRouter from './routes/auth.routes';
 import termRouter from './routes/term.routes';
+import adminRouter from './routes/admin.routes';
 import { prometheusMiddleware, metricsEndpoint } from './middleware/monitoring';
 import { ErrorHandler } from './common/exception/ErrorHandler';
 import { prisma } from './config/prisma.config';
@@ -16,6 +17,7 @@ import {
   authenticateToken as authenticate,
   requireAdmin as authorizeAdmin,
 } from './middleware/auth.middleware';
+import bcrypt from 'bcrypt';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,6 +61,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use('/api/users', usersRouter);
 app.use('/api/auth', authRouter);
 app.use('/api', termRouter);
+app.use('/api/admin', adminRouter);
 
 // Prometheus 메트릭 엔드포인트
 app.get('/metrics', metricsEndpoint);
@@ -122,14 +125,72 @@ app.use(ErrorHandler.notFound);
 app.use(ErrorHandler.handle);
 
 // 서버 시작
+/**
+ * 초기 관리자 계정 생성
+ */
+async function createInitialAdmin(): Promise<void> {
+  try {
+    // 관리자 계정 수 확인
+    const adminCount = await prisma.user.count({
+      where: { isAdmin: true },
+    });
+
+    // 관리자가 없으면 초기 관리자 생성
+    if (adminCount === 0) {
+      const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
+      const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+      const initialAdminName = process.env.INITIAL_ADMIN_NAME || '시스템관리자';
+
+      if (!initialAdminEmail || !initialAdminPassword) {
+        logger.warn('⚠️ 초기 관리자 환경변수가 설정되지 않았습니다.');
+        return;
+      }
+
+      // 비밀번호 해시화
+      const hashedPassword = await bcrypt.hash(initialAdminPassword, 10);
+
+      // 초기 관리자 생성
+      const admin = await prisma.user.create({
+        data: {
+          email: initialAdminEmail,
+          password: hashedPassword,
+          name: initialAdminName,
+          role: 'ADMIN',
+          is_admin: true,
+          isSignUpCompleted: true,
+          provider: 'LOCAL',
+        },
+      });
+
+      logger.info('✅ 초기 관리자 계정 생성 완료', {
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+      });
+    } else {
+      logger.info('ℹ️ 관리자 계정이 이미 존재합니다.');
+    }
+  } catch (error) {
+    logger.error('❌ 초기 관리자 생성 중 오류:', error);
+  }
+}
+
 const startServer = async (): Promise<void> => {
   try {
     // Prisma 클라이언트 연결 테스트
     await prisma.$connect();
     logger.info('✅ Database connected successfully');
 
+    // 초기 관리자 계정 생성
+    await createInitialAdmin();
+
     app.listen(PORT, () => {
       logger.info(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+      logger.info(`http://localhost:${PORT}`);
+      logger.info(`API 문서: http://localhost:${PORT}/api-docs`);
+      logger.info(`메트릭: http://localhost:${PORT}/metrics`);
+      logger.info(`헬스체크: http://localhost:${PORT}/health`);
+      logger.info(`DB 상태: http://localhost:${PORT}/db-status`);
     });
   } catch (error) {
     logger.error('서버 시작 실패:', error);

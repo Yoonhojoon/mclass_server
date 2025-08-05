@@ -1,5 +1,5 @@
 import { UserService } from '../user/user.service.js';
-import { TokenService } from '../token/token.service.js';
+import { TokenService, TokenPayload } from '../token/token.service.js';
 import { AuthError } from '../../common/exception/auth/AuthError.js';
 import logger from '../../config/logger.config.js';
 
@@ -12,15 +12,7 @@ export interface RegisterDto {
   email: string;
   password: string;
   name?: string;
-  role?: 'USER' | 'ADMIN';
-}
-
-export interface TokenPayload {
-  userId: string;
-  email: string;
-  role: string;
-  signUpCompleted: boolean; // 회원가입 완료 여부
-  provider?: string; // 소셜 로그인 제공자
+  role?: 'USER';
 }
 
 export interface UserResponse {
@@ -78,6 +70,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
@@ -88,6 +81,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       });
 
@@ -97,7 +91,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          isAdmin: user.is_admin,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
@@ -138,6 +132,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
@@ -157,7 +152,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          isAdmin: user.is_admin,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
@@ -265,6 +260,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
@@ -339,6 +335,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
         provider: user.provider,
       };
@@ -358,7 +355,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          isAdmin: user.is_admin,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
@@ -415,6 +412,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: true,
         provider: user.provider,
       };
@@ -434,7 +432,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          isAdmin: user.is_admin,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: true,
         },
         accessToken,

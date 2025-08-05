@@ -8,6 +8,7 @@ interface JWTDecodedPayload {
   userId: string;
   email: string;
   role: string;
+  isAdmin: boolean;
   signUpCompleted: boolean;
   provider?: string;
   exp?: number;
@@ -21,6 +22,7 @@ export interface TokenPayload {
   userId: string;
   email: string;
   role: string;
+  isAdmin: boolean;
   signUpCompleted: boolean;
   provider?: string;
 }

@@ -8,6 +8,7 @@ import logger from '../../config/logger.config.js';
 // 사용자 타입 정의
 interface AuthenticatedUser {
   id: string;
+  role?: string;
   isAdmin?: boolean;
 }
 
