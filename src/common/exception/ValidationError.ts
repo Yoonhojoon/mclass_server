@@ -1,4 +1,4 @@
-import { BaseError } from './BaseError';
+import { BaseError } from './BaseError.js';
 import { ErrorResponse } from '../types/api.js';
 
 export class ValidationError extends BaseError {

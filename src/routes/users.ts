@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { UserService } from '../domains/user/user.service';
+import { UserService } from '../domains/user/user.service.js';
 import { PrismaClient } from '@prisma/client';
 
 /**

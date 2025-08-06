@@ -1,5 +1,5 @@
 import { PrismaClient, Term, UserTermAgreement } from '@prisma/client';
-import { TermError } from '../../common/exception/term/TermError';
+import { TermError } from '../../common/exception/term/TermError.js';
 import logger from '../../config/logger.config.js';
 
 export class TermService {
