@@ -57,4 +57,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # 애플리케이션 시작 (ES 모듈)
-CMD ["npm", "run", "start"] 
+CMD ["node", "dist/index.js"] 
