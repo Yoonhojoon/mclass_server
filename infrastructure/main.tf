@@ -322,6 +322,40 @@ resource "aws_ecs_task_definition" "main" {
           value = "3000"
         }
       ]
+      secrets = [
+        {
+          name      = "DATABASE_URL"
+          valueFrom = aws_ssm_parameter.database_url.arn
+        },
+        {
+          name      = "JWT_SECRET"
+          valueFrom = aws_ssm_parameter.jwt_secret.arn
+        },
+        {
+          name      = "KAKAO_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.kakao_client_id.arn
+        },
+        {
+          name      = "KAKAO_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.kakao_client_secret.arn
+        },
+        {
+          name      = "GOOGLE_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.google_client_id.arn
+        },
+        {
+          name      = "GOOGLE_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.google_client_secret.arn
+        },
+        {
+          name      = "NAVER_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.naver_client_id.arn
+        },
+        {
+          name      = "NAVER_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.naver_client_secret.arn
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
