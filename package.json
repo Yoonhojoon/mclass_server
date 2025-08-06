@@ -43,6 +43,14 @@
       "prettier --write"
     ]
   },
+  "overrides": {
+    "passport-oauth2": {
+      "passport-kakao": "1.0.1"
+    }
+  },
+  "resolutions": {
+    "passport-oauth2": "1.6.1"
+  },
   "dependencies": {
     "@prisma/client": "^6.13.0",
     "@types/bcrypt": "^6.0.0",

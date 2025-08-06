@@ -83,3 +83,5 @@ dev-debug.log
 # tasks/ 
 
 .cursor/
+.env.prod
+.env.test
