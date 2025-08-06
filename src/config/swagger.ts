@@ -15,7 +15,11 @@ const options = {
     servers: [
       {
         url: 'http://localhost:3000',
-        description: '개발 서버',
+        description: '로컬 개발 서버',
+      },
+      {
+        url: 'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+        description: '프로덕션 서버',
       },
     ],
     components: {
