@@ -60,78 +60,129 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
     
+    - name: Debug ENV_PROD contents
+      run: |
+        echo "🔍 ENV_PROD 내용 디버깅 중..."
+        echo "ENV_PROD 길이: ${#ENV_PROD}"
+        echo "ENV_PROD 첫 50자: ${ENV_PROD:0:50}"
+        echo "ENV_PROD 마지막 50자: ${ENV_PROD: -50}"
+        
+        # .env.prod 파일 생성
+        echo "${{ secrets.ENV_PROD }}" > .env.prod
+        
+        echo "📄 .env.prod 파일 내용:"
+        cat .env.prod
+        
+        echo ""
+        echo "🔍 환경변수 추출 테스트:"
+        echo "DATABASE_URL: $(grep DATABASE_URL .env.prod | cut -d '=' -f2- | head -c 20)..."
+        echo "JWT_SECRET: $(grep JWT_SECRET .env.prod | cut -d '=' -f2- | head -c 10)..."
+        echo "GOOGLE_CLIENT_ID: $(grep GOOGLE_CLIENT_ID .env.prod | cut -d '=' -f2- | head -c 20)..."
+        echo "KAKAO_CLIENT_ID: $(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2- | head -c 20)..."
+        echo "NAVER_CLIENT_ID: $(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2- | head -c 20)..."
+        
+        echo ""
+        echo "📊 환경변수 개수 확인:"
+        grep -c "=" .env.prod || echo "환경변수 없음"
+        
+        echo ""
+        echo "✅ 디버깅 완료!"
+
     - name: Setup Parameter Store secrets
       run: |
         echo "🔐 Parameter Store에 환경변수 설정 중..."
+        echo "${{ secrets.ENV_PROD }}" > .env.prod
         
-        # 데이터베이스 URL
+        # 각 환경변수를 추출하여 Parameter Store에 저장
+        echo "📦 DATABASE_URL 설정 중..."
+        DATABASE_URL_VALUE=$(grep DATABASE_URL .env.prod | cut -d '=' -f2-)
+        echo "추출된 DATABASE_URL 길이: ${#DATABASE_URL_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/database_url" \
-          --value "${{ secrets.DATABASE_URL }}" \
+          --value "$DATABASE_URL_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "DATABASE_URL 설정 완료"
         
-        # JWT 시크릿
+        echo "🔑 JWT_SECRET 설정 중..."
+        JWT_SECRET_VALUE=$(grep JWT_SECRET .env.prod | cut -d '=' -f2-)
+        echo "추출된 JWT_SECRET 길이: ${#JWT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/jwt_secret" \
-          --value "${{ secrets.JWT_SECRET }}" \
+          --value "$JWT_SECRET_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "JWT_SECRET 설정 완료"
         
-        # Redis URL
-        aws ssm put-parameter \
-          --name "/mclass/redis_url" \
-          --value "${{ secrets.REDIS_URL }}" \
-          --type "SecureString" \
-          --region ${{ env.AWS_REGION }} \
-          --overwrite || echo "REDIS_URL 설정 완료"
-        
-        # 소셜 로그인 설정
+        echo "🍊 KAKAO_CLIENT_ID 설정 중..."
+        KAKAO_CLIENT_ID_VALUE=$(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2-)
+        echo "추출된 KAKAO_CLIENT_ID: $KAKAO_CLIENT_ID_VALUE"
         aws ssm put-parameter \
           --name "/mclass/kakao_client_id" \
-          --value "${{ secrets.KAKAO_CLIENT_ID }}" \
+          --value "$KAKAO_CLIENT_ID_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "KAKAO_CLIENT_ID 설정 완료"
         
+        echo "🍊 KAKAO_CLIENT_SECRET 설정 중..."
+        KAKAO_CLIENT_SECRET_VALUE=$(grep KAKAO_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+        echo "추출된 KAKAO_CLIENT_SECRET 길이: ${#KAKAO_CLIENT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/kakao_client_secret" \
-          --value "${{ secrets.KAKAO_CLIENT_SECRET }}" \
+          --value "$KAKAO_CLIENT_SECRET_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "KAKAO_CLIENT_SECRET 설정 완료"
         
+        echo "🔍 GOOGLE_CLIENT_ID 설정 중..."
+        GOOGLE_CLIENT_ID_VALUE=$(grep GOOGLE_CLIENT_ID .env.prod | cut -d '=' -f2-)
+        echo "추출된 GOOGLE_CLIENT_ID: $GOOGLE_CLIENT_ID_VALUE"
         aws ssm put-parameter \
           --name "/mclass/google_client_id" \
-          --value "${{ secrets.GOOGLE_CLIENT_ID }}" \
+          --value "$GOOGLE_CLIENT_ID_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "GOOGLE_CLIENT_ID 설정 완료"
         
+        echo "🔍 GOOGLE_CLIENT_SECRET 설정 중..."
+        GOOGLE_CLIENT_SECRET_VALUE=$(grep GOOGLE_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+        echo "추출된 GOOGLE_CLIENT_SECRET 길이: ${#GOOGLE_CLIENT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/google_client_secret" \
-          --value "${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+          --value "$GOOGLE_CLIENT_SECRET_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "GOOGLE_CLIENT_SECRET 설정 완료"
         
+        echo "🟢 NAVER_CLIENT_ID 설정 중..."
+        NAVER_CLIENT_ID_VALUE=$(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2-)
+        echo "추출된 NAVER_CLIENT_ID: $NAVER_CLIENT_ID_VALUE"
         aws ssm put-parameter \
           --name "/mclass/naver_client_id" \
-          --value "${{ secrets.NAVER_CLIENT_ID }}" \
+          --value "$NAVER_CLIENT_ID_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "NAVER_CLIENT_ID 설정 완료"
         
+        echo "🟢 NAVER_CLIENT_SECRET 설정 중..."
+        NAVER_CLIENT_SECRET_VALUE=$(grep NAVER_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+        echo "추출된 NAVER_CLIENT_SECRET 길이: ${#NAVER_CLIENT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/naver_client_secret" \
-          --value "${{ secrets.NAVER_CLIENT_SECRET }}" \
+          --value "$NAVER_CLIENT_SECRET_VALUE" \
           --type "SecureString" \
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "NAVER_CLIENT_SECRET 설정 완료"
         
         echo "✅ 모든 환경변수가 Parameter Store에 설정되었습니다!"
+        
+        echo ""
+        echo "🔍 Parameter Store 확인:"
+        aws ssm get-parameters \
+          --names "/mclass/database_url" "/mclass/jwt_secret" "/mclass/kakao_client_id" "/mclass/google_client_id" "/mclass/naver_client_id" \
+          --region ${{ env.AWS_REGION }} \
+          --query 'Parameters[*].{Name:Name,Type:Type,Version:Version}' \
+          --output table
     
     - name: Verify existing infrastructure
       run: |
