@@ -1,5 +1,4 @@
-import { User } from '@prisma/client';
-import { prisma } from '../../config/prisma.config.js';
+import { User, PrismaClient } from '@prisma/client';
 import { UserError } from '../../common/exception/user/UserError.js';
 import bcrypt from 'bcrypt';
 
@@ -9,20 +8,20 @@ export interface CreateUserDto {
   name?: string;
   role?: 'USER' | 'ADMIN';
   provider?: 'LOCAL' | 'KAKAO' | 'GOOGLE' | 'NAVER';
-  social_id?: string;
+  socialId?: string;
   isSignUpCompleted?: boolean;
 }
 
 export interface UpdateUserDto {
   name?: string;
   role?: 'USER' | 'ADMIN';
-  is_admin?: boolean;
+  isAdmin?: boolean;
 }
 
 export class UserService {
-  private prisma: typeof prisma;
+  private prisma: PrismaClient;
 
-  constructor() {
+  constructor(prisma: PrismaClient) {
     this.prisma = prisma;
   }
 
@@ -55,7 +54,7 @@ export class UserService {
         name: userData.name,
         role: userData.role || 'USER',
         provider: userData.provider || 'LOCAL',
-        social_id: userData.social_id,
+        socialId: userData.socialId,
         isSignUpCompleted: userData.isSignUpCompleted || false,
       },
     });
@@ -158,7 +157,7 @@ export class UserService {
    */
   async findAllUsers(): Promise<User[]> {
     return await this.prisma.user.findMany({
-      orderBy: { created_at: 'desc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -176,7 +175,7 @@ export class UserService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { is_admin: false },
+      data: { isAdmin: false },
     });
 
     return true;
@@ -196,7 +195,7 @@ export class UserService {
 
     await this.prisma.user.update({
       where: { id },
-      data: { is_admin: true },
+      data: { isAdmin: true },
     });
 
     return true;
@@ -282,7 +281,7 @@ export class UserService {
     email: string;
     name?: string;
     provider: 'KAKAO' | 'GOOGLE' | 'NAVER';
-    social_id: string;
+    socialId: string;
   }): Promise<User> {
     // 기존 사용자 확인
     let user = await this.findByEmail(socialData.email);
@@ -292,7 +291,7 @@ export class UserService {
       return await this.updateUserProvider(
         user.id,
         socialData.provider,
-        socialData.social_id
+        socialData.socialId
       );
     } else {
       // 새 사용자 생성
@@ -309,8 +308,8 @@ export class UserService {
   ): Promise<User | null> {
     return await this.prisma.user.findFirst({
       where: {
-        social_id: socialId,
-        provider: provider as 'LOCAL' | 'KAKAO' | 'GOOGLE' | 'NAVER',
+        socialId: socialId,
+        provider: provider as 'KAKAO' | 'GOOGLE' | 'NAVER',
       },
     });
   }
@@ -322,20 +321,22 @@ export class UserService {
     email: string;
     name?: string;
     provider: 'KAKAO' | 'GOOGLE' | 'NAVER';
-    social_id: string;
+    socialId: string;
     isSignUpCompleted?: boolean;
   }): Promise<User> {
-    return await this.createUser({
-      email: socialData.email,
-      name: socialData.name,
-      provider: socialData.provider,
-      social_id: socialData.social_id,
-      isSignUpCompleted: socialData.isSignUpCompleted || false,
+    return await this.prisma.user.create({
+      data: {
+        email: socialData.email,
+        name: socialData.name,
+        provider: socialData.provider,
+        socialId: socialData.socialId,
+        isSignUpCompleted: socialData.isSignUpCompleted || false,
+      },
     });
   }
 
   /**
-   * 사용자 소셜 로그인 정보 업데이트
+   * 사용자 소셜 정보 업데이트
    */
   async updateUserProvider(
     userId: string,
@@ -351,8 +352,8 @@ export class UserService {
     return await this.prisma.user.update({
       where: { id: userId },
       data: {
-        provider,
-        social_id: socialId,
+        provider: provider,
+        socialId: socialId,
       },
     });
   }
@@ -382,7 +383,7 @@ export class UserService {
   async agreeToTerm(userId: string, termId: string): Promise<void> {
     // 약관 동의는 TermService에서 처리하므로 여기서는 UserService와 연결
     const { TermService } = await import('../term/term.service.js');
-    const termService = new TermService(prisma);
+    const termService = new TermService(this.prisma);
     await termService.agreeToTerm(userId, termId);
   }
 

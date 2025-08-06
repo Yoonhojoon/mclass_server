@@ -34,14 +34,14 @@ export const authenticateToken = async (
     next();
   } catch (error) {
     if (error instanceof AuthError) {
-      return res.status(401).json({
-        error: error.name,
-        message: error.message,
-      });
+      return res.status(error.statusCode).json(error.toResponse());
     }
     return res.status(401).json({
-      error: 'AUTHENTICATION_FAILED',
-      message: '인증에 실패했습니다.',
+      success: false,
+      error: {
+        code: 'AUTHENTICATION_FAILED',
+        message: '인증에 실패했습니다.',
+      },
     });
   }
 };
@@ -61,23 +61,25 @@ export const requireSignUpCompleted = async (
 
     if (!(req as AuthenticatedRequest).user?.signUpCompleted) {
       return res.status(403).json({
-        error: 'SIGNUP_NOT_COMPLETED',
-        message: '약관 동의가 필요합니다.',
-        code: 'TERMS_REQUIRED',
+        success: false,
+        error: {
+          code: 'SIGNUP_NOT_COMPLETED',
+          message: '약관 동의가 필요합니다.',
+        },
       });
     }
 
     next();
   } catch (error) {
     if (error instanceof AuthError) {
-      return res.status(401).json({
-        error: error.name,
-        message: error.message,
-      });
+      return res.status(error.statusCode).json(error.toResponse());
     }
     return res.status(500).json({
-      error: 'INTERNAL_ERROR',
-      message: '서버 오류가 발생했습니다.',
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: '서버 오류가 발생했습니다.',
+      },
     });
   }
 };
@@ -97,22 +99,25 @@ export const requireAdmin = async (
 
     if ((req as AuthenticatedRequest).user?.role !== 'ADMIN') {
       return res.status(403).json({
-        error: 'INSUFFICIENT_PERMISSIONS',
-        message: '관리자 권한이 필요합니다.',
+        success: false,
+        error: {
+          code: 'INSUFFICIENT_PERMISSIONS',
+          message: '관리자 권한이 필요합니다.',
+        },
       });
     }
 
     next();
   } catch (error) {
     if (error instanceof AuthError) {
-      return res.status(401).json({
-        error: error.name,
-        message: error.message,
-      });
+      return res.status(error.statusCode).json(error.toResponse());
     }
     return res.status(500).json({
-      error: 'INTERNAL_ERROR',
-      message: '서버 오류가 발생했습니다.',
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: '서버 오류가 발생했습니다.',
+      },
     });
   }
 };

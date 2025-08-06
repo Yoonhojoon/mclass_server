@@ -8,6 +8,7 @@ interface JWTDecodedPayload {
   userId: string;
   email: string;
   role: string;
+  isAdmin: boolean;
   signUpCompleted: boolean;
   provider?: string;
   exp?: number;
@@ -21,6 +22,7 @@ export interface TokenPayload {
   userId: string;
   email: string;
   role: string;
+  isAdmin: boolean;
   signUpCompleted: boolean;
   provider?: string;
 }
@@ -30,9 +32,8 @@ export class TokenService {
    * 액세스 토큰 생성
    */
   static generateAccessToken(payload: TokenPayload): string {
-    // JWT 라이브러리 타입 호환성을 위해 any 사용
-    return (jwt.sign as any)(payload, jwtConfig.secret, {
-      expiresIn: jwtConfig.expiresIn,
+    return jwt.sign(payload, jwtConfig.secret, {
+      expiresIn: jwtConfig.expiresIn as any,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
     });
@@ -42,9 +43,8 @@ export class TokenService {
    * 리프레시 토큰 생성
    */
   static generateRefreshToken(payload: TokenPayload): string {
-    // JWT 라이브러리 타입 호환성을 위해 any 사용
-    return (jwt.sign as any)(payload, jwtConfig.secret, {
-      expiresIn: jwtConfig.refreshExpiresIn,
+    return jwt.sign(payload, jwtConfig.secret, {
+      expiresIn: jwtConfig.refreshExpiresIn as any,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
     });
@@ -55,8 +55,7 @@ export class TokenService {
    */
   static verifyAccessToken(token: string): TokenPayload {
     try {
-      // JWT 라이브러리 타입 호환성을 위해 any 사용
-      return (jwt.verify as any)(token, jwtConfig.secret, {
+      return jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       }) as TokenPayload;
@@ -76,8 +75,7 @@ export class TokenService {
    */
   static verifyRefreshToken(token: string): TokenPayload {
     try {
-      // JWT 라이브러리 타입 호환성을 위해 any 사용
-      return (jwt.verify as any)(token, jwtConfig.secret, {
+      return jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       }) as TokenPayload;
@@ -97,8 +95,7 @@ export class TokenService {
    */
   static isTokenValid(token: string): boolean {
     try {
-      // JWT 라이브러리 타입 호환성을 위해 any 사용
-      (jwt.verify as any)(token, jwtConfig.secret, {
+      jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       });
@@ -173,6 +170,7 @@ export class TokenService {
         userId: payload.userId,
         email: payload.email,
         role: payload.role,
+        isAdmin: payload.isAdmin,
         signUpCompleted: payload.signUpCompleted,
         provider: payload.provider,
       };

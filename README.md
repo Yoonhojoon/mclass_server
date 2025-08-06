@@ -99,6 +99,7 @@ FRONTEND_URL=http://localhost:3000
 ```
 src/
 ├── auth/               # 로그인, 회원가입 등 인증
+├── admin/              # 관리자 기능
 ├── class/              # M클래스 CRUD
 ├── user/               # 사용자 정보 관리
 ├── enrollment/         # 신청 관련 도메인 (신청 로직, 내 신청 목록)
@@ -149,6 +150,23 @@ src/
 - `POST /api/enrollments` - 클래스 신청
 - `PUT /api/enrollments/:id` - 신청 상태 변경
 - `DELETE /api/enrollments/:id` - 신청 취소
+
+### 관리자 (Admin)
+- `GET /api/admin/users` - 모든 사용자 관리
+- `GET /api/admin/users/:id` - 특정 사용자 상세 정보
+- `PUT /api/admin/users/:id` - 사용자 정보 수정
+- `DELETE /api/admin/users/:id` - 사용자 삭제
+- `GET /api/admin/classes` - 모든 클래스 관리
+- `GET /api/admin/classes/:id` - 특정 클래스 상세 정보
+- `POST /api/admin/classes` - 새 클래스 생성
+- `PUT /api/admin/classes/:id` - 클래스 정보 수정
+- `DELETE /api/admin/classes/:id` - 클래스 삭제
+- `GET /api/admin/enrollments` - 모든 신청 내역 관리
+- `GET /api/admin/enrollments/:id` - 특정 신청 상세 정보
+- `PUT /api/admin/enrollments/:id` - 신청 상태 관리
+- `DELETE /api/admin/enrollments/:id` - 신청 삭제
+- `GET /api/admin/dashboard` - 관리자 대시보드 통계
+- `GET /api/admin/logs` - 시스템 로그 조회
 
 ## 🐳 Docker 설정
 

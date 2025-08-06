@@ -23,9 +23,20 @@ describe('AuthController', () => {
   let mockResponse: Partial<Response>;
   let mockJson: jest.Mock;
   let mockStatus: jest.Mock;
+  let mockPrisma: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Mock Prisma
+    mockPrisma = {
+      user: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        findMany: jest.fn(),
+      },
+    };
 
     // Mock AuthService
     mockAuthService = {
@@ -60,7 +71,7 @@ describe('AuthController', () => {
       status: mockStatus,
     };
 
-    authController = new AuthController();
+    authController = new AuthController(mockPrisma);
   });
 
   describe('login', () => {
@@ -75,8 +86,8 @@ describe('AuthController', () => {
         email: 'test@example.com',
         name: 'Test User',
         role: 'USER',
-        is_admin: false,
-        isSignUpCompleted: true,
+        isAdmin: false,
+        isSignUpCompleted: false,
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -103,6 +114,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockLoginResult,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-123, 역할: USER)`,
       });
       expect(mockStatus).not.toHaveBeenCalled();
     });
@@ -127,8 +139,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: authError.name,
-        message: authError.message,
+        error: {
+          code: 'INVALID_CREDENTIALS',
+          message: '잘못된 인증 정보입니다.',
+        },
       });
     });
 
@@ -148,8 +162,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: 'INTERNAL_ERROR',
-        message: '로그인 처리 중 오류가 발생했습니다.',
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: '로그인 처리 중 오류가 발생했습니다.',
+        },
       });
     });
   });
@@ -168,8 +184,8 @@ describe('AuthController', () => {
         email: 'newuser@example.com',
         name: 'New User',
         role: 'USER',
-        is_admin: false,
-        isSignUpCompleted: true,
+        isAdmin: false,
+        isSignUpCompleted: false,
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -196,6 +212,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockRegisterResult,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-456, 역할: USER)`,
       });
       expect(mockStatus).not.toHaveBeenCalled();
     });
@@ -220,8 +237,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: authError.name,
-        message: authError.message,
+        error: {
+          code: 'EMAIL_EXISTS',
+          message: '이미 존재하는 이메일입니다.',
+        },
       });
     });
   });
@@ -242,9 +261,9 @@ describe('AuthController', () => {
         email: 'social@example.com',
         name: 'Social User',
         role: 'USER',
-        is_admin: false,
+        isAdmin: false,
         provider: 'GOOGLE',
-        isSignUpCompleted: true,
+        isSignUpCompleted: false,
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -273,6 +292,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockSocialResult,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-789, 역할: USER)`,
       });
       expect(mockStatus).not.toHaveBeenCalled();
     });
@@ -299,8 +319,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: authError.name,
-        message: authError.message,
+        error: {
+          code: 'SOCIAL_LOGIN_FAILED',
+          message: '소셜 로그인 처리 중 오류가 발생했습니다.',
+        },
       });
     });
   });
@@ -312,11 +334,11 @@ describe('AuthController', () => {
 
     const mockCompleteSignUpResult = {
       user: {
-        id: 'user-123',
-        email: 'test@example.com',
-        name: 'Test User',
+        id: 'user-789',
+        email: 'social@example.com',
+        name: 'Social User',
         role: 'USER',
-        is_admin: false,
+        isAdmin: false,
         provider: 'GOOGLE',
         isSignUpCompleted: true,
       },
@@ -356,6 +378,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockCompleteSignUpResult,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-789, 역할: USER)`,
       });
       expect(mockStatus).not.toHaveBeenCalled();
     });
@@ -375,8 +398,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(401);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: 'UNAUTHORIZED',
-        message: '인증이 필요합니다.',
+        error: {
+          code: 'UNAUTHORIZED',
+          message: '인증이 필요합니다.',
+        },
       });
     });
 
@@ -395,8 +420,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: 'INVALID_TERM_IDS',
-        message: '약관 ID 목록이 필요합니다.',
+        error: {
+          code: 'INVALID_TERM_IDS',
+          message: '약관 ID 목록이 필요합니다.',
+        },
       });
     });
 
@@ -423,8 +450,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: authError.name,
-        message: authError.message,
+        error: {
+          code: 'REGISTRATION_FAILED',
+          message: '회원가입 완료 처리 중 오류가 발생했습니다.',
+        },
       });
     });
   });
@@ -452,7 +481,8 @@ describe('AuthController', () => {
       expect(mockAuthService.logout).toHaveBeenCalledWith('mock-token');
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
-        message: '로그아웃되었습니다.',
+        data: null,
+        message: '로그아웃이 성공적으로 완료되었습니다.',
       });
       expect(mockStatus).not.toHaveBeenCalled();
     });
@@ -471,7 +501,8 @@ describe('AuthController', () => {
       expect(mockAuthService.logout).not.toHaveBeenCalled();
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
-        message: '로그아웃되었습니다.',
+        data: null,
+        message: '로그아웃이 성공적으로 완료되었습니다.',
       });
     });
 
@@ -491,8 +522,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: 'INTERNAL_ERROR',
-        message: '로그아웃 처리 중 오류가 발생했습니다.',
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: '로그아웃 처리 중 오류가 발생했습니다.',
+        },
       });
     });
   });
@@ -530,6 +563,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockRefreshResult,
+        message: `토큰이 성공적으로 갱신되었습니다. (만료 시간: 3600초)`,
       });
       expect(mockStatus).not.toHaveBeenCalled();
     });
@@ -556,8 +590,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: authError.name,
-        message: authError.message,
+        error: {
+          code: 'TOKEN_REFRESH_FAILED',
+          message: '토큰 갱신 중 오류가 발생했습니다.',
+        },
       });
     });
   });
@@ -598,7 +634,9 @@ describe('AuthController', () => {
       );
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
-        message: '비밀번호가 변경되었습니다.',
+        data: null,
+        message:
+          '비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해주세요.',
       });
       expect(mockStatus).not.toHaveBeenCalled();
     });
@@ -618,8 +656,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(401);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: 'UNAUTHORIZED',
-        message: '인증이 필요합니다.',
+        error: {
+          code: 'UNAUTHORIZED',
+          message: '인증이 필요합니다.',
+        },
       });
     });
 
@@ -647,8 +687,10 @@ describe('AuthController', () => {
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
-        error: authError.name,
-        message: authError.message,
+        error: {
+          code: 'INVALID_CREDENTIALS',
+          message: '현재 비밀번호가 일치하지 않습니다.',
+        },
       });
     });
   });

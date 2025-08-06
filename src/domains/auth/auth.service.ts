@@ -1,7 +1,8 @@
 import { UserService } from '../user/user.service.js';
-import { TokenService } from '../token/token.service.js';
+import { TokenService, TokenPayload } from '../token/token.service.js';
 import { AuthError } from '../../common/exception/auth/AuthError.js';
 import logger from '../../config/logger.config.js';
+import { PrismaClient } from '@prisma/client';
 
 export interface LoginDto {
   email: string;
@@ -12,15 +13,7 @@ export interface RegisterDto {
   email: string;
   password: string;
   name?: string;
-  role?: 'USER' | 'ADMIN';
-}
-
-export interface TokenPayload {
-  userId: string;
-  email: string;
-  role: string;
-  signUpCompleted: boolean; // 회원가입 완료 여부
-  provider?: string; // 소셜 로그인 제공자
+  role?: 'USER';
 }
 
 export interface UserResponse {
@@ -28,7 +21,7 @@ export interface UserResponse {
   email: string;
   name: string | null;
   role: string;
-  is_admin: boolean;
+  isAdmin: boolean;
   isSignUpCompleted: boolean;
   provider?: string;
 }
@@ -47,8 +40,8 @@ export interface OAuthProfile {
 export class AuthService {
   private userService: UserService;
 
-  constructor() {
-    this.userService = new UserService();
+  constructor(prisma: PrismaClient) {
+    this.userService = new UserService(prisma);
   }
 
   /**
@@ -78,6 +71,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
@@ -88,6 +82,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       });
 
@@ -97,7 +92,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          is_admin: user.is_admin,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
@@ -138,6 +133,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
@@ -157,7 +153,7 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          is_admin: user.is_admin,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
         },
         accessToken,
@@ -265,6 +261,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
@@ -290,9 +287,7 @@ export class AuthService {
   /**
    * 소셜 로그인 처리
    */
-  async handleSocialLogin(
-    profile: any // OAuth 프로필 타입이 복잡하여 any 사용
-  ): Promise<{
+  async handleSocialLogin(profile: OAuthProfile): Promise<{
     user: UserResponse;
     accessToken: string;
     refreshToken: string;
@@ -317,12 +312,19 @@ export class AuthService {
         });
 
         // 2. 새 사용자 생성 (준회원 상태)
+        const email =
+          profile.emails?.[0]?.value ||
+          String((profile as Record<string, unknown>).email || '');
+        const name =
+          profile.displayName ||
+          String((profile as Record<string, unknown>).name || '');
+
         user = await this.userService.createSocialUser({
-          email: profile.email,
-          name: profile.name,
-          provider: profile.provider,
-          social_id: profile.id,
-          isSignUpCompleted: false, // 준회원 상태로 생성
+          email,
+          name,
+          provider: 'GOOGLE',
+          socialId: profile.id,
+          isSignUpCompleted: false,
         });
       } else {
         logger.info('👤 기존 소셜 사용자 로그인', {
@@ -335,6 +337,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: user.isSignUpCompleted || false,
         provider: user.provider,
       };
@@ -354,9 +357,9 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          is_admin: user.is_admin,
-          provider: user.provider,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,
@@ -412,6 +415,7 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         role: user.role,
+        isAdmin: user.isAdmin,
         signUpCompleted: true,
         provider: user.provider,
       };
@@ -431,9 +435,9 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
-          is_admin: user.is_admin,
-          provider: user.provider,
+          isAdmin: user.isAdmin,
           isSignUpCompleted: true,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,
