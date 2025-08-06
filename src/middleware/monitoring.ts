@@ -34,7 +34,7 @@ export const prometheusMiddleware = (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): void => {
   const start = Date.now();
   const route = req.route?.path || req.path;
 
@@ -69,7 +69,10 @@ export const prometheusMiddleware = (
 };
 
 // 메트릭 엔드포인트
-export const metricsEndpoint = async (req: Request, res: Response) => {
+export const metricsEndpoint = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     res.set('Content-Type', promClient.register.contentType);
     res.end(await promClient.register.metrics());

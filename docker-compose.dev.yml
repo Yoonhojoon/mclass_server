@@ -1,44 +1,29 @@
 version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
+  postgres:
+    image: postgres:15
+    container_name: mclass_postgres_dev
     environment:
-      - NODE_ENV=development
-      - PORT=3000
-    volumes:
-      - .:/app
-      - /app/node_modules
-    depends_on:
-      - prometheus
-      - grafana
-
-  prometheus:
-    image: prom/prometheus:latest
+      POSTGRES_DB: mclass_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
-      - "9090:9090"
+      - "5432:5432"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
-  grafana:
-    image: grafana/grafana:latest
+  redis:
+    image: redis:7-alpine
+    container_name: mclass_redis_dev
     ports:
-      - "3001:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - "6379:6379"
     volumes:
-      - grafana-storage:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
 
 volumes:
-  grafana-storage: 
+  postgres_data:
+  redis_data: 

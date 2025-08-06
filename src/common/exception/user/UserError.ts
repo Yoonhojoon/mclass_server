@@ -1,0 +1,123 @@
+import { BaseError } from '../BaseError.js';
+import { ErrorResponse } from '../../types/api.js';
+
+export class UserError extends BaseError {
+  public readonly errorCode: string;
+  public readonly details?: unknown;
+
+  constructor(
+    message: string,
+    statusCode: number = 400,
+    errorCode: string = 'USER_ERROR',
+    details?: unknown
+  ) {
+    super(message, statusCode);
+    this.errorCode = errorCode;
+    this.details = details;
+    this.name = 'UserError';
+  }
+
+  /**
+   * 표준 응답 형식으로 변환
+   */
+  toResponse(): ErrorResponse {
+    const response: ErrorResponse = {
+      success: false,
+      error: {
+        code: this.errorCode,
+        message: this.message,
+      },
+    };
+
+    if (this.details !== undefined) {
+      response.error.details = this.details;
+    }
+
+    return response;
+  }
+
+  static notFound(userId?: string): UserError {
+    const message = userId
+      ? `사용자 ID ${userId}를 찾을 수 없습니다.`
+      : '사용자를 찾을 수 없습니다.';
+    return new UserError(message, 404, 'USER_NOT_FOUND');
+  }
+
+  static alreadyExists(email: string): UserError {
+    return new UserError(
+      `이미 등록된 이메일입니다: ${email}`,
+      409,
+      'USER_ALREADY_EXISTS'
+    );
+  }
+
+  static validationError(message: string): UserError {
+    return new UserError(
+      `사용자 데이터 검증 오류: ${message}`,
+      400,
+      'USER_VALIDATION_ERROR'
+    );
+  }
+
+  static passwordMismatch(): UserError {
+    return new UserError(
+      '비밀번호가 일치하지 않습니다.',
+      401,
+      'USER_PASSWORD_MISMATCH'
+    );
+  }
+
+  static invalidPassword(): UserError {
+    return new UserError(
+      '유효하지 않은 비밀번호입니다.',
+      400,
+      'USER_INVALID_PASSWORD'
+    );
+  }
+
+  static invalidEmail(): UserError {
+    return new UserError(
+      '유효하지 않은 이메일 형식입니다.',
+      400,
+      'USER_INVALID_EMAIL'
+    );
+  }
+
+  static invalidProvider(): UserError {
+    return new UserError(
+      '지원하지 않는 로그인 방식입니다.',
+      400,
+      'USER_INVALID_PROVIDER'
+    );
+  }
+
+  static inactive(): UserError {
+    return new UserError('비활성화된 사용자입니다.', 403, 'USER_INACTIVE');
+  }
+
+  static profileUpdateError(message: string): UserError {
+    return new UserError(
+      `프로필 업데이트 오류: ${message}`,
+      400,
+      'USER_PROFILE_UPDATE_ERROR'
+    );
+  }
+
+  static creationFailed(
+    message: string = '사용자 생성에 실패했습니다.'
+  ): UserError {
+    return new UserError(message, 500, 'USER_CREATION_FAILED');
+  }
+
+  static updateFailed(
+    message: string = '사용자 정보 업데이트에 실패했습니다.'
+  ): UserError {
+    return new UserError(message, 500, 'USER_UPDATE_FAILED');
+  }
+
+  static deletionFailed(
+    message: string = '사용자 삭제에 실패했습니다.'
+  ): UserError {
+    return new UserError(message, 500, 'USER_DELETION_FAILED');
+  }
+}

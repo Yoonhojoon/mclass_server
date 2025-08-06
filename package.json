@@ -7,6 +7,14 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "nodemon",
+    "dev:db": "docker-compose -f docker-compose.dev.yml up -d",
+    "dev:db:down": "docker-compose -f docker-compose.dev.yml down",
+    "dev:db:reset": "docker-compose -f docker-compose.dev.yml down -v && docker-compose -f docker-compose.dev.yml up -d",
+    "studio": "npx prisma studio",
+    "dev:full": "npm run dev:db && npm run dev",
+    "dev:all": "concurrently \"npm run dev:full\" \"npm run studio\"",
+    "dev:server": "npm run dev:db && nodemon",
+    "dev:studio": "npm run dev:db && npx prisma studio",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -35,23 +43,54 @@
       "prettier --write"
     ]
   },
+  "overrides": {
+    "passport-oauth2": {
+      "passport-kakao": "1.0.1"
+    }
+  },
+  "resolutions": {
+    "passport-oauth2": "1.6.1"
+  },
   "dependencies": {
+    "@prisma/client": "^6.13.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/pg": "^8.15.5",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "aws-sdk": "^2.1692.0",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "ioredis": "^5.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "passport-kakao": "^1.0.1",
+    "passport-naver": "^1.0.6",
+    "pg": "^8.16.3",
+    "prisma": "^6.13.0",
     "prom-client": "^15.1.3",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@types/express": "^5.0.3",
+    "@types/express-session": "^1.18.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
+    "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.16",
     "@types/supertest": "^6.0.3",
+    "@types/winston": "^2.4.4",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
+    "concurrently": "^9.2.0",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
@@ -63,6 +102,7 @@
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }
 }

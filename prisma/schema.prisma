@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String?
+  name       String?
+  role       UserRole @default(USER)
+  isAdmin    Boolean  @default(false)
+  provider   Provider @default(LOCAL)
+  socialId   String?
+  isSignUpCompleted Boolean @default(false) // 회원가입 완료 여부
+  createdAt  DateTime @default(now())
+
+  // Add compound unique constraint
+  @@unique([provider, socialId])
+
+  // Relations
+  mclasses              MClass[]
+  enrollments           Enrollment[]
+  userTermAgreements    UserTermAgreement[]
+
+  @@map("users")
+}
+
+model MClass {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  capacity    Int
+  startAt     DateTime
+  endAt       DateTime
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  creator     User         @relation(fields: [createdBy], references: [id])
+  enrollments Enrollment[]
+
+  @@map("mclasses")
+}
+
+model Term {
+  id          String   @id @default(uuid())
+  type        TermType
+  title       String
+  content     String
+  isRequired  Boolean  @default(false) @map("isRequired")
+  version     String
+  createdAt   DateTime @default(now()) @map("createdAt")
+
+  // Relations
+  userTermAgreements UserTermAgreement[]
+
+  @@map("terms")
+}
+
+model UserTermAgreement {
+  id         String   @id @default(uuid())
+  userId     String
+  termId     String
+  agreedAt   DateTime @default(now())
+
+  // Relations
+  user       User @relation(fields: [userId], references: [id])
+  term       Term @relation(fields: [termId], references: [id])
+
+  @@unique([userId, termId])
+  @@map("user_term_agreements")
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String
+  mclassId   String
+  appliedAt  DateTime @default(now())
+
+  // Relations
+  user       User         @relation(fields: [userId], references: [id])
+  mclass     MClass       @relation(fields: [mclassId], references: [id])
+  form       EnrollmentForm?
+
+  @@unique([userId, mclassId])
+  @@map("enrollments")
+}
+
+model EnrollmentForm {
+  id               String   @id @default(uuid())
+  phone            String?
+  birthDate        DateTime?
+  gender           Gender?
+  isStudent        Boolean  @default(false)
+  schoolName       String?
+  major            String?
+  address          String?
+  availableTime    String[] // Array of text
+  supportReason    String?
+  wantedActivity   String?
+  experience       String?
+  introduce        String?
+  agreeTerms       Boolean  @default(false)
+
+  // Relations
+  enrollment Enrollment @relation(fields: [id], references: [id])
+
+  @@map("enrollment_forms")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Provider {
+  LOCAL
+  KAKAO
+  GOOGLE
+  NAVER
+}
+
+enum TermType {
+  SERVICE
+  PRIVACY
+  ENROLLMENT
+}
+
+enum Gender {
+  M
+  F
+}
