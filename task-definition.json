@@ -39,10 +39,6 @@
           "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/jwt_secret"
         },
         {
-          "name": "REDIS_URL",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/redis_url"
-        },
-        {
           "name": "KAKAO_CLIENT_ID",
           "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/kakao_client_id"
         },
