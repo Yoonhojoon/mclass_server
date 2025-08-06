@@ -726,18 +726,9 @@ resource "aws_iam_role_policy" "ecs_task_parameter_store" {
         Effect = "Allow"
         Action = [
           "ssm:GetParameters",
-          "secretsmanager:GetSecretValue"
+          "ssm:GetParameter"
         ]
-        Resource = [
-          aws_ssm_parameter.database_url.arn,
-          aws_ssm_parameter.jwt_secret.arn,
-          aws_ssm_parameter.kakao_client_id.arn,
-          aws_ssm_parameter.kakao_client_secret.arn,
-          aws_ssm_parameter.google_client_id.arn,
-          aws_ssm_parameter.google_client_secret.arn,
-          aws_ssm_parameter.naver_client_id.arn,
-          aws_ssm_parameter.naver_client_secret.arn
-        ]
+        Resource = "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/*"
       }
     ]
   })
