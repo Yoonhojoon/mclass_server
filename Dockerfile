@@ -13,6 +13,9 @@ RUN npm ci
 # 소스 코드 복사
 COPY . .
 
+# Prisma 클라이언트 생성
+RUN npx prisma generate
+
 # TypeScript 빌드
 RUN npm run build
 
@@ -37,6 +40,9 @@ RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 
 # 빌드된 파일들을 복사
 COPY --from=builder /app/dist ./dist
+
+# Prisma 클라이언트 복사
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # 사용자 권한 변경
 RUN chown -R nodejs:nodejs /app
