@@ -61,6 +61,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "aws-sdk": "^2.1692.0",
     "bcrypt": "^6.0.0",
+    "connect-redis": "^9.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",

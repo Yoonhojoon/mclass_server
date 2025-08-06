@@ -174,6 +174,36 @@ jobs:
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "NAVER_CLIENT_SECRET 설정 완료"
         
+        echo "👑 INITIAL_ADMIN_EMAIL 설정 중..."
+        INITIAL_ADMIN_EMAIL_VALUE=$(grep INITIAL_ADMIN_EMAIL .env.prod | cut -d '=' -f2-)
+        echo "추출된 INITIAL_ADMIN_EMAIL: $INITIAL_ADMIN_EMAIL_VALUE"
+        aws ssm put-parameter \
+          --name "/mclass/initial_admin_email" \
+          --value "$INITIAL_ADMIN_EMAIL_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "INITIAL_ADMIN_EMAIL 설정 완료"
+        
+        echo "👑 INITIAL_ADMIN_PASSWORD 설정 중..."
+        INITIAL_ADMIN_PASSWORD_VALUE=$(grep INITIAL_ADMIN_PASSWORD .env.prod | cut -d '=' -f2-)
+        echo "추출된 INITIAL_ADMIN_PASSWORD 길이: ${#INITIAL_ADMIN_PASSWORD_VALUE}"
+        aws ssm put-parameter \
+          --name "/mclass/initial_admin_password" \
+          --value "$INITIAL_ADMIN_PASSWORD_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "INITIAL_ADMIN_PASSWORD 설정 완료"
+        
+        echo "👑 INITIAL_ADMIN_NAME 설정 중..."
+        INITIAL_ADMIN_NAME_VALUE=$(grep INITIAL_ADMIN_NAME .env.prod | cut -d '=' -f2-)
+        echo "추출된 INITIAL_ADMIN_NAME: $INITIAL_ADMIN_NAME_VALUE"
+        aws ssm put-parameter \
+          --name "/mclass/initial_admin_name" \
+          --value "$INITIAL_ADMIN_NAME_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "INITIAL_ADMIN_NAME 설정 완료"
+        
         echo "✅ 모든 환경변수가 Parameter Store에 설정되었습니다!"
         
         echo ""

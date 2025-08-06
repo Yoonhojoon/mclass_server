@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
-import session from 'express-session';
 import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
+import session from 'express-session';
+import { RedisStore } from 'connect-redis';
 import { specs } from './config/swagger';
 import { createUserRoutes } from './routes/users';
 import { createAuthRoutes } from './routes/auth.routes';
@@ -13,6 +14,7 @@ import { ErrorHandler } from './common/exception/ErrorHandler';
 import { prisma } from './config/prisma.config';
 import passport from './config/passport.config';
 import logger from './config/logger.config';
+import { redis } from './config/redis.config.js';
 import {
   authenticateToken as authenticate,
   requireAdmin as authorizeAdmin,
@@ -21,6 +23,12 @@ import bcrypt from 'bcrypt';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Redis 스토어 설정
+const redisStore = new RedisStore({
+  client: redis,
+  prefix: 'mclass:session:',
+});
 
 // 미들웨어 설정
 app.use(
@@ -34,14 +42,16 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 세션 설정
+// 세션 설정 (Redis 스토어 사용)
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    store: redisStore,
+    secret: process.env.JWT_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 24시간
     },
   })

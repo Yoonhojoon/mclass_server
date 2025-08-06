@@ -51,4 +51,23 @@ variable "naver_client_secret" {
   description = "Naver OAuth client secret"
   type        = string
   sensitive   = true
+}
+
+# 초기 관리자 관련 변수들 추가
+variable "initial_admin_email" {
+  description = "Initial admin email"
+  type        = string
+  sensitive   = true
+}
+
+variable "initial_admin_password" {
+  description = "Initial admin password"
+  type        = string
+  sensitive   = true
+}
+
+variable "initial_admin_name" {
+  description = "Initial admin name"
+  type        = string
+  sensitive   = true
 } 
