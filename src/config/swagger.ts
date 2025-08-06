@@ -297,17 +297,17 @@ const options = {
               format: 'uuid',
               description: '동의 기록 ID',
             },
-            user_id: {
+            userId: {
               type: 'string',
               format: 'uuid',
               description: '사용자 ID',
             },
-            term_id: {
+            termId: {
               type: 'string',
               format: 'uuid',
               description: '약관 ID',
             },
-            agreed_at: {
+            agreedAt: {
               type: 'string',
               format: 'date-time',
               description: '동의일시',

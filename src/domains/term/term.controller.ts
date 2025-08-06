@@ -55,64 +55,6 @@ export class TermController {
   }
 
   /**
-   * 약관 유형별 조회
-   */
-  async getTermsByType(req: Request, res: Response): Promise<void> {
-    try {
-      const { type } = req.params;
-      const terms = await this.termService.getTermsByType(
-        type as 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
-      );
-      logger.info('✅ 약관 유형별 목록 응답 성공', {
-        type,
-        count: terms.length,
-      });
-      res.json(TermSuccess.termTypeRetrieved(terms).toResponse());
-    } catch (error) {
-      logger.error('약관 유형별 조회 중 오류 발생:', error);
-      const termError = TermError.typeNotFound(req.params.type);
-      res.status(termError.statusCode).json(termError.toResponse());
-    }
-  }
-
-  /**
-   * 필수 약관 조회
-   */
-  async getRequiredTerms(req: Request, res: Response): Promise<void> {
-    try {
-      const terms = await this.termService.getRequiredTerms();
-      logger.info('✅ 필수 약관 목록 응답 성공', { count: terms.length });
-      res.json(TermSuccess.requiredTermsRetrieved(terms).toResponse());
-    } catch (error) {
-      logger.error('필수 약관 조회 중 오류 발생:', error);
-      const termError = TermError.requiredTermsNotFound();
-      res.status(termError.statusCode).json(termError.toResponse());
-    }
-  }
-
-  /**
-   * 최신 버전의 약관 조회
-   */
-  async getLatestTermsByType(req: Request, res: Response): Promise<void> {
-    try {
-      const { type } = req.params;
-      const term = await this.termService.getLatestTermsByType(
-        type as 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
-      );
-      logger.info('✅ 최신 약관 조회 성공', {
-        type,
-        termId: term.id,
-        version: term.version,
-      });
-      res.json(TermSuccess.latestTermRetrieved(term).toResponse());
-    } catch (error) {
-      logger.error('최신 약관 조회 중 오류 발생:', error);
-      const termError = TermError.latestVersionNotFound(req.params.type);
-      res.status(termError.statusCode).json(termError.toResponse());
-    }
-  }
-
-  /**
    * 약관 생성 (관리자 전용)
    */
   async createTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -228,7 +170,7 @@ export class TermController {
       logger.info('✅ 사용자 약관 동의 성공', {
         userId,
         termId,
-        agreedAt: agreement.agreed_at,
+        agreedAt: agreement.agreedAt,
       });
       res.status(201).json(TermSuccess.termAgreed(agreement).toResponse());
     } catch (error) {

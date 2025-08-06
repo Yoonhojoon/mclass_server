@@ -16,7 +16,7 @@ export class TermService {
     try {
       const terms = await this.prisma.term.findMany({
         orderBy: {
-          created_at: 'desc',
+          createdAt: 'desc',
         },
       });
 
@@ -55,100 +55,6 @@ export class TermService {
         throw error;
       }
       throw TermError.databaseError('약관 조회', error);
-    }
-  }
-
-  /**
-   * 약관 유형별 조회
-   */
-  async getTermsByType(
-    type: 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
-  ): Promise<Term[]> {
-    try {
-      const terms = await this.prisma.term.findMany({
-        where: { type },
-        orderBy: {
-          created_at: 'desc',
-        },
-      });
-
-      if (terms.length === 0) {
-        throw TermError.typeNotFound(type);
-      }
-
-      logger.info('✅ 약관 유형별 조회 성공', {
-        type,
-        count: terms.length,
-      });
-
-      return terms;
-    } catch (error) {
-      if (error instanceof TermError) {
-        throw error;
-      }
-      throw TermError.databaseError('약관 유형별 조회', error);
-    }
-  }
-
-  /**
-   * 필수 약관 조회
-   */
-  async getRequiredTerms(): Promise<Term[]> {
-    try {
-      const terms = await this.prisma.term.findMany({
-        where: { isRequired: true },
-        orderBy: {
-          created_at: 'desc',
-        },
-      });
-
-      if (terms.length === 0) {
-        throw TermError.requiredTermsNotFound();
-      }
-
-      logger.info('✅ 필수 약관 조회 성공', {
-        count: terms.length,
-      });
-
-      return terms;
-    } catch (error) {
-      if (error instanceof TermError) {
-        throw error;
-      }
-      throw TermError.databaseError('필수 약관 조회', error);
-    }
-  }
-
-  /**
-   * 최신 버전의 약관 조회
-   */
-  async getLatestTermsByType(
-    type: 'SERVICE' | 'PRIVACY' | 'ENROLLMENT'
-  ): Promise<Term> {
-    try {
-      const term = await this.prisma.term.findFirst({
-        where: { type },
-        orderBy: {
-          created_at: 'desc',
-        },
-      });
-
-      if (!term) {
-        throw TermError.latestVersionNotFound(type);
-      }
-
-      logger.info('✅ 최신 약관 조회 성공', {
-        type,
-        termId: term.id,
-        version: term.version,
-      });
-
-      return term;
-    } catch (error) {
-      if (error instanceof TermError) {
-        throw error;
-      }
-      throw TermError.databaseError('최신 약관 조회', error);
     }
   }
 
@@ -262,7 +168,7 @@ export class TermService {
       const existingTerm = await this.prisma.term.findUnique({
         where: { id },
         include: {
-          user_term_agreements: true,
+          userTermAgreements: true,
         },
       });
 
@@ -271,7 +177,7 @@ export class TermService {
       }
 
       // 동의 기록이 있으면 삭제 불가
-      if (existingTerm.user_term_agreements.length > 0) {
+      if (existingTerm.userTermAgreements.length > 0) {
         throw TermError.cannotDeleteWithAgreements();
       }
 
@@ -310,12 +216,10 @@ export class TermService {
       }
 
       // 이미 동의했는지 확인
-      const existingAgreement = await this.prisma.userTermAgreement.findUnique({
+      const existingAgreement = await this.prisma.userTermAgreement.findFirst({
         where: {
-          user_id_term_id: {
-            user_id: userId,
-            term_id: termId,
-          },
+          userId: userId,
+          termId: termId,
         },
       });
 
@@ -325,8 +229,8 @@ export class TermService {
 
       const agreement = await this.prisma.userTermAgreement.create({
         data: {
-          user_id: userId,
-          term_id: termId,
+          userId: userId,
+          termId: termId,
         },
         include: {
           user: {
@@ -343,7 +247,7 @@ export class TermService {
       logger.info('✅ 약관 동의 성공', {
         userId,
         termId,
-        agreedAt: agreement.agreed_at,
+        agreedAt: agreement.agreedAt,
       });
 
       return agreement;
@@ -361,12 +265,12 @@ export class TermService {
   async getUserAgreements(userId: string): Promise<UserTermAgreement[]> {
     try {
       const agreements = await this.prisma.userTermAgreement.findMany({
-        where: { user_id: userId },
+        where: { userId: userId },
         include: {
           term: true,
         },
         orderBy: {
-          agreed_at: 'desc',
+          agreedAt: 'desc',
         },
       });
 
@@ -386,12 +290,10 @@ export class TermService {
    */
   async hasUserAgreed(userId: string, termId: string): Promise<boolean> {
     try {
-      const agreement = await this.prisma.userTermAgreement.findUnique({
+      const agreement = await this.prisma.userTermAgreement.findFirst({
         where: {
-          user_id_term_id: {
-            user_id: userId,
-            term_id: termId,
-          },
+          userId: userId,
+          termId: termId,
         },
       });
 
@@ -416,7 +318,7 @@ export class TermService {
 
       const userAgreements = await this.prisma.userTermAgreement.findMany({
         where: {
-          user_id: userId,
+          userId: userId,
           term: {
             isRequired: true,
           },

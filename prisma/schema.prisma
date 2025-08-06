@@ -55,9 +55,9 @@ model Term {
   type        TermType
   title       String
   content     String
-  isRequired  Boolean  @default(false)
+  isRequired  Boolean  @default(false) @map("isRequired")
   version     String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @map("createdAt")
 
   // Relations
   userTermAgreements UserTermAgreement[]
