@@ -60,6 +60,79 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
     
+    - name: Setup Parameter Store secrets
+      run: |
+        echo "🔐 Parameter Store에 환경변수 설정 중..."
+        
+        # 데이터베이스 URL
+        aws ssm put-parameter \
+          --name "/mclass/database_url" \
+          --value "${{ secrets.DATABASE_URL }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "DATABASE_URL 설정 완료"
+        
+        # JWT 시크릿
+        aws ssm put-parameter \
+          --name "/mclass/jwt_secret" \
+          --value "${{ secrets.JWT_SECRET }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "JWT_SECRET 설정 완료"
+        
+        # Redis URL
+        aws ssm put-parameter \
+          --name "/mclass/redis_url" \
+          --value "${{ secrets.REDIS_URL }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "REDIS_URL 설정 완료"
+        
+        # 소셜 로그인 설정
+        aws ssm put-parameter \
+          --name "/mclass/kakao_client_id" \
+          --value "${{ secrets.KAKAO_CLIENT_ID }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "KAKAO_CLIENT_ID 설정 완료"
+        
+        aws ssm put-parameter \
+          --name "/mclass/kakao_client_secret" \
+          --value "${{ secrets.KAKAO_CLIENT_SECRET }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "KAKAO_CLIENT_SECRET 설정 완료"
+        
+        aws ssm put-parameter \
+          --name "/mclass/google_client_id" \
+          --value "${{ secrets.GOOGLE_CLIENT_ID }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "GOOGLE_CLIENT_ID 설정 완료"
+        
+        aws ssm put-parameter \
+          --name "/mclass/google_client_secret" \
+          --value "${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "GOOGLE_CLIENT_SECRET 설정 완료"
+        
+        aws ssm put-parameter \
+          --name "/mclass/naver_client_id" \
+          --value "${{ secrets.NAVER_CLIENT_ID }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "NAVER_CLIENT_ID 설정 완료"
+        
+        aws ssm put-parameter \
+          --name "/mclass/naver_client_secret" \
+          --value "${{ secrets.NAVER_CLIENT_SECRET }}" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "NAVER_CLIENT_SECRET 설정 완료"
+        
+        echo "✅ 모든 환경변수가 Parameter Store에 설정되었습니다!"
+    
     - name: Verify existing infrastructure
       run: |
         echo "✅ Terraform으로 생성된 인프라 확인:"
