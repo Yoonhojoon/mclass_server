@@ -67,44 +67,6 @@
           "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/naver_client_secret"
         }
       ],
-      "secrets": [
-        {
-          "name": "DATABASE_URL",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/database_url"
-        },
-        {
-          "name": "JWT_SECRET",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/jwt_secret"
-        },
-        {
-          "name": "REDIS_URL",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/redis_url"
-        },
-        {
-          "name": "KAKAO_CLIENT_ID",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/kakao_client_id"
-        },
-        {
-          "name": "KAKAO_CLIENT_SECRET",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/kakao_client_secret"
-        },
-        {
-          "name": "GOOGLE_CLIENT_ID",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/google_client_id"
-        },
-        {
-          "name": "GOOGLE_CLIENT_SECRET",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/google_client_secret"
-        },
-        {
-          "name": "NAVER_CLIENT_ID",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/naver_client_id"
-        },
-        {
-          "name": "NAVER_CLIENT_SECRET",
-          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/naver_client_secret"
-        }
-      ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
