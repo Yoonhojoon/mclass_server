@@ -201,4 +201,10 @@ export class AuthError extends BaseError {
       'EMAIL_NOT_PROVIDED_BY_SOCIAL'
     );
   }
+
+  static internalError(
+    message: string = '서버 내부 오류가 발생했습니다.'
+  ): AuthError {
+    return new AuthError(message, 500, 'INTERNAL_ERROR');
+  }
 }

@@ -323,6 +323,7 @@ export class AuthService {
           name,
           provider: 'GOOGLE',
           socialId: profile.id,
+          isSignUpCompleted: false,
         });
       } else {
         logger.info('👤 기존 소셜 사용자 로그인', {
@@ -357,6 +358,7 @@ export class AuthService {
           role: user.role,
           isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,
@@ -434,6 +436,7 @@ export class AuthService {
           role: user.role,
           isAdmin: user.isAdmin,
           isSignUpCompleted: true,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,

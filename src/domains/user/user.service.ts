@@ -55,7 +55,7 @@ export class UserService {
         name: userData.name,
         role: userData.role || 'USER',
         provider: userData.provider || 'LOCAL',
-        social_id: userData.socialId,
+        socialId: userData.socialId,
         isSignUpCompleted: userData.isSignUpCompleted || false,
       },
     });
@@ -309,7 +309,7 @@ export class UserService {
   ): Promise<User | null> {
     return await this.prisma.user.findFirst({
       where: {
-        social_id: socialId,
+        socialId: socialId,
         provider: provider as 'KAKAO' | 'GOOGLE' | 'NAVER',
       },
     });

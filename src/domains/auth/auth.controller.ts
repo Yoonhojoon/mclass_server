@@ -38,7 +38,9 @@ export class AuthController {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json(error.toResponse());
       } else {
-        const authError = AuthError.loginFailed();
+        const authError = AuthError.internalError(
+          '로그인 처리 중 오류가 발생했습니다.'
+        );
         res.status(authError.statusCode).json(authError.toResponse());
       }
     }
@@ -74,7 +76,9 @@ export class AuthController {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json(error.toResponse());
       } else {
-        const authError = AuthError.registrationFailed();
+        const authError = AuthError.internalError(
+          '회원가입 처리 중 오류가 발생했습니다.'
+        );
         res.status(authError.statusCode).json(authError.toResponse());
       }
     }
@@ -108,7 +112,9 @@ export class AuthController {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json(error.toResponse());
       } else {
-        const authError = AuthError.socialLoginFailed('unknown');
+        const authError = AuthError.internalError(
+          '소셜 로그인 처리 중 오류가 발생했습니다.'
+        );
         res.status(authError.statusCode).json(authError.toResponse());
       }
     }
@@ -156,7 +162,7 @@ export class AuthController {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json(error.toResponse());
       } else {
-        const authError = AuthError.registrationFailed(
+        const authError = AuthError.internalError(
           '회원가입 완료 처리 중 오류가 발생했습니다.'
         );
         res.status(authError.statusCode).json(authError.toResponse());
@@ -182,7 +188,9 @@ export class AuthController {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      const authError = AuthError.logoutFailed();
+      const authError = AuthError.internalError(
+        '로그아웃 처리 중 오류가 발생했습니다.'
+      );
       res.status(authError.statusCode).json(authError.toResponse());
     }
   }
@@ -206,7 +214,9 @@ export class AuthController {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json(error.toResponse());
       } else {
-        const authError = AuthError.tokenRefreshFailed();
+        const authError = AuthError.internalError(
+          '토큰 갱신 처리 중 오류가 발생했습니다.'
+        );
         res.status(authError.statusCode).json(authError.toResponse());
       }
     }
@@ -245,7 +255,9 @@ export class AuthController {
       if (error instanceof AuthError) {
         res.status(error.statusCode).json(error.toResponse());
       } else {
-        const authError = AuthError.passwordChangeFailed();
+        const authError = AuthError.internalError(
+          '비밀번호 변경 처리 중 오류가 발생했습니다.'
+        );
         res.status(authError.statusCode).json(authError.toResponse());
       }
     }

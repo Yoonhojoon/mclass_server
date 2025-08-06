@@ -33,7 +33,7 @@ export class TokenService {
    */
   static generateAccessToken(payload: TokenPayload): string {
     return jwt.sign(payload, jwtConfig.secret, {
-      expiresIn: jwtConfig.expiresIn,
+      expiresIn: jwtConfig.expiresIn as any,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
     });
@@ -44,7 +44,7 @@ export class TokenService {
    */
   static generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign(payload, jwtConfig.secret, {
-      expiresIn: jwtConfig.refreshExpiresIn,
+      expiresIn: jwtConfig.refreshExpiresIn as any,
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
     });
@@ -170,6 +170,7 @@ export class TokenService {
         userId: payload.userId,
         email: payload.email,
         role: payload.role,
+        isAdmin: payload.isAdmin,
         signUpCompleted: payload.signUpCompleted,
         provider: payload.provider,
       };

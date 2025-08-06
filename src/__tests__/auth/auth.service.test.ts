@@ -113,12 +113,14 @@ describe('AuthService', () => {
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: mockUser.isSignUpCompleted,
       });
       expect(mockTokenService.generateRefreshToken).toHaveBeenCalledWith({
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: mockUser.isSignUpCompleted,
       });
       expect(result).toEqual({
@@ -204,12 +206,14 @@ describe('AuthService', () => {
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: mockUser.isSignUpCompleted,
       });
       expect(mockTokenService.generateRefreshToken).toHaveBeenCalledWith({
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: mockUser.isSignUpCompleted,
       });
       expect(result).toEqual({
@@ -339,6 +343,7 @@ describe('AuthService', () => {
       userId: 'user-123',
       email: 'test@example.com',
       role: 'USER',
+      isAdmin: false,
       signUpCompleted: true,
     };
 
@@ -383,12 +388,14 @@ describe('AuthService', () => {
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: mockUser.isSignUpCompleted,
       });
       expect(mockTokenService.generateRefreshToken).toHaveBeenCalledWith({
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: mockUser.isSignUpCompleted,
       });
       expect(result).toEqual(mockNewTokens);
@@ -454,6 +461,7 @@ describe('AuthService', () => {
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: mockUser.isSignUpCompleted,
         provider: mockUser.provider,
       });
@@ -569,6 +577,7 @@ describe('AuthService', () => {
         userId: mockUser.id,
         email: mockUser.email,
         role: mockUser.role,
+        isAdmin: mockUser.isAdmin,
         signUpCompleted: true,
         provider: mockUser.provider,
       });

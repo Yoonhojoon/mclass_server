@@ -94,6 +94,7 @@ describe('Auth API Integration Tests', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
         data: mockLoginResult,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-123, 역할: USER)`,
       });
     });
 
@@ -126,8 +127,10 @@ describe('Auth API Integration Tests', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        error: 'AuthError',
-        message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+        error: {
+          code: 'INVALID_CREDENTIALS',
+          message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+        },
       });
     });
   });
@@ -180,6 +183,7 @@ describe('Auth API Integration Tests', () => {
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: true,
         data: mockRegisterResult,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-456, 역할: USER)`,
       });
     });
 
@@ -212,8 +216,10 @@ describe('Auth API Integration Tests', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(400);
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        error: 'AuthError',
-        message: '이미 존재하는 이메일입니다.',
+        error: {
+          code: 'EMAIL_EXISTS',
+          message: '이미 존재하는 이메일입니다.',
+        },
       });
     });
   });
@@ -230,7 +236,17 @@ describe('Auth API Integration Tests', () => {
           authController as unknown as { authService: any }
         ).authService;
         const mockCompleteSignUpResult = {
-          message: '회원가입이 완료되었습니다.',
+          user: {
+            id: 'user-123',
+            email: 'test@example.com',
+            name: 'Test User',
+            role: 'USER',
+            isAdmin: false,
+            isSignUpCompleted: true,
+            provider: 'GOOGLE',
+          },
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token',
         };
 
         mockAuthService.completeSignUp = jest
@@ -264,6 +280,8 @@ describe('Auth API Integration Tests', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
           data: mockCompleteSignUpResult,
+          message:
+            '로그인이 성공적으로 완료되었습니다. (사용자 ID: user-123, 역할: USER)',
         });
       });
 
@@ -286,8 +304,52 @@ describe('Auth API Integration Tests', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          error: 'UNAUTHORIZED',
-          message: '인증이 필요합니다.',
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '인증이 필요합니다.',
+          },
+        });
+      });
+
+      it('❌ INVALID_TERM_IDS 에러 발생 시 400 상태를 반환해야 함', async () => {
+        // Arrange - Mock AuthService to throw error
+        const mockAuthService = (
+          authController as unknown as { authService: any }
+        ).authService;
+        const authError = new AuthError(
+          '약관 ID 목록이 필요합니다.',
+          400,
+          'INVALID_TERM_IDS'
+        );
+        mockAuthService.completeSignUp = jest.fn().mockRejectedValue(authError);
+
+        // Create mock request and response
+        const mockRequest = {
+          body: completeSignUpData,
+          user: {
+            userId: 'user-123',
+            email: 'test@example.com',
+            role: 'USER',
+            signUpCompleted: true,
+          },
+        } as unknown as AuthenticatedRequest;
+
+        const mockResponse = {
+          json: jest.fn(),
+          status: jest.fn().mockReturnThis(),
+        } as unknown as Response;
+
+        // Act
+        await authController.completeSignUp(mockRequest, mockResponse);
+
+        // Assert
+        expect(mockResponse.status).toHaveBeenCalledWith(400);
+        expect(mockResponse.json).toHaveBeenCalledWith({
+          success: false,
+          error: {
+            code: 'INVALID_TERM_IDS',
+            message: '약관 ID 목록이 필요합니다.',
+          },
         });
       });
     });
@@ -332,7 +394,9 @@ describe('Auth API Integration Tests', () => {
         );
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: true,
-          message: '비밀번호가 변경되었습니다.',
+          data: null,
+          message:
+            '비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해주세요.',
         });
       });
 
@@ -355,8 +419,10 @@ describe('Auth API Integration Tests', () => {
         expect(mockResponse.status).toHaveBeenCalledWith(401);
         expect(mockResponse.json).toHaveBeenCalledWith({
           success: false,
-          error: 'UNAUTHORIZED',
-          message: '인증이 필요합니다.',
+          error: {
+            code: 'UNAUTHORIZED',
+            message: '인증이 필요합니다.',
+          },
         });
       });
     });
