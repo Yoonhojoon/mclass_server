@@ -1,12 +1,21 @@
 import { SuccessResponse } from '../types/api.js';
 
-export class BaseSuccess<T = any> {
+export class BaseSuccess<T = unknown> {
   protected data: T;
   protected message?: string;
+  protected statusCode: number;
+  protected successCode: string;
 
-  constructor(data: T, message?: string) {
-    this.data = data;
+  constructor(
+    message: string,
+    statusCode: number = 200,
+    successCode: string = 'SUCCESS',
+    data?: T
+  ) {
     this.message = message;
+    this.statusCode = statusCode;
+    this.successCode = successCode;
+    this.data = data as T;
   }
 
   /**
@@ -19,7 +28,7 @@ export class BaseSuccess<T = any> {
     };
 
     if (this.message) {
-      (response as any).message = this.message;
+      (response as unknown as Record<string, unknown>).message = this.message;
     }
 
     return response;

@@ -1,8 +1,11 @@
-import { Router } from 'express';
-import { TermController } from '../domains/term/term.controller';
-import { TermService } from '../domains/term/term.service';
+import { Router, Request, Response } from 'express';
+import { TermController } from '../domains/term/term.controller.js';
+import { TermService } from '../domains/term/term.service.js';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware';
+import {
+  authenticateToken,
+  requireAdmin,
+} from '../middleware/auth.middleware.js';
 import { validateId } from '../middleware/validation.middleware';
 
 /**
@@ -196,8 +199,17 @@ router.get('/terms/:id', validateId, (req, res) =>
  *                 code: 'INTERNAL_SERVER_ERROR'
  *                 message: '서버 내부 오류가 발생했습니다.'
  */
-router.post('/terms', authenticateToken, requireAdmin, (req, res) =>
-  termController.createTerm(req, res)
+router.post(
+  '/terms',
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) =>
+    termController.createTerm(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 /**
@@ -305,8 +317,17 @@ router.post('/terms', authenticateToken, requireAdmin, (req, res) =>
  *                 code: 'INTERNAL_SERVER_ERROR'
  *                 message: '서버 내부 오류가 발생했습니다.'
  */
-router.put('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
-  termController.updateTerm(req, res)
+router.put(
+  '/terms/:id',
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) =>
+    termController.updateTerm(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 /**
@@ -396,8 +417,17 @@ router.put('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
  *                 code: 'INTERNAL_SERVER_ERROR'
  *                 message: '서버 내부 오류가 발생했습니다.'
  */
-router.delete('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
-  termController.deleteTerm(req, res)
+router.delete(
+  '/terms/:id',
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) =>
+    termController.deleteTerm(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 /**
@@ -491,8 +521,16 @@ router.delete('/terms/:id', authenticateToken, requireAdmin, (req, res) =>
  *                 code: 'INTERNAL_SERVER_ERROR'
  *                 message: '서버 내부 오류가 발생했습니다.'
  */
-router.post('/users/agreements', authenticateToken, (req, res) =>
-  termController.agreeToTerm(req, res)
+router.post(
+  '/users/agreements',
+  authenticateToken,
+  (req: Request, res: Response) =>
+    termController.agreeToTerm(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 /**
@@ -542,8 +580,16 @@ router.post('/users/agreements', authenticateToken, (req, res) =>
  *                 code: 'INTERNAL_SERVER_ERROR'
  *                 message: '서버 내부 오류가 발생했습니다.'
  */
-router.get('/users/agreements', authenticateToken, (req, res) =>
-  termController.getUserAgreements(req, res)
+router.get(
+  '/users/agreements',
+  authenticateToken,
+  (req: Request, res: Response) =>
+    termController.getUserAgreements(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 export default router;

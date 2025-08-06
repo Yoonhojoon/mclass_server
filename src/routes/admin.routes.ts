@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { AdminController } from '../domains/admin/admin.controller.js';
 import { AdminService } from '../domains/admin/admin.service.js';
 import { PrismaClient } from '@prisma/client';
@@ -48,8 +48,17 @@ const adminController = new AdminController(adminService);
  *       404:
  *         description: 사용자를 찾을 수 없음
  */
-router.get('/users/:id/role', authenticateToken, requireAdmin, (req, res) =>
-  adminController.getUserRole(req, res)
+router.get(
+  '/users/:id/role',
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) =>
+    adminController.getUserRole(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 /**
@@ -98,8 +107,17 @@ router.get('/users/:id/role', authenticateToken, requireAdmin, (req, res) =>
  *       404:
  *         description: 사용자를 찾을 수 없음
  */
-router.patch('/users/:id/role', authenticateToken, requireAdmin, (req, res) =>
-  adminController.updateUserRole(req, res)
+router.patch(
+  '/users/:id/role',
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) =>
+    adminController.updateUserRole(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 /**
@@ -132,8 +150,17 @@ router.patch('/users/:id/role', authenticateToken, requireAdmin, (req, res) =>
  *       403:
  *         description: 권한 없음
  */
-router.get('/users', authenticateToken, requireAdmin, (req, res) =>
-  adminController.getAllUsers(req, res)
+router.get(
+  '/users',
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) =>
+    adminController.getAllUsers(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 /**
@@ -166,8 +193,17 @@ router.get('/users', authenticateToken, requireAdmin, (req, res) =>
  *       403:
  *         description: 권한 없음
  */
-router.get('/admin-count', authenticateToken, requireAdmin, (req, res) =>
-  adminController.getAdminCount(req, res)
+router.get(
+  '/admin-count',
+  authenticateToken,
+  requireAdmin,
+  (req: Request, res: Response) =>
+    adminController.getAdminCount(
+      req as unknown as Request & {
+        user?: { id: string; email: string; role: string; isAdmin?: boolean };
+      },
+      res
+    )
 );
 
 export default router;

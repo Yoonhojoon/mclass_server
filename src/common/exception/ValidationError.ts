@@ -84,4 +84,23 @@ export class ValidationError extends BaseError {
       'INVALID_TERM_IDS'
     );
   }
+
+  // 리소스를 찾을 수 없음
+  static notFound(
+    message: string = '리소스를 찾을 수 없습니다.'
+  ): ValidationError {
+    return new ValidationError(message, 404, 'NOT_FOUND');
+  }
+
+  // 잘못된 요청
+  static badRequest(message: string = '잘못된 요청입니다.'): ValidationError {
+    return new ValidationError(message, 400, 'BAD_REQUEST');
+  }
+
+  // 내부 서버 오류
+  static internalServerError(
+    message: string = '내부 서버 오류가 발생했습니다.'
+  ): ValidationError {
+    return new ValidationError(message, 500, 'INTERNAL_SERVER_ERROR');
+  }
 }

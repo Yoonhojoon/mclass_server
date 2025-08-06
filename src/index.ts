@@ -156,7 +156,7 @@ async function createInitialAdmin(): Promise<void> {
           password: hashedPassword,
           name: initialAdminName,
           role: 'ADMIN',
-          is_admin: true,
+          isAdmin: true,
           isSignUpCompleted: true,
           provider: 'LOCAL',
         },

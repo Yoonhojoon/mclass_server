@@ -16,13 +16,20 @@ export class AdminService {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
-    this.userService = new UserService(prisma);
+    this.userService = new UserService();
   }
 
   /**
    * 사용자 권한 조회
    */
-  async getUserRole(userId: string) {
+  async getUserRole(userId: string): Promise<{
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+    isAdmin: boolean;
+    isSignUpCompleted: boolean;
+  }> {
     try {
       const user = await this.userService.findById(userId);
       if (!user) {
@@ -34,7 +41,7 @@ export class AdminService {
         email: user.email,
         name: user.name,
         role: user.role,
-        isAdmin: user.is_admin,
+        isAdmin: user.isAdmin,
         isSignUpCompleted: user.isSignUpCompleted,
       };
     } catch (error) {
@@ -50,7 +57,14 @@ export class AdminService {
     userId: string,
     adminId: string,
     roleData: UpdateRoleDto
-  ) {
+  ): Promise<{
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+    isAdmin: boolean;
+    isSignUpCompleted: boolean;
+  }> {
     try {
       // 1. 대상 사용자 확인
       const targetUser = await this.userService.findById(userId);
@@ -70,7 +84,7 @@ export class AdminService {
       }
 
       // 4. 마지막 관리자 보호
-      if (targetUser.is_admin && !roleData.isAdmin) {
+      if (targetUser.isAdmin && !roleData.isAdmin) {
         const adminCount = await this.getAdminCount();
         if (adminCount <= 1) {
           throw new Error('최소 1명의 관리자가 필요합니다.');
@@ -82,7 +96,7 @@ export class AdminService {
         where: { id: userId },
         data: {
           role: roleData.role,
-          is_admin: roleData.isAdmin,
+          isAdmin: roleData.isAdmin,
         },
       });
 
@@ -92,7 +106,7 @@ export class AdminService {
         targetUserId: userId,
         oldRole: targetUser.role,
         newRole: roleData.role,
-        oldIsAdmin: targetUser.is_admin,
+        oldIsAdmin: targetUser.isAdmin,
         newIsAdmin: roleData.isAdmin,
         reason: roleData.reason,
       });
@@ -102,7 +116,7 @@ export class AdminService {
         changedBy: adminId,
         oldRole: targetUser.role,
         newRole: roleData.role,
-        oldIsAdmin: targetUser.is_admin,
+        oldIsAdmin: targetUser.isAdmin,
         newIsAdmin: roleData.isAdmin,
       });
 
@@ -111,7 +125,7 @@ export class AdminService {
         email: updatedUser.email,
         name: updatedUser.name,
         role: updatedUser.role,
-        isAdmin: updatedUser.is_admin,
+        isAdmin: updatedUser.isAdmin,
         isSignUpCompleted: updatedUser.isSignUpCompleted,
       };
     } catch (error) {
@@ -139,7 +153,7 @@ export class AdminService {
 
       logger.info('✅ 관리자 권한 설정 완료', {
         userId,
-        isAdmin: updatedUser.is_admin,
+        isAdmin: updatedUser.isAdmin,
         role: updatedUser.role,
       });
 
@@ -159,14 +173,25 @@ export class AdminService {
    */
   async getAdminCount(): Promise<number> {
     return await this.prisma.user.count({
-      where: { is_admin: true },
+      where: { isAdmin: true },
     });
   }
 
   /**
    * 모든 사용자 목록 조회 (관리자용)
    */
-  async getAllUsers() {
+  async getAllUsers(): Promise<
+    Array<{
+      id: string;
+      email: string;
+      name: string | null;
+      role: string;
+      isAdmin: boolean;
+      isSignUpCompleted: boolean;
+      provider: string;
+      createdAt: Date;
+    }>
+  > {
     try {
       const users = await this.prisma.user.findMany({
         select: {
@@ -174,7 +199,7 @@ export class AdminService {
           email: true,
           name: true,
           role: true,
-          is_admin: true,
+          isAdmin: true,
           isSignUpCompleted: true,
           provider: true,
           createdAt: true,
@@ -184,7 +209,7 @@ export class AdminService {
 
       return users.map(user => ({
         ...user,
-        isAdmin: user.is_admin,
+        isAdmin: user.isAdmin,
       }));
     } catch (error) {
       logger.error('사용자 목록 조회 중 오류:', error);
@@ -203,7 +228,7 @@ export class AdminService {
     oldIsAdmin: boolean;
     newIsAdmin: boolean;
     reason?: string;
-  }) {
+  }): Promise<void> {
     try {
       // 실제 구현에서는 별도 테이블에 로그 저장
       logger.info('🔍 권한 변경 감사 로그', {
