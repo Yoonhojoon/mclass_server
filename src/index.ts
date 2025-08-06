@@ -246,6 +246,9 @@ process.on('SIGINT', async (): Promise<void> => {
 export { app };
 
 // Only start server if this file is run directly
-if (process.argv[1] && process.argv[1].endsWith('index.ts')) {
+if (
+  process.argv[1] &&
+  (process.argv[1].endsWith('index.ts') || process.argv[1].endsWith('index.js'))
+) {
   startServer();
 }
