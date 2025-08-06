@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { BaseError } from '../common/exception/BaseError';
-import { TermError } from '../common/exception/term/TermError';
+import { BaseError } from '../common/exception/BaseError.js';
+import { TermError } from '../common/exception/term/TermError.js';
 import logger from '../config/logger.config.js';
 
 export interface ErrorResponse {

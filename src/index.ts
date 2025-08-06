@@ -4,21 +4,24 @@ import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
 import session from 'express-session';
 import { RedisStore } from 'connect-redis';
-import { specs } from './config/swagger';
-import { createUserRoutes } from './routes/users';
-import { createAuthRoutes } from './routes/auth.routes';
-import { createTermRoutes } from './routes/term.routes';
-import { createAdminRoutes } from './routes/admin.routes';
-import { prometheusMiddleware, metricsEndpoint } from './middleware/monitoring';
-import { ErrorHandler } from './common/exception/ErrorHandler';
-import { prisma } from './config/prisma.config';
-import passport from './config/passport.config';
-import logger from './config/logger.config';
+import { specs } from './config/swagger.js';
+import { createUserRoutes } from './routes/users.js';
+import { createAuthRoutes } from './routes/auth.routes.js';
+import { createTermRoutes } from './routes/term.routes.js';
+import { createAdminRoutes } from './routes/admin.routes.js';
+import {
+  prometheusMiddleware,
+  metricsEndpoint,
+} from './middleware/monitoring.js';
+import { ErrorHandler } from './common/exception/ErrorHandler.js';
+import { prisma } from './config/prisma.config.js';
+import passport from './config/passport.config.js';
+import logger from './config/logger.config.js';
 import { redis } from './config/redis.config.js';
 import {
   authenticateToken as authenticate,
   requireAdmin as authorizeAdmin,
-} from './middleware/auth.middleware';
+} from './middleware/auth.middleware.js';
 import bcrypt from 'bcrypt';
 
 const app = express();

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { TermService } from './term.service';
-import { TermError } from '../../common/exception/term/TermError';
+import { TermService } from './term.service.js';
+import { TermError } from '../../common/exception/term/TermError.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import { TermSuccess } from '../../common/exception/term/TermSuccess.js';
 import logger from '../../config/logger.config.js';

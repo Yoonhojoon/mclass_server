@@ -48,9 +48,6 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# 헬스체크 추가 (ES 모듈 문법)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
-  CMD node -e "import('http').then(http => http.get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }))"
 
 # 포트 노출
 EXPOSE 3000
@@ -59,5 +56,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 애플리케이션 시작
+# 애플리케이션 시작 (ES 모듈)
 CMD ["node", "dist/index.js"] 

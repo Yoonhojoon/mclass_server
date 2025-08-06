@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { TermError } from '../common/exception/term/TermError';
+import { TermError } from '../common/exception/term/TermError.js';
 import logger from '../config/logger.config.js';
 
 /**
