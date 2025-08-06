@@ -1,5 +1,4 @@
-import { User } from '@prisma/client';
-import { prisma } from '../../config/prisma.config.js';
+import { User, PrismaClient } from '@prisma/client';
 import { UserError } from '../../common/exception/user/UserError.js';
 import bcrypt from 'bcrypt';
 
@@ -20,9 +19,9 @@ export interface UpdateUserDto {
 }
 
 export class UserService {
-  private prisma: typeof prisma;
+  private prisma: PrismaClient;
 
-  constructor() {
+  constructor(prisma: PrismaClient) {
     this.prisma = prisma;
   }
 
@@ -384,7 +383,7 @@ export class UserService {
   async agreeToTerm(userId: string, termId: string): Promise<void> {
     // 약관 동의는 TermService에서 처리하므로 여기서는 UserService와 연결
     const { TermService } = await import('../term/term.service.js');
-    const termService = new TermService(prisma);
+    const termService = new TermService(this.prisma);
     await termService.agreeToTerm(userId, termId);
   }
 

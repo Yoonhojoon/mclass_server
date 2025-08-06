@@ -4,10 +4,10 @@ import session from 'express-session';
 import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
 import { specs } from './config/swagger';
-import usersRouter from './routes/users';
-import authRouter from './routes/auth.routes';
-import termRouter from './routes/term.routes';
-import adminRouter from './routes/admin.routes';
+import { createUserRoutes } from './routes/users';
+import { createAuthRoutes } from './routes/auth.routes';
+import { createTermRoutes } from './routes/term.routes';
+import { createAdminRoutes } from './routes/admin.routes';
 import { prometheusMiddleware, metricsEndpoint } from './middleware/monitoring';
 import { ErrorHandler } from './common/exception/ErrorHandler';
 import { prisma } from './config/prisma.config';
@@ -58,10 +58,10 @@ app.use(prometheusMiddleware);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // 라우트 설정
-app.use('/api/users', usersRouter);
-app.use('/api/auth', authRouter);
-app.use('/api', termRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/users', createUserRoutes(prisma));
+app.use('/api/auth', createAuthRoutes(prisma));
+app.use('/api', createTermRoutes(prisma));
+app.use('/api/admin', createAdminRoutes(prisma));
 
 // Prometheus 메트릭 엔드포인트
 app.get('/metrics', metricsEndpoint);

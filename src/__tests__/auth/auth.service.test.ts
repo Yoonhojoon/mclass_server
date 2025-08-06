@@ -24,9 +24,20 @@ describe('AuthService', () => {
   let authService: AuthService;
   let mockUserService: jest.Mocked<UserService>;
   let mockTokenService: jest.Mocked<typeof TokenService>;
+  let mockPrisma: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Mock Prisma
+    mockPrisma = {
+      user: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        findMany: jest.fn(),
+      },
+    };
 
     // Mock UserService
     mockUserService = {
@@ -64,7 +75,7 @@ describe('AuthService', () => {
     logger.error.mockImplementation(() => {});
     logger.debug.mockImplementation(() => {});
 
-    authService = new AuthService();
+    authService = new AuthService(mockPrisma);
   });
 
   describe('login', () => {

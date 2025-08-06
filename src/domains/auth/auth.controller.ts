@@ -5,12 +5,13 @@ import { ValidationError } from '../../common/exception/ValidationError.js';
 import { AuthSuccessResponse } from '../../common/exception/auth/AuthSuccess.js';
 import logger from '../../config/logger.config.js';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
+import { PrismaClient } from '@prisma/client';
 
 export class AuthController {
   private authService: AuthService;
 
-  constructor(authService?: AuthService) {
-    this.authService = authService || new AuthService();
+  constructor(prisma: PrismaClient) {
+    this.authService = new AuthService(prisma);
   }
 
   /**

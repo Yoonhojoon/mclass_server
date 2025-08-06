@@ -54,186 +54,205 @@ export class AuthSuccessResponse {
     };
   }
 
-  static passwordResetEmailSent(email: string): AuthSuccessResponse {
+  static passwordResetEmailSent(email: string): SuccessResponse<null> {
     const message = `비밀번호 재설정 이메일이 ${email}로 발송되었습니다.`;
     return {
       success: true,
-      code: 'PASSWORD_RESET_EMAIL_SENT',
+      data: null,
       message,
+      code: 'PASSWORD_RESET_EMAIL_SENT',
     };
   }
 
-  static passwordResetSuccess(): AuthSuccessResponse {
+  static passwordResetSuccess(): SuccessResponse<null> {
     const message = '비밀번호가 성공적으로 재설정되었습니다.';
     return {
       success: true,
-      code: 'PASSWORD_RESET_SUCCESS',
+      data: null,
       message,
+      code: 'PASSWORD_RESET_SUCCESS',
     };
   }
 
-  static emailVerificationSent(email: string): AuthSuccessResponse {
+  static emailVerificationSent(email: string): SuccessResponse<null> {
     const message = `이메일 인증 링크가 ${email}로 발송되었습니다.`;
     return {
       success: true,
-      code: 'EMAIL_VERIFICATION_SENT',
+      data: null,
       message,
+      code: 'EMAIL_VERIFICATION_SENT',
     };
   }
 
-  static emailVerificationSuccess(email: string): AuthSuccessResponse {
+  static emailVerificationSuccess(email: string): SuccessResponse<null> {
     const message = `${email} 이메일 인증이 성공적으로 완료되었습니다.`;
     return {
       success: true,
-      code: 'EMAIL_VERIFICATION_SUCCESS',
+      data: null,
       message,
+      code: 'EMAIL_VERIFICATION_SUCCESS',
     };
   }
 
-  static accountActivationSuccess(): AuthSuccessResponse {
+  static accountActivationSuccess(): SuccessResponse<null> {
     const message = '계정이 성공적으로 활성화되었습니다.';
     return {
       success: true,
-      code: 'ACCOUNT_ACTIVATION_SUCCESS',
+      data: null,
       message,
+      code: 'ACCOUNT_ACTIVATION_SUCCESS',
     };
   }
 
-  static accountDeactivationSuccess(): AuthSuccessResponse {
+  static accountDeactivationSuccess(): SuccessResponse<null> {
     const message = '계정이 성공적으로 비활성화되었습니다.';
     return {
       success: true,
-      code: 'ACCOUNT_DEACTIVATION_SUCCESS',
+      data: null,
       message,
+      code: 'ACCOUNT_DEACTIVATION_SUCCESS',
     };
   }
 
-  static accountLockSuccess(): AuthSuccessResponse {
+  static accountLockSuccess(): SuccessResponse<null> {
     const message = '계정이 성공적으로 잠겨있습니다.';
     return {
       success: true,
-      code: 'ACCOUNT_LOCK_SUCCESS',
+      data: null,
       message,
+      code: 'ACCOUNT_LOCK_SUCCESS',
     };
   }
 
-  static accountUnlockSuccess(): AuthSuccessResponse {
+  static accountUnlockSuccess(): SuccessResponse<null> {
     const message = '계정 잠금이 해제되었습니다.';
     return {
       success: true,
-      code: 'ACCOUNT_UNLOCK_SUCCESS',
+      data: null,
       message,
+      code: 'ACCOUNT_UNLOCK_SUCCESS',
     };
   }
 
   static permissionGranted(
     userId: string,
     permission: string
-  ): AuthSuccessResponse {
+  ): SuccessResponse<null> {
     const message = `사용자 ${userId}에게 ${permission} 권한이 성공적으로 부여되었습니다.`;
     return {
       success: true,
-      code: 'PERMISSION_GRANTED',
+      data: null,
       message,
+      code: 'PERMISSION_GRANTED',
     };
   }
 
   static permissionRevoked(
     userId: string,
     permission: string
-  ): AuthSuccessResponse {
+  ): SuccessResponse<null> {
     const message = `사용자 ${userId}의 ${permission} 권한이 성공적으로 취소되었습니다.`;
     return {
       success: true,
-      code: 'PERMISSION_REVOKED',
+      data: null,
       message,
+      code: 'PERMISSION_REVOKED',
     };
   }
 
   static roleUpdateSuccess(
     userId: string,
     newRole: string
-  ): AuthSuccessResponse {
+  ): SuccessResponse<null> {
     const message = `사용자 ${userId}의 역할이 "${newRole}"로 성공적으로 업데이트되었습니다.`;
     return {
       success: true,
-      code: 'ROLE_UPDATE_SUCCESS',
+      data: null,
       message,
+      code: 'ROLE_UPDATE_SUCCESS',
     };
   }
 
-  static sessionCreateSuccess(data?: unknown): AuthSuccessResponse {
+  static sessionCreateSuccess<T = unknown>(data?: T): SuccessResponse<T> {
     const message = '세션이 성공적으로 생성되었습니다.';
     return {
       success: true,
-      code: 'SESSION_CREATE_SUCCESS',
+      data: data as T,
       message,
-      data,
+      code: 'SESSION_CREATE_SUCCESS',
     };
   }
 
-  static sessionDestroySuccess(): AuthSuccessResponse {
+  static sessionDestroySuccess(): SuccessResponse<null> {
     const message = '세션이 성공적으로 종료되었습니다.';
     return {
       success: true,
-      code: 'SESSION_DESTROY_SUCCESS',
+      data: null,
       message,
+      code: 'SESSION_DESTROY_SUCCESS',
     };
   }
 
-  static sessionExtendSuccess(data?: unknown): AuthSuccessResponse {
+  static sessionExtendSuccess<T = unknown>(data?: T): SuccessResponse<T> {
     const message = '세션이 성공적으로 연장되었습니다.';
     return {
       success: true,
-      code: 'SESSION_EXTEND_SUCCESS',
+      data: data as T,
       message,
-      data,
+      code: 'SESSION_EXTEND_SUCCESS',
     };
   }
 
-  static securitySettingsUpdateSuccess(): AuthSuccessResponse {
+  static securitySettingsUpdateSuccess(): SuccessResponse<null> {
     const message = '보안 설정이 성공적으로 업데이트되었습니다.';
     return {
       success: true,
-      code: 'SECURITY_SETTINGS_UPDATE_SUCCESS',
+      data: null,
       message,
+      code: 'SECURITY_SETTINGS_UPDATE_SUCCESS',
     };
   }
 
-  static twoFactorEnableSuccess(method: string): AuthSuccessResponse {
+  static twoFactorEnableSuccess(method: string): SuccessResponse<null> {
     const message = `${method} 2단계 인증이 성공적으로 활성화되었습니다.`;
     return {
       success: true,
-      code: 'TWO_FACTOR_ENABLE_SUCCESS',
+      data: null,
       message,
+      code: 'TWO_FACTOR_ENABLE_SUCCESS',
     };
   }
 
-  static twoFactorDisableSuccess(method: string): AuthSuccessResponse {
+  static twoFactorDisableSuccess(method: string): SuccessResponse<null> {
     const message = `${method} 2단계 인증이 성공적으로 비활성화되었습니다.`;
     return {
       success: true,
-      code: 'TWO_FACTOR_DISABLE_SUCCESS',
+      data: null,
       message,
+      code: 'TWO_FACTOR_DISABLE_SUCCESS',
     };
   }
 
-  static authLogCreateSuccess(): AuthSuccessResponse {
+  static authLogCreateSuccess(): SuccessResponse<null> {
     const message = '인증 로그가 성공적으로 기록되었습니다.';
     return {
       success: true,
-      code: 'AUTH_LOG_CREATE_SUCCESS',
+      data: null,
       message,
+      code: 'AUTH_LOG_CREATE_SUCCESS',
     };
   }
 
-  static authLogGetSuccess(count: number, data?: unknown): AuthSuccessResponse {
+  static authLogGetSuccess<T = unknown>(
+    count: number,
+    data?: T
+  ): SuccessResponse<T> {
     const message = `총 ${count}개의 인증 로그를 성공적으로 조회했습니다.`;
     return {
       success: true,
-      code: 'AUTH_LOG_GET_SUCCESS',
+      data: data as T,
       message,
-      data,
+      code: 'AUTH_LOG_GET_SUCCESS',
     };
   }
 }

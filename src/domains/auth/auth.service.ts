@@ -2,6 +2,7 @@ import { UserService } from '../user/user.service.js';
 import { TokenService, TokenPayload } from '../token/token.service.js';
 import { AuthError } from '../../common/exception/auth/AuthError.js';
 import logger from '../../config/logger.config.js';
+import { PrismaClient } from '@prisma/client';
 
 export interface LoginDto {
   email: string;
@@ -39,8 +40,8 @@ export interface OAuthProfile {
 export class AuthService {
   private userService: UserService;
 
-  constructor() {
-    this.userService = new UserService();
+  constructor(prisma: PrismaClient) {
+    this.userService = new UserService(prisma);
   }
 
   /**

@@ -6,8 +6,9 @@ import { UserService } from '../domains/user/user.service.js';
 // TokenService는 현재 사용되지 않으므로 주석 처리
 // import { TokenService } from '../domains/token/token.service.js';
 import logger from './logger.config.js';
+import { prisma } from './prisma.config.js';
 
-const userService = new UserService();
+const userService = new UserService(prisma);
 
 // OAuth 공통 처리 함수 (파싱된 데이터로 처리)
 async function handleOAuthCallback(

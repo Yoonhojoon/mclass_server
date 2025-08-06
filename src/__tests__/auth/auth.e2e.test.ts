@@ -19,25 +19,6 @@ jest.mock('../../config/logger.config', () => ({
   },
 }));
 
-// Mock passport config
-jest.mock('../../config/passport.config', () => ({
-  __esModule: true,
-  default: {
-    authenticate: jest.fn((strategy, options) => {
-      return (req: any, res: any, next: any) => {
-        // Mock successful authentication
-        req.user = {
-          id: 'mock-user-id',
-          email: 'mock@example.com',
-          name: 'Mock User',
-          provider: 'GOOGLE',
-        };
-        next();
-      };
-    }),
-  },
-}));
-
 // Mock passport
 jest.mock('passport', () => ({
   authenticate: jest.fn((strategy, options) => {
@@ -52,6 +33,24 @@ jest.mock('passport', () => ({
       next();
     };
   }),
+  use: jest.fn(),
+  initialize: jest.fn(() => (req: any, res: any, next: any) => next()),
+  session: jest.fn(() => (req: any, res: any, next: any) => next()),
+  serializeUser: jest.fn(),
+  deserializeUser: jest.fn(),
+}));
+
+// Mock passport strategies
+jest.mock('passport-google-oauth20', () => ({
+  Strategy: jest.fn(),
+}));
+
+jest.mock('passport-kakao', () => ({
+  Strategy: jest.fn(),
+}));
+
+jest.mock('passport-naver', () => ({
+  Strategy: jest.fn(),
 }));
 
 describe('Auth E2E Tests', () => {
@@ -86,8 +85,8 @@ describe('Auth E2E Tests', () => {
     prisma = new PrismaClient();
 
     // Initialize services
-    authService = new AuthService();
-    userService = new UserService();
+    authService = new AuthService(prisma);
+    userService = new UserService(prisma);
     tokenService = new TokenService();
 
     // Test database connection
@@ -429,7 +428,10 @@ describe('Auth E2E Tests', () => {
       }
 
       // 만료된 토큰 생성 (실제로는 시간 기반이지만 테스트에서는 다른 방법 사용)
-      const expiredToken = 'expired-token';
+      const expiredToken = jwt.sign(
+        { userId: testUser.email, exp: Math.floor(Date.now() / 1000) - 60 },
+        process.env.JWT_SECRET || 'test-secret'
+      );
 
       const response = await request(app)
         .put('/api/auth/change-password')

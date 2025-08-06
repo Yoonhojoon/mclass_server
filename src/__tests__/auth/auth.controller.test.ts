@@ -23,9 +23,20 @@ describe('AuthController', () => {
   let mockResponse: Partial<Response>;
   let mockJson: jest.Mock;
   let mockStatus: jest.Mock;
+  let mockPrisma: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Mock Prisma
+    mockPrisma = {
+      user: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+        findMany: jest.fn(),
+      },
+    };
 
     // Mock AuthService
     mockAuthService = {
@@ -60,7 +71,7 @@ describe('AuthController', () => {
       status: mockStatus,
     };
 
-    authController = new AuthController();
+    authController = new AuthController(mockPrisma);
   });
 
   describe('login', () => {

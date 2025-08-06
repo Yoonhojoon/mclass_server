@@ -3,6 +3,7 @@ import { UserService } from '../user/user.service.js';
 import logger from '../../config/logger.config.js';
 import { User } from '@prisma/client';
 import { UserError } from '../../common/exception/user/UserError.js';
+import { AdminError } from '../../common/exception/admin/AdminError.js';
 
 export interface UpdateRoleDto {
   role: 'USER' | 'ADMIN';
@@ -16,7 +17,7 @@ export class AdminService {
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
-    this.userService = new UserService();
+    this.userService = new UserService(prisma);
   }
 
   /**
@@ -33,7 +34,7 @@ export class AdminService {
     try {
       const user = await this.userService.findById(userId);
       if (!user) {
-        throw new Error('사용자를 찾을 수 없습니다.');
+        throw UserError.notFound(userId);
       }
 
       return {
@@ -69,25 +70,25 @@ export class AdminService {
       // 1. 대상 사용자 확인
       const targetUser = await this.userService.findById(userId);
       if (!targetUser) {
-        throw new Error('변경할 사용자를 찾을 수 없습니다.');
+        throw UserError.notFound(userId);
       }
 
       // 2. 초기 관리자 보호
       const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
       if (targetUser.email === initialAdminEmail) {
-        throw new Error('초기 관리자 권한은 변경할 수 없습니다.');
+        throw AdminError.cannotModifyInitialAdmin();
       }
 
       // 3. 자기 자신 변경 방지
       if (userId === adminId) {
-        throw new Error('자신의 권한은 변경할 수 없습니다.');
+        throw AdminError.cannotModifySelf();
       }
 
       // 4. 마지막 관리자 보호
       if (targetUser.isAdmin && !roleData.isAdmin) {
         const adminCount = await this.getAdminCount();
         if (adminCount <= 1) {
-          throw new Error('최소 1명의 관리자가 필요합니다.');
+          throw AdminError.minimumAdminRequired();
         }
       }
 
@@ -139,31 +140,37 @@ export class AdminService {
    */
   async setAdminStatus(userId: string, isAdmin: boolean): Promise<User> {
     try {
-      logger.info('👑 관리자 권한 설정', { userId, isAdmin });
-
-      const user = await this.userService.findById(userId);
-      if (!user) {
-        throw UserError.notFound();
+      // Add same safeguards as updateUserRole
+      const targetUser = await this.userService.findById(userId);
+      if (!targetUser) {
+        throw UserError.notFound(userId);
       }
 
-      const updatedUser = await this.userService.updateUser(userId, {
-        isAdmin: isAdmin,
-        role: isAdmin ? 'ADMIN' : 'USER',
+      // Protect initial admin
+      const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
+      if (targetUser.email === initialAdminEmail && !isAdmin) {
+        throw AdminError.cannotModifyInitialAdmin();
+      }
+
+      // Prevent removing last admin
+      if (targetUser.isAdmin && !isAdmin) {
+        const adminCount = await this.getAdminCount();
+        if (adminCount <= 1) {
+          throw AdminError.minimumAdminRequired();
+        }
+      }
+
+      // Update admin status
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: { isAdmin },
       });
 
-      logger.info('✅ 관리자 권한 설정 완료', {
-        userId,
-        isAdmin: updatedUser.isAdmin,
-        role: updatedUser.role,
-      });
+      logger.info('👑 관리자 권한 설정', { userId, isAdmin });
 
       return updatedUser;
     } catch (error) {
-      logger.error('❌ 관리자 권한 설정 중 오류', {
-        userId,
-        isAdmin,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      logger.error('관리자 권한 설정 중 오류:', error);
       throw error;
     }
   }
@@ -213,7 +220,7 @@ export class AdminService {
       }));
     } catch (error) {
       logger.error('사용자 목록 조회 중 오류:', error);
-      throw error;
+      throw AdminError.userListRetrievalFailed();
     }
   }
 
@@ -237,6 +244,7 @@ export class AdminService {
       });
     } catch (error) {
       logger.error('감사 로그 기록 중 오류:', error);
+      throw AdminError.auditLogFailed('role_change');
     }
   }
 }

@@ -1,16 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { AdminService, UpdateRoleDto } from './admin.service.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import logger from '../../config/logger.config.js';
-
-interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-    isAdmin?: boolean;
-  };
-}
+import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -50,7 +42,7 @@ export class AdminController {
   ): Promise<void> {
     try {
       const { id } = req.params;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
       const { role, isAdmin, reason } = req.body as UpdateRoleDto;
 
       if (!adminId) {

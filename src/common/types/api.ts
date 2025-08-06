@@ -10,6 +10,7 @@ export interface SuccessResponse<T = unknown> extends BaseResponse {
   success: true;
   data: T;
   message?: string;
+  code?: string;
 }
 
 // 에러 응답
