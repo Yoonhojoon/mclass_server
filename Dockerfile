@@ -59,5 +59,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 애플리케이션 시작 (ES 모듈)
-CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js"] 
+# 애플리케이션 시작
+CMD ["node", "dist/index.js"] 

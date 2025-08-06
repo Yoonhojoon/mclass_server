@@ -187,15 +187,34 @@ async function createInitialAdmin(): Promise<void> {
 
 const startServer = async (): Promise<void> => {
   try {
+    logger.info('🚀 애플리케이션 시작 중...');
+    logger.info('📋 환경변수 확인 중...');
+
+    // 필수 환경변수 확인
+    const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
+    const missingVars = requiredEnvVars.filter(
+      varName => !process.env[varName]
+    );
+
+    if (missingVars.length > 0) {
+      logger.error('❌ 필수 환경변수가 누락되었습니다:', missingVars);
+      process.exit(1);
+    }
+
+    logger.info('✅ 필수 환경변수 확인 완료');
+
     // Prisma 클라이언트 연결 테스트
+    logger.info('🔌 데이터베이스 연결 중...');
     await prisma.$connect();
     logger.info('✅ Database connected successfully');
 
     // 초기 관리자 계정 생성
+    logger.info('👑 초기 관리자 계정 확인 중...');
     await createInitialAdmin();
 
+    logger.info('🌐 HTTP 서버 시작 중...');
     app.listen(PORT, () => {
-      logger.info(`서버가 포트 ${PORT}에서 실행 중입니다.`);
+      logger.info(`✅ 서버가 포트 ${PORT}에서 실행 중입니다.`);
       logger.info(`http://localhost:${PORT}`);
       logger.info(`API 문서: http://localhost:${PORT}/api-docs`);
       logger.info(`메트릭: http://localhost:${PORT}/metrics`);
@@ -203,7 +222,12 @@ const startServer = async (): Promise<void> => {
       logger.info(`DB 상태: http://localhost:${PORT}/db-status`);
     });
   } catch (error) {
-    logger.error('서버 시작 실패:', error);
+    logger.error('❌ 서버 시작 실패:', error);
+    logger.error('🔍 오류 상세 정보:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : 'Unknown',
+    });
     process.exit(1);
   }
 };
