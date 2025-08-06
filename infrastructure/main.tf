@@ -697,7 +697,6 @@ resource "aws_iam_role_policy" "ecs_task_parameter_store" {
         Resource = [
           aws_ssm_parameter.database_url.arn,
           aws_ssm_parameter.jwt_secret.arn,
-          aws_ssm_parameter.redis_url.arn,
           aws_ssm_parameter.kakao_client_id.arn,
           aws_ssm_parameter.kakao_client_secret.arn,
           aws_ssm_parameter.google_client_id.arn,
