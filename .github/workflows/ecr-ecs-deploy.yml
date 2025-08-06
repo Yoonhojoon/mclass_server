@@ -30,6 +30,10 @@ jobs:
     
     - name: Install dependencies
       run: npm ci
+
+    - name: Create .env.prod
+      run: echo "${{ secrets.ENV_PROD }}" > .env
+
     
     - name: Run tests
       run: npm test
