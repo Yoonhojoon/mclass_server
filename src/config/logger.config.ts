@@ -42,9 +42,10 @@ if (!fs.existsSync(logDir)) {
 
 // 트랜스포트 설정
 const transports = [
-  // 콘솔 출력
+  // 콘솔 출력 (프로덕션에서도 CloudWatch로 전송됨)
   new winston.transports.Console({
     format: winston.format.combine(
+      winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
       winston.format.colorize(),
       winston.format.simple()
     ),

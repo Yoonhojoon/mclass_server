@@ -340,6 +340,10 @@ resource "aws_ecs_task_definition" "main" {
         {
           name  = "PORT"
           value = "3000"
+        },
+        {
+          name  = "REDIS_URL"
+          value = "redis://redis:6379"
         }
       ]
       secrets = [
@@ -374,6 +378,10 @@ resource "aws_ecs_task_definition" "main" {
         {
           name      = "NAVER_CLIENT_SECRET"
           valueFrom = aws_ssm_parameter.naver_client_secret.arn
+        },
+        {
+          name      = "REDIS_URL"
+          valueFrom = aws_ssm_parameter.redis_url.arn
         }
       ]
       logConfiguration = {
@@ -663,16 +671,16 @@ resource "aws_ssm_parameter" "jwt_secret" {
   }
 }
 
-# Redis URL - 임시로 비활성화 (Redis 사용하지 않는 경우)
-# resource "aws_ssm_parameter" "redis_url" {
-#   name  = "/mclass/redis_url"
-#   type  = "SecureString"
-#   value = var.redis_url
-#
-#   tags = {
-#     Name = "mclass-redis-url"
-#   }
-# }
+# Redis URL
+resource "aws_ssm_parameter" "redis_url" {
+  name  = "/mclass/redis_url"
+  type  = "SecureString"
+  value = var.redis_url
+
+  tags = {
+    Name = "mclass-redis-url"
+  }
+}
 
 resource "aws_ssm_parameter" "kakao_client_id" {
   name  = "/mclass/kakao_client_id"
@@ -731,6 +739,37 @@ resource "aws_ssm_parameter" "naver_client_secret" {
 
   tags = {
     Name = "mclass-naver-client-secret"
+  }
+}
+
+# 초기 관리자 관련 SSM 파라미터들 추가
+resource "aws_ssm_parameter" "initial_admin_email" {
+  name  = "/mclass/initial_admin_email"
+  type  = "SecureString"
+  value = var.initial_admin_email
+
+  tags = {
+    Name = "mclass-initial-admin-email"
+  }
+}
+
+resource "aws_ssm_parameter" "initial_admin_password" {
+  name  = "/mclass/initial_admin_password"
+  type  = "SecureString"
+  value = var.initial_admin_password
+
+  tags = {
+    Name = "mclass-initial-admin-password"
+  }
+}
+
+resource "aws_ssm_parameter" "initial_admin_name" {
+  name  = "/mclass/initial_admin_name"
+  type  = "SecureString"
+  value = var.initial_admin_name
+
+  tags = {
+    Name = "mclass-initial-admin-name"
   }
 }
 
