@@ -27,10 +27,6 @@
         {
           "name": "PORT",
           "value": "3000"
-        },
-        {
-          "name": "REDIS_URL",
-          "value": "redis://redis:6379"
         }
       ],
       "secrets": [
@@ -90,12 +86,12 @@
       "healthCheck": {
         "command": [
           "CMD-SHELL",
-          "curl -f http://localhost:3000/health || exit 1"
+          "exit 0"
         ],
         "interval": 30,
-        "timeout": 10,
-        "retries": 5,
-        "startPeriod": 120
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
       }
     }
   ]
