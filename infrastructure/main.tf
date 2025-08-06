@@ -609,15 +609,16 @@ resource "aws_ssm_parameter" "jwt_secret" {
   }
 }
 
-resource "aws_ssm_parameter" "redis_url" {
-  name  = "/mclass/redis_url"
-  type  = "SecureString"
-  value = var.redis_url
-
-  tags = {
-    Name = "mclass-redis-url"
-  }
-}
+# Redis URL - 임시로 비활성화 (Redis 사용하지 않는 경우)
+# resource "aws_ssm_parameter" "redis_url" {
+#   name  = "/mclass/redis_url"
+#   type  = "SecureString"
+#   value = var.redis_url
+#
+#   tags = {
+#     Name = "mclass-redis-url"
+#   }
+# }
 
 resource "aws_ssm_parameter" "kakao_client_id" {
   name  = "/mclass/kakao_client_id"
