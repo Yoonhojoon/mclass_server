@@ -47,15 +47,34 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Create terraform.tfvars from ENV_PROD
+        run: |
+          echo "${{ secrets.ENV_PROD }}" > .env.prod
+          
+          # .env.prod 파일에서 환경변수들을 추출하여 terraform.tfvars 생성
+          cat > terraform.tfvars << EOF
+          database_url = "$(grep DATABASE_URL .env.prod | cut -d '=' -f2-)"
+          jwt_secret = "$(grep JWT_SECRET .env.prod | cut -d '=' -f2-)"
+          redis_url = "$(grep REDIS_URL .env.prod | cut -d '=' -f2-)"
+          kakao_client_id = "$(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2-)"
+          kakao_client_secret = "$(grep KAKAO_CLIENT_SECRET .env.prod | cut -d '=' -f2-)"
+          google_client_id = "$(grep GOOGLE_CLIENT_ID .env.prod | cut -d '=' -f2-)"
+          google_client_secret = "$(grep GOOGLE_CLIENT_SECRET .env.prod | cut -d '=' -f2-)"
+          naver_client_id = "$(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2-)"
+          naver_client_secret = "$(grep NAVER_CLIENT_SECRET .env.prod | cut -d '=' -f2-)"
+          EOF
+          
+          echo "✅ ENV_PROD에서 환경변수 추출 완료"
+
       - name: Terraform Plan
-        run: terraform plan -no-color -lock=false
+        run: terraform plan -no-color -lock=false -var-file=terraform.tfvars
 
 
 
       # 실제 배포는 main 브랜치에서만 실행되도록 조건 분기
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -lock=false
+        run: terraform apply -auto-approve -lock=false -var-file=terraform.tfvars
 
       - name: Show Terraform Outputs
         if: github.ref == 'refs/heads/main'

@@ -588,6 +588,127 @@ output "ecr_repository_url" {
 #   })
 # }
 
+# Parameter Store for Environment Variables
+resource "aws_ssm_parameter" "database_url" {
+  name  = "/mclass/database_url"
+  type  = "SecureString"
+  value = var.database_url
+
+  tags = {
+    Name = "mclass-database-url"
+  }
+}
+
+resource "aws_ssm_parameter" "jwt_secret" {
+  name  = "/mclass/jwt_secret"
+  type  = "SecureString"
+  value = var.jwt_secret
+
+  tags = {
+    Name = "mclass-jwt-secret"
+  }
+}
+
+resource "aws_ssm_parameter" "redis_url" {
+  name  = "/mclass/redis_url"
+  type  = "SecureString"
+  value = var.redis_url
+
+  tags = {
+    Name = "mclass-redis-url"
+  }
+}
+
+resource "aws_ssm_parameter" "kakao_client_id" {
+  name  = "/mclass/kakao_client_id"
+  type  = "SecureString"
+  value = var.kakao_client_id
+
+  tags = {
+    Name = "mclass-kakao-client-id"
+  }
+}
+
+resource "aws_ssm_parameter" "kakao_client_secret" {
+  name  = "/mclass/kakao_client_secret"
+  type  = "SecureString"
+  value = var.kakao_client_secret
+
+  tags = {
+    Name = "mclass-kakao-client-secret"
+  }
+}
+
+resource "aws_ssm_parameter" "google_client_id" {
+  name  = "/mclass/google_client_id"
+  type  = "SecureString"
+  value = var.google_client_id
+
+  tags = {
+    Name = "mclass-google-client-id"
+  }
+}
+
+resource "aws_ssm_parameter" "google_client_secret" {
+  name  = "/mclass/google_client_secret"
+  type  = "SecureString"
+  value = var.google_client_secret
+
+  tags = {
+    Name = "mclass-google-client-secret"
+  }
+}
+
+resource "aws_ssm_parameter" "naver_client_id" {
+  name  = "/mclass/naver_client_id"
+  type  = "SecureString"
+  value = var.naver_client_id
+
+  tags = {
+    Name = "mclass-naver-client-id"
+  }
+}
+
+resource "aws_ssm_parameter" "naver_client_secret" {
+  name  = "/mclass/naver_client_secret"
+  type  = "SecureString"
+  value = var.naver_client_secret
+
+  tags = {
+    Name = "mclass-naver-client-secret"
+  }
+}
+
+# ECS Task Role Policy for Parameter Store access
+resource "aws_iam_role_policy" "ecs_task_parameter_store" {
+  name = "ecs-task-parameter-store"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = [
+          aws_ssm_parameter.database_url.arn,
+          aws_ssm_parameter.jwt_secret.arn,
+          aws_ssm_parameter.redis_url.arn,
+          aws_ssm_parameter.kakao_client_id.arn,
+          aws_ssm_parameter.kakao_client_secret.arn,
+          aws_ssm_parameter.google_client_id.arn,
+          aws_ssm_parameter.google_client_secret.arn,
+          aws_ssm_parameter.naver_client_id.arn,
+          aws_ssm_parameter.naver_client_secret.arn
+        ]
+      }
+    ]
+  })
+}
+
 # Grafana IAM Role Policy (비용 발생 - 주석 처리)
 # resource "aws_iam_role_policy" "grafana_policy" {
 #   name = "grafana-policy"
