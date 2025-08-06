@@ -99,6 +99,7 @@ FRONTEND_URL=http://localhost:3000
 ```
 src/
 ├── auth/               # 로그인, 회원가입 등 인증
+├── admin/              # 관리자 기능
 ├── class/              # M클래스 CRUD
 ├── user/               # 사용자 정보 관리
 ├── enrollment/         # 신청 관련 도메인 (신청 로직, 내 신청 목록)
