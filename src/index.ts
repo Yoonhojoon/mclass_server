@@ -211,6 +211,9 @@ const startServer = async (): Promise<void> => {
     logger.info(
       `  - DATABASE_URL: ${process.env.DATABASE_URL ? '설정됨' : 'not set'}`
     );
+    if (process.env.DATABASE_URL) {
+      logger.info(`    📍 DATABASE_URL 값: ${process.env.DATABASE_URL}`);
+    }
     logger.info(
       `  - JWT_SECRET: ${process.env.JWT_SECRET ? '설정됨' : 'not set'}`
     );
