@@ -36,7 +36,11 @@ const redisStore = new RedisStore({
 // 미들웨어 설정
 app.use(
   cors({
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -143,31 +147,28 @@ app.use(ErrorHandler.handle);
  */
 async function createInitialAdmin(): Promise<void> {
   try {
-    // 관리자 계정 수 확인
+    // 데이터베이스 연결 상태 확인
+    await prisma.$connect();
+
+    // 관리자 계정이 이미 존재하는지 확인
     const adminCount = await prisma.user.count({
-      where: { isAdmin: true },
+      where: {
+        role: 'ADMIN',
+      },
     });
 
-    // 관리자가 없으면 초기 관리자 생성
     if (adminCount === 0) {
-      const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL;
-      const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
-      const initialAdminName = process.env.INITIAL_ADMIN_NAME || '시스템관리자';
+      // 초기 관리자 계정 생성
+      const hashedPassword = await bcrypt.hash(
+        process.env.INITIAL_ADMIN_PASSWORD || 'admin123',
+        10
+      );
 
-      if (!initialAdminEmail || !initialAdminPassword) {
-        logger.warn('⚠️ 초기 관리자 환경변수가 설정되지 않았습니다.');
-        return;
-      }
-
-      // 비밀번호 해시화
-      const hashedPassword = await bcrypt.hash(initialAdminPassword, 10);
-
-      // 초기 관리자 생성
       const admin = await prisma.user.create({
         data: {
-          email: initialAdminEmail,
+          email: process.env.INITIAL_ADMIN_EMAIL || 'admin@example.com',
           password: hashedPassword,
-          name: initialAdminName,
+          name: process.env.INITIAL_ADMIN_NAME || 'admin',
           role: 'ADMIN',
           isAdmin: true,
           isSignUpCompleted: true,
@@ -175,7 +176,8 @@ async function createInitialAdmin(): Promise<void> {
         },
       });
 
-      logger.info('✅ 초기 관리자 계정 생성 완료', {
+      logger.info('✅ 초기 관리자 계정이 생성되었습니다:', {
+        id: admin.id,
         email: admin.email,
         name: admin.name,
         role: admin.role,
@@ -185,6 +187,39 @@ async function createInitialAdmin(): Promise<void> {
     }
   } catch (error) {
     logger.error('❌ 초기 관리자 생성 중 오류:', error);
+    throw error; // 오류를 다시 던져서 서버 시작을 중단
+  }
+}
+
+// 데이터베이스 연결을 안전하게 처리하는 함수
+async function ensureDatabaseConnection(): Promise<void> {
+  const maxRetries = 5;
+  const retryDelay = 2000; // 2초
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`🔌 데이터베이스 연결 시도 ${attempt}/${maxRetries}...`);
+      await prisma.$connect();
+      logger.info('✅ Database connected successfully');
+      return;
+    } catch (error) {
+      logger.warn(
+        `⚠️ 데이터베이스 연결 실패 (시도 ${attempt}/${maxRetries}):`,
+        error
+      );
+
+      if (attempt === maxRetries) {
+        logger.error('❌ 최대 재시도 횟수에 도달했습니다. 서버를 종료합니다.');
+        throw error;
+      }
+
+      logger.info(`${retryDelay / 1000}초 후 재시도합니다...`);
+      // setTimeout을 안전하게 사용
+      await new Promise(resolve => {
+        const timer = globalThis.setTimeout(resolve, retryDelay);
+        return () => globalThis.clearTimeout(timer);
+      });
+    }
   }
 }
 
@@ -230,10 +265,8 @@ const startServer = async (): Promise<void> => {
 
     logger.info('✅ 필수 환경변수 확인 완료');
 
-    // Prisma 클라이언트 연결 테스트
-    logger.info('🔌 데이터베이스 연결 중...');
-    await prisma.$connect();
-    logger.info('✅ Database connected successfully');
+    // 데이터베이스 연결 (재시도 로직 포함)
+    await ensureDatabaseConnection();
 
     // 초기 관리자 계정 생성
     logger.info('👑 초기 관리자 계정 확인 중...');
