@@ -204,6 +204,27 @@ const startServer = async (): Promise<void> => {
       process.exit(1);
     }
 
+    // 환경변수 값들 로그 출력 (민감한 정보는 마스킹)
+    logger.info('📋 환경변수 설정 상태:');
+    logger.info(`  - NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+    logger.info(`  - PORT: ${process.env.PORT || '3000 (default)'}`);
+    logger.info(
+      `  - DATABASE_URL: ${process.env.DATABASE_URL ? '설정됨' : 'not set'}`
+    );
+    logger.info(
+      `  - JWT_SECRET: ${process.env.JWT_SECRET ? '설정됨' : 'not set'}`
+    );
+    logger.info(`  - REDIS_URL: ${process.env.REDIS_URL || 'not set'}`);
+    logger.info(
+      `  - INITIAL_ADMIN_EMAIL: ${process.env.INITIAL_ADMIN_EMAIL || 'not set'}`
+    );
+    logger.info(
+      `  - INITIAL_ADMIN_PASSWORD: ${process.env.INITIAL_ADMIN_PASSWORD ? '설정됨' : 'not set'}`
+    );
+    logger.info(
+      `  - INITIAL_ADMIN_NAME: ${process.env.INITIAL_ADMIN_NAME || 'not set'}`
+    );
+
     logger.info('✅ 필수 환경변수 확인 완료');
 
     // Prisma 클라이언트 연결 테스트

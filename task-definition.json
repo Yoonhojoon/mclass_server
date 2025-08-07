@@ -73,6 +73,10 @@
         {
           "name": "INITIAL_ADMIN_NAME",
           "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/initial_admin_name"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/redis_url"
         }
       ],
       "logConfiguration": {
