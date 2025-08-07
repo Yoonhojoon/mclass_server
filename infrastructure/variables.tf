@@ -1,9 +1,4 @@
 # Environment Variables
-variable "database_url" {
-  description = "Database connection URL"
-  type        = string
-  sensitive   = true
-}
 
 variable "jwt_secret" {
   description = "JWT secret key"
