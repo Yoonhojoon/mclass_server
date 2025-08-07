@@ -44,7 +44,7 @@ COPY --from=builder /app/dist ./dist
 # Prisma 클라이언트 복사
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Prisma 스키마 파일 복사 (마이그레이션용)
+# Prisma 스키마 파일과 마이그레이션 파일들 복사 (마이그레이션용)
 COPY --from=builder /app/prisma ./prisma
 
 # 사용자 권한 변경
