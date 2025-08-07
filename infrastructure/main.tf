@@ -670,7 +670,7 @@ output "rds_port" {
 resource "aws_ssm_parameter" "database_url" {
   name      = "/mclass/database_url"
   type      = "SecureString"
-  value = var.database_url
+  value     = var.database_url
   overwrite = true
 
   tags = {
