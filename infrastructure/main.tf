@@ -759,9 +759,10 @@ resource "aws_ssm_parameter" "naver_client_secret" {
 
 # 초기 관리자 관련 SSM 파라미터들 추가
 resource "aws_ssm_parameter" "initial_admin_email" {
-  name  = "/mclass/initial_admin_email"
-  type  = "SecureString"
-  value = var.initial_admin_email
+  name      = "/mclass/initial_admin_email"
+  type      = "SecureString"
+  value     = var.initial_admin_email
+  overwrite = true
 
   tags = {
     Name = "mclass-initial-admin-email"
@@ -769,9 +770,10 @@ resource "aws_ssm_parameter" "initial_admin_email" {
 }
 
 resource "aws_ssm_parameter" "initial_admin_password" {
-  name  = "/mclass/initial_admin_password"
-  type  = "SecureString"
-  value = var.initial_admin_password
+  name      = "/mclass/initial_admin_password"
+  type      = "SecureString"
+  value     = var.initial_admin_password
+  overwrite = true
 
   tags = {
     Name = "mclass-initial-admin-password"
@@ -779,9 +781,10 @@ resource "aws_ssm_parameter" "initial_admin_password" {
 }
 
 resource "aws_ssm_parameter" "initial_admin_name" {
-  name  = "/mclass/initial_admin_name"
-  type  = "SecureString"
-  value = var.initial_admin_name
+  name      = "/mclass/initial_admin_name"
+  type      = "SecureString"
+  value     = var.initial_admin_name
+  overwrite = true
 
   tags = {
     Name = "mclass-initial-admin-name"
@@ -873,7 +876,7 @@ resource "aws_db_instance" "main" {
   identifier = "mclass-postgresql"
 
   engine         = "postgres"
-  engine_version = "15.3"
+  engine_version = "15.10"
   instance_class = "db.t3.micro" # 프리티어
 
   allocated_storage     = 20
