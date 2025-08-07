@@ -668,9 +668,10 @@ output "rds_port" {
 
 # Parameter Store for Environment Variables
 resource "aws_ssm_parameter" "database_url" {
-  name  = "/mclass/database_url"
-  type  = "SecureString"
-  value = "postgresql://postgres:${var.database_password}@${aws_db_instance.main.endpoint}:5432/mclass_prod"
+  name      = "/mclass/database_url"
+  type      = "SecureString"
+  value = var.database_url
+  overwrite = true
 
   tags = {
     Name = "mclass-database-url"

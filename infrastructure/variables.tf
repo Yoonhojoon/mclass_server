@@ -71,4 +71,10 @@ variable "database_password" {
   description = "Database password for RDS PostgreSQL"
   type        = string
   sensitive   = true
+}
+
+variable "database_url" {
+  description = "Complete database connection URL"
+  type        = string
+  sensitive   = true
 } 

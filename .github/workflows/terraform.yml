@@ -59,6 +59,7 @@ jobs:
           # 각 환경변수 확인
           echo "🔍 환경변수 확인:"
           echo "DATABASE_PASSWORD: $(grep DATABASE_PASSWORD .env.prod | cut -d '=' -f2- || echo 'NOT_FOUND')"
+          echo "DATABASE_URL: $(grep DATABASE_URL .env.prod | cut -d '=' -f2- || echo 'NOT_FOUND')"
           echo "JWT_SECRET: $(grep JWT_SECRET .env.prod | cut -d '=' -f2- || echo 'NOT_FOUND')"
           echo "REDIS_URL: $(grep REDIS_URL .env.prod | cut -d '=' -f2- || echo 'NOT_FOUND')"
           echo "INITIAL_ADMIN_EMAIL: $(grep INITIAL_ADMIN_EMAIL .env.prod | cut -d '=' -f2- || echo 'NOT_FOUND')"
@@ -69,6 +70,7 @@ jobs:
           # .env.prod 파일에서 환경변수들을 추출하여 terraform.tfvars 생성
           cat > terraform.tfvars << EOF
           database_password = "$(grep DATABASE_PASSWORD .env.prod | cut -d '=' -f2-)"
+          database_url = "$(grep DATABASE_URL .env.prod | cut -d '=' -f2-)"
           jwt_secret = "$(grep JWT_SECRET .env.prod | cut -d '=' -f2-)"
           redis_url = "$(grep REDIS_URL .env.prod | cut -d '=' -f2-)"
           kakao_client_id = "$(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2-)"
