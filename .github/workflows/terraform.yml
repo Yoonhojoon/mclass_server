@@ -88,6 +88,10 @@ jobs:
 
       - name: Terraform Plan
         run: terraform plan -no-color -lock=false -var-file=terraform.tfvars
+      
+      - name: Taint RDS Instance (Force Recreation)
+        if: github.ref == 'refs/heads/main'
+        run: terraform taint aws_db_instance.main
 
 
 
