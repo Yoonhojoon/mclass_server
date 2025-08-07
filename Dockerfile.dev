@@ -15,5 +15,5 @@ COPY . .
 # 포트 노출
 EXPOSE 3000
 
-# 개발 모드로 실행
-CMD ["npm", "run", "dev"] 
+# 개발 모드로 실행 (마이그레이션 후 서버 시작)
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run dev"] 
