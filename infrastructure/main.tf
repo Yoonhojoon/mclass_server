@@ -681,9 +681,10 @@ resource "aws_ssm_parameter" "jwt_secret" {
 
 # Redis URL
 resource "aws_ssm_parameter" "redis_url" {
-  name  = "/mclass/redis_url"
-  type  = "SecureString"
-  value = var.redis_url
+  name      = "/mclass/redis_url"
+  type      = "SecureString"
+  value     = var.redis_url != "" ? var.redis_url : "redis://redis:6379"
+  overwrite = true
 
   tags = {
     Name = "mclass-redis-url"
@@ -691,9 +692,10 @@ resource "aws_ssm_parameter" "redis_url" {
 }
 
 resource "aws_ssm_parameter" "kakao_client_id" {
-  name  = "/mclass/kakao_client_id"
-  type  = "SecureString"
-  value = var.kakao_client_id
+  name      = "/mclass/kakao_client_id"
+  type      = "SecureString"
+  value     = var.kakao_client_id
+  overwrite = true
 
   tags = {
     Name = "mclass-kakao-client-id"
@@ -701,9 +703,10 @@ resource "aws_ssm_parameter" "kakao_client_id" {
 }
 
 resource "aws_ssm_parameter" "kakao_client_secret" {
-  name  = "/mclass/kakao_client_secret"
-  type  = "SecureString"
-  value = var.kakao_client_secret
+  name      = "/mclass/kakao_client_secret"
+  type      = "SecureString"
+  value     = var.kakao_client_secret
+  overwrite = true
 
   tags = {
     Name = "mclass-kakao-client-secret"
@@ -711,9 +714,10 @@ resource "aws_ssm_parameter" "kakao_client_secret" {
 }
 
 resource "aws_ssm_parameter" "google_client_id" {
-  name  = "/mclass/google_client_id"
-  type  = "SecureString"
-  value = var.google_client_id
+  name      = "/mclass/google_client_id"
+  type      = "SecureString"
+  value     = var.google_client_id
+  overwrite = true
 
   tags = {
     Name = "mclass-google-client-id"
@@ -721,9 +725,10 @@ resource "aws_ssm_parameter" "google_client_id" {
 }
 
 resource "aws_ssm_parameter" "google_client_secret" {
-  name  = "/mclass/google_client_secret"
-  type  = "SecureString"
-  value = var.google_client_secret
+  name      = "/mclass/google_client_secret"
+  type      = "SecureString"
+  value     = var.google_client_secret
+  overwrite = true
 
   tags = {
     Name = "mclass-google-client-secret"
@@ -731,9 +736,10 @@ resource "aws_ssm_parameter" "google_client_secret" {
 }
 
 resource "aws_ssm_parameter" "naver_client_id" {
-  name  = "/mclass/naver_client_id"
-  type  = "SecureString"
-  value = var.naver_client_id
+  name      = "/mclass/naver_client_id"
+  type      = "SecureString"
+  value     = var.naver_client_id
+  overwrite = true
 
   tags = {
     Name = "mclass-naver-client-id"
@@ -741,9 +747,10 @@ resource "aws_ssm_parameter" "naver_client_id" {
 }
 
 resource "aws_ssm_parameter" "naver_client_secret" {
-  name  = "/mclass/naver_client_secret"
-  type  = "SecureString"
-  value = var.naver_client_secret
+  name      = "/mclass/naver_client_secret"
+  type      = "SecureString"
+  value     = var.naver_client_secret
+  overwrite = true
 
   tags = {
     Name = "mclass-naver-client-secret"
@@ -866,7 +873,7 @@ resource "aws_db_instance" "main" {
   identifier = "mclass-postgresql"
 
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15.3"
   instance_class = "db.t3.micro" # 프리티어
 
   allocated_storage     = 20
