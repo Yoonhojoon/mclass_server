@@ -340,10 +340,6 @@ resource "aws_ecs_task_definition" "main" {
         {
           name  = "PORT"
           value = "3000"
-        },
-        {
-          name  = "REDIS_URL"
-          value = "redis://redis:6379"
         }
       ]
       secrets = [
