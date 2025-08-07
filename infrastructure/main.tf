@@ -662,7 +662,7 @@ output "rds_port" {
 resource "aws_ssm_parameter" "database_url" {
   name  = "/mclass/database_url"
   type  = "SecureString"
-  value = var.database_url
+  value = "postgresql://postgres:${var.database_password}@${aws_db_instance.main.endpoint}:5432/mclass_prod"
 
   tags = {
     Name = "mclass-database-url"

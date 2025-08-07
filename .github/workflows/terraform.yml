@@ -53,7 +53,7 @@ jobs:
           
           # .env.prod 파일에서 환경변수들을 추출하여 terraform.tfvars 생성
           cat > terraform.tfvars << EOF
-          database_url = "$(grep DATABASE_URL .env.prod | cut -d '=' -f2-)"
+          database_password = "$(grep DATABASE_PASSWORD .env.prod | cut -d '=' -f2-)"
           jwt_secret = "$(grep JWT_SECRET .env.prod | cut -d '=' -f2-)"
           redis_url = "$(grep REDIS_URL .env.prod | cut -d '=' -f2-)"
           kakao_client_id = "$(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2-)"
@@ -62,6 +62,9 @@ jobs:
           google_client_secret = "$(grep GOOGLE_CLIENT_SECRET .env.prod | cut -d '=' -f2-)"
           naver_client_id = "$(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2-)"
           naver_client_secret = "$(grep NAVER_CLIENT_SECRET .env.prod | cut -d '=' -f2-)"
+          initial_admin_email = "$(grep INITIAL_ADMIN_EMAIL .env.prod | cut -d '=' -f2-)"
+          initial_admin_password = "$(grep INITIAL_ADMIN_PASSWORD .env.prod | cut -d '=' -f2-)"
+          initial_admin_name = "$(grep INITIAL_ADMIN_NAME .env.prod | cut -d '=' -f2-)"
           EOF
           
           echo "✅ ENV_PROD에서 환경변수 추출 완료"
@@ -85,6 +88,7 @@ jobs:
           echo "🏗️  VPC: $(terraform output -raw vpc_id 2>/dev/null || echo 'N/A')"
           echo "🌐 ALB DNS: $(terraform output -raw alb_dns_name 2>/dev/null || echo 'N/A')"
           echo "📦 ECR Repository: $(terraform output -raw ecr_repository_url 2>/dev/null || echo 'N/A')"
+          echo "🔗 RDS Endpoint: $(terraform output -raw rds_endpoint 2>/dev/null || echo 'N/A')"
           echo "🔗 ECS Cluster: mclass-cluster"
           echo "⚙️  ECS Service: mclass-service"
           echo "📋 Task Definition: mclass-task"
