@@ -44,10 +44,12 @@ COPY --from=builder /app/dist ./dist
 # Prisma 클라이언트 복사
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
+# Prisma 스키마 파일 복사 (마이그레이션용)
+COPY --from=builder /app/prisma ./prisma
+
 # 사용자 권한 변경
 RUN chown -R nodejs:nodejs /app
 USER nodejs
-
 
 # 포트 노출
 EXPOSE 3000
@@ -56,5 +58,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 애플리케이션 시작 (ES 모듈)
-CMD ["node", "dist/index.js"] 
+# 애플리케이션 시작 (마이그레이션 후 서버 시작)
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"] 

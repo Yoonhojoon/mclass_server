@@ -958,7 +958,7 @@ const options = {
       },
     ],
   },
-  apis: ['./dist/routes/*.js', './dist/routes/*.routes.js', './dist/index.js'], // API 라우트 파일들
+  apis: ['./src/routes/*.ts', './src/routes/*.routes.ts', './src/index.ts'], // API 라우트 파일들
 };
 
 export const specs = swaggerJsdoc(options);
