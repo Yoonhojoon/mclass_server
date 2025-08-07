@@ -378,6 +378,18 @@ resource "aws_ecs_task_definition" "main" {
         {
           name      = "REDIS_URL"
           valueFrom = aws_ssm_parameter.redis_url.arn
+        },
+        {
+          name      = "INITIAL_ADMIN_EMAIL"
+          valueFrom = aws_ssm_parameter.initial_admin_email.arn
+        },
+        {
+          name      = "INITIAL_ADMIN_PASSWORD"
+          valueFrom = aws_ssm_parameter.initial_admin_password.arn
+        },
+        {
+          name      = "INITIAL_ADMIN_NAME"
+          valueFrom = aws_ssm_parameter.initial_admin_name.arn
         }
       ]
       logConfiguration = {
