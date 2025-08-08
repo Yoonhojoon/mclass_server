@@ -64,28 +64,18 @@ jobs:
       run: |
         echo "🔍 ENV_PROD 내용 디버깅 중..."
         echo "ENV_PROD 길이: ${#ENV_PROD}"
-        echo "ENV_PROD 첫 50자: ${ENV_PROD:0:50}"
-        echo "ENV_PROD 마지막 50자: ${ENV_PROD: -50}"
         
         # .env.prod 파일 생성
         echo "${{ secrets.ENV_PROD }}" > .env.prod
         
-        echo "📄 .env.prod 파일 내용:"
-        cat .env.prod
+        echo "📄 .env.prod 파일이 생성되었습니다."
         
-        echo ""
-        echo "🔍 환경변수 추출 테스트:"
-        echo "DATABASE_URL: $(grep DATABASE_URL .env.prod | cut -d '=' -f2- | head -c 20)..."
-        echo "JWT_SECRET: $(grep JWT_SECRET .env.prod | cut -d '=' -f2- | head -c 10)..."
-        echo "GOOGLE_CLIENT_ID: $(grep GOOGLE_CLIENT_ID .env.prod | cut -d '=' -f2- | head -c 20)..."
-        echo "KAKAO_CLIENT_ID: $(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2- | head -c 20)..."
-        echo "NAVER_CLIENT_ID: $(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2- | head -c 20)..."
-        
-        echo ""
         echo "📊 환경변수 개수 확인:"
         grep -c "=" .env.prod || echo "환경변수 없음"
         
-        echo ""
+        # 민감한 정보가 포함된 .env.prod 파일 삭제
+        rm -f .env.prod
+        
         echo "✅ 디버깅 완료!"
 
     - name: Setup Parameter Store secrets
@@ -96,7 +86,6 @@ jobs:
         # 각 환경변수를 추출하여 Parameter Store에 저장
         echo "📦 DATABASE_URL 설정 중..."
         DATABASE_URL_VALUE=$(grep DATABASE_URL .env.prod | cut -d '=' -f2-)
-        echo "추출된 DATABASE_URL 길이: ${#DATABASE_URL_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/database_url" \
           --value "$DATABASE_URL_VALUE" \
@@ -106,7 +95,6 @@ jobs:
         
         echo "🔑 JWT_SECRET 설정 중..."
         JWT_SECRET_VALUE=$(grep JWT_SECRET .env.prod | cut -d '=' -f2-)
-        echo "추출된 JWT_SECRET 길이: ${#JWT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/jwt_secret" \
           --value "$JWT_SECRET_VALUE" \
@@ -116,7 +104,6 @@ jobs:
         
         echo "🍊 KAKAO_CLIENT_ID 설정 중..."
         KAKAO_CLIENT_ID_VALUE=$(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2-)
-        echo "추출된 KAKAO_CLIENT_ID: $KAKAO_CLIENT_ID_VALUE"
         aws ssm put-parameter \
           --name "/mclass/kakao_client_id" \
           --value "$KAKAO_CLIENT_ID_VALUE" \
@@ -126,7 +113,6 @@ jobs:
         
         echo "🍊 KAKAO_CLIENT_SECRET 설정 중..."
         KAKAO_CLIENT_SECRET_VALUE=$(grep KAKAO_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
-        echo "추출된 KAKAO_CLIENT_SECRET 길이: ${#KAKAO_CLIENT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/kakao_client_secret" \
           --value "$KAKAO_CLIENT_SECRET_VALUE" \
@@ -136,7 +122,6 @@ jobs:
         
         echo "🔍 GOOGLE_CLIENT_ID 설정 중..."
         GOOGLE_CLIENT_ID_VALUE=$(grep GOOGLE_CLIENT_ID .env.prod | cut -d '=' -f2-)
-        echo "추출된 GOOGLE_CLIENT_ID: $GOOGLE_CLIENT_ID_VALUE"
         aws ssm put-parameter \
           --name "/mclass/google_client_id" \
           --value "$GOOGLE_CLIENT_ID_VALUE" \
@@ -146,7 +131,6 @@ jobs:
         
         echo "🔍 GOOGLE_CLIENT_SECRET 설정 중..."
         GOOGLE_CLIENT_SECRET_VALUE=$(grep GOOGLE_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
-        echo "추출된 GOOGLE_CLIENT_SECRET 길이: ${#GOOGLE_CLIENT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/google_client_secret" \
           --value "$GOOGLE_CLIENT_SECRET_VALUE" \
@@ -156,7 +140,6 @@ jobs:
         
         echo "🟢 NAVER_CLIENT_ID 설정 중..."
         NAVER_CLIENT_ID_VALUE=$(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2-)
-        echo "추출된 NAVER_CLIENT_ID: $NAVER_CLIENT_ID_VALUE"
         aws ssm put-parameter \
           --name "/mclass/naver_client_id" \
           --value "$NAVER_CLIENT_ID_VALUE" \
@@ -166,7 +149,6 @@ jobs:
         
         echo "🟢 NAVER_CLIENT_SECRET 설정 중..."
         NAVER_CLIENT_SECRET_VALUE=$(grep NAVER_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
-        echo "추출된 NAVER_CLIENT_SECRET 길이: ${#NAVER_CLIENT_SECRET_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/naver_client_secret" \
           --value "$NAVER_CLIENT_SECRET_VALUE" \
@@ -176,7 +158,6 @@ jobs:
         
         echo "👑 INITIAL_ADMIN_EMAIL 설정 중..."
         INITIAL_ADMIN_EMAIL_VALUE=$(grep INITIAL_ADMIN_EMAIL .env.prod | cut -d '=' -f2-)
-        echo "추출된 INITIAL_ADMIN_EMAIL: $INITIAL_ADMIN_EMAIL_VALUE"
         aws ssm put-parameter \
           --name "/mclass/initial_admin_email" \
           --value "$INITIAL_ADMIN_EMAIL_VALUE" \
@@ -186,7 +167,6 @@ jobs:
         
         echo "👑 INITIAL_ADMIN_PASSWORD 설정 중..."
         INITIAL_ADMIN_PASSWORD_VALUE=$(grep INITIAL_ADMIN_PASSWORD .env.prod | cut -d '=' -f2-)
-        echo "추출된 INITIAL_ADMIN_PASSWORD 길이: ${#INITIAL_ADMIN_PASSWORD_VALUE}"
         aws ssm put-parameter \
           --name "/mclass/initial_admin_password" \
           --value "$INITIAL_ADMIN_PASSWORD_VALUE" \
@@ -196,7 +176,6 @@ jobs:
         
         echo "👑 INITIAL_ADMIN_NAME 설정 중..."
         INITIAL_ADMIN_NAME_VALUE=$(grep INITIAL_ADMIN_NAME .env.prod | cut -d '=' -f2-)
-        echo "추출된 INITIAL_ADMIN_NAME: $INITIAL_ADMIN_NAME_VALUE"
         aws ssm put-parameter \
           --name "/mclass/initial_admin_name" \
           --value "$INITIAL_ADMIN_NAME_VALUE" \
@@ -204,15 +183,10 @@ jobs:
           --region ${{ env.AWS_REGION }} \
           --overwrite || echo "INITIAL_ADMIN_NAME 설정 완료"
         
-        echo "✅ 모든 환경변수가 Parameter Store에 설정되었습니다!"
+        # 민감한 정보가 포함된 .env.prod 파일 삭제
+        rm -f .env.prod
         
-        echo ""
-        echo "🔍 Parameter Store 확인:"
-        aws ssm get-parameters \
-          --names "/mclass/database_url" "/mclass/jwt_secret" "/mclass/kakao_client_id" "/mclass/google_client_id" "/mclass/naver_client_id" \
-          --region ${{ env.AWS_REGION }} \
-          --query 'Parameters[*].{Name:Name,Type:Type,Version:Version}' \
-          --output table
+        echo "✅ Parameter Store 설정 완료"
     
     - name: Verify existing infrastructure
       run: |

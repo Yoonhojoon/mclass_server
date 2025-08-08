@@ -34,13 +34,36 @@ const redisStore = new RedisStore({
 });
 
 // 미들웨어 설정
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://127.0.0.1:3000',
+  'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+  'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+];
+
+// 환경 변수에서 추가 origin이 있다면 추가
+if (process.env.ALLOWED_ORIGINS) {
+  const additionalOrigins = process.env.ALLOWED_ORIGINS.split(',').map(origin =>
+    origin.trim()
+  );
+  allowedOrigins.push(...additionalOrigins);
+}
+
 app.use(
   cors({
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
-    ],
+    origin: function (origin, callback) {
+      // origin이 없는 경우 (같은 origin에서의 요청) 허용
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        logger.warn(`🚫 CORS 차단된 origin: ${origin}`);
+        callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
