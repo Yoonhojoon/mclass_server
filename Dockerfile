@@ -44,13 +44,26 @@ COPY --from=builder /app/dist ./dist
 # Prisma 클라이언트 복사
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
+# Prisma 스키마 파일과 마이그레이션 파일들 복사 (마이그레이션용)
+COPY --from=builder /app/prisma ./prisma
+
+# 시작 스크립트 생성
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'echo "🔄 데이터베이스 마이그레이션 시작..."' >> /app/start.sh && \
+    echo 'npx prisma migrate deploy' >> /app/start.sh && \
+    echo 'if [ $? -eq 0 ]; then' >> /app/start.sh && \
+    echo '  echo "✅ 마이그레이션 완료"' >> /app/start.sh && \
+    echo '  echo "🚀 애플리케이션 시작..."' >> /app/start.sh && \
+    echo '  exec node dist/index.js' >> /app/start.sh && \
+    echo 'else' >> /app/start.sh && \
+    echo '  echo "❌ 마이그레이션 실패"' >> /app/start.sh && \
+    echo '  exit 1' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 # 사용자 권한 변경
 RUN chown -R nodejs:nodejs /app
 USER nodejs
-
-# 헬스체크 추가 (ES 모듈 문법)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
-  CMD node -e "import('http').then(http => http.get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }))"
 
 # 포트 노출
 EXPOSE 3000
@@ -59,5 +72,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# 애플리케이션 시작 (ES 모듈)
-CMD ["node", "--experimental-specifier-resolution=node", "dist/index.js"] 
+# 애플리케이션 시작 (마이그레이션 후 서버 시작)
+CMD ["/app/start.sh"] 

@@ -1,5 +1,17 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// 디버깅을 위한 로그
+console.log('🔍 Swagger 설정 - 환경:', process.env.NODE_ENV);
+console.log('🔍 Swagger 설정 - isDevelopment:', isDevelopment);
+
+const apiPaths = isDevelopment
+  ? ['./src/routes/*.ts', './src/routes/*.routes.ts', './src/index.ts']
+  : ['./dist/routes/*.js', './dist/routes/*.routes.js', './dist/index.js'];
+
+console.log('🔍 Swagger 설정 - API 경로:', apiPaths);
+
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -958,7 +970,7 @@ const options = {
       },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/routes/*.routes.ts', './src/index.ts'], // API 라우트 파일들
+  apis: apiPaths, // 환경에 따라 다른 경로 사용
 };
 
 export const specs = swaggerJsdoc(options);

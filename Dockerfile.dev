@@ -12,8 +12,22 @@ RUN npm ci
 # 소스 코드 복사
 COPY . .
 
+# 시작 스크립트 생성
+RUN echo '#!/bin/sh' > /app/start-dev.sh && \
+    echo 'echo "🔄 데이터베이스 마이그레이션 시작..."' >> /app/start-dev.sh && \
+    echo 'npx prisma migrate deploy' >> /app/start-dev.sh && \
+    echo 'if [ $? -eq 0 ]; then' >> /app/start-dev.sh && \
+    echo '  echo "✅ 마이그레이션 완료"' >> /app/start-dev.sh && \
+    echo '  echo "🚀 개발 서버 시작..."' >> /app/start-dev.sh && \
+    echo '  exec npm run dev' >> /app/start-dev.sh && \
+    echo 'else' >> /app/start-dev.sh && \
+    echo '  echo "❌ 마이그레이션 실패"' >> /app/start-dev.sh && \
+    echo '  exit 1' >> /app/start-dev.sh && \
+    echo 'fi' >> /app/start-dev.sh && \
+    chmod +x /app/start-dev.sh
+
 # 포트 노출
 EXPOSE 3000
 
-# 개발 모드로 실행
-CMD ["npm", "run", "dev"] 
+# 개발 모드로 실행 (마이그레이션 후 서버 시작)
+CMD ["/app/start-dev.sh"] 

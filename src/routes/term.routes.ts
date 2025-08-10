@@ -6,7 +6,7 @@ import {
   authenticateToken,
   requireAdmin,
 } from '../middleware/auth.middleware.js';
-import { validateId } from '../middleware/validation.middleware';
+import { validateId } from '../middleware/validation.middleware.js';
 
 /**
  * @swagger

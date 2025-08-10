@@ -29,6 +29,56 @@
           "value": "3000"
         }
       ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/database_url"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/jwt_secret"
+        },
+        {
+          "name": "KAKAO_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/kakao_client_id"
+        },
+        {
+          "name": "KAKAO_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/kakao_client_secret"
+        },
+        {
+          "name": "GOOGLE_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/google_client_id"
+        },
+        {
+          "name": "GOOGLE_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/google_client_secret"
+        },
+        {
+          "name": "NAVER_CLIENT_ID",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/naver_client_id"
+        },
+        {
+          "name": "NAVER_CLIENT_SECRET",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/naver_client_secret"
+        },
+        {
+          "name": "INITIAL_ADMIN_EMAIL",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/initial_admin_email"
+        },
+        {
+          "name": "INITIAL_ADMIN_PASSWORD",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/initial_admin_password"
+        },
+        {
+          "name": "INITIAL_ADMIN_NAME",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/initial_admin_name"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/redis_url"
+        }
+      ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
@@ -36,16 +86,6 @@
           "awslogs-region": "ap-northeast-2",
           "awslogs-stream-prefix": "ecs"
         }
-      },
-      "healthCheck": {
-        "command": [
-          "CMD-SHELL",
-          "curl -f http://localhost:3000/health || exit 1"
-        ],
-        "interval": 30,
-        "timeout": 10,
-        "retries": 5,
-        "startPeriod": 120
       }
     }
   ]

@@ -47,15 +47,68 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
+      - name: Create terraform.tfvars from ENV_PROD
+        run: |
+          # 민감한 정보를 환경 변수로 설정하여 마스킹
+          echo "${{ secrets.ENV_PROD }}" > .env.prod
+          
+          # 환경 변수들을 추출하여 마스킹된 형태로 로그 출력
+          echo "🔍 환경변수 추출 중..."
+          DATABASE_PASSWORD=$(grep DATABASE_PASSWORD .env.prod | cut -d '=' -f2-)
+          DATABASE_URL=$(grep DATABASE_URL .env.prod | cut -d '=' -f2-)
+          JWT_SECRET=$(grep JWT_SECRET .env.prod | cut -d '=' -f2-)
+          REDIS_URL=$(grep REDIS_URL .env.prod | cut -d '=' -f2-)
+          KAKAO_CLIENT_ID=$(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2-)
+          KAKAO_CLIENT_SECRET=$(grep KAKAO_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+          GOOGLE_CLIENT_ID=$(grep GOOGLE_CLIENT_ID .env.prod | cut -d '=' -f2-)
+          GOOGLE_CLIENT_SECRET=$(grep GOOGLE_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+          NAVER_CLIENT_ID=$(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2-)
+          NAVER_CLIENT_SECRET=$(grep NAVER_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+          INITIAL_ADMIN_EMAIL=$(grep INITIAL_ADMIN_EMAIL .env.prod | cut -d '=' -f2-)
+          INITIAL_ADMIN_PASSWORD=$(grep INITIAL_ADMIN_PASSWORD .env.prod | cut -d '=' -f2-)
+          INITIAL_ADMIN_NAME=$(grep INITIAL_ADMIN_NAME .env.prod | cut -d '=' -f2-)
+          
+          # 민감한 정보를 마스킹하여 로그 출력
+          echo "DATABASE_PASSWORD: ${DATABASE_PASSWORD:0:4}***"
+          echo "DATABASE_URL: ${DATABASE_URL:0:20}***"
+          echo "JWT_SECRET: ${JWT_SECRET:0:8}***"
+          echo "REDIS_URL: ${REDIS_URL:0:20}***"
+          echo "KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:0:10}***"
+          echo "GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:0:10}***"
+          echo "NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:0:10}***"
+          echo "INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:0:10}***"
+          echo "INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:0:5}***"
+          
+          # .env.prod 파일에서 환경변수들을 추출하여 terraform.tfvars 생성
+          cat > terraform.tfvars << EOF
+          database_password = "$DATABASE_PASSWORD"
+          database_url = "$DATABASE_URL"
+          jwt_secret = "$JWT_SECRET"
+          redis_url = "$REDIS_URL"
+          kakao_client_id = "$KAKAO_CLIENT_ID"
+          kakao_client_secret = "$KAKAO_CLIENT_SECRET"
+          google_client_id = "$GOOGLE_CLIENT_ID"
+          google_client_secret = "$GOOGLE_CLIENT_SECRET"
+          naver_client_id = "$NAVER_CLIENT_ID"
+          naver_client_secret = "$NAVER_CLIENT_SECRET"
+          initial_admin_email = "$INITIAL_ADMIN_EMAIL"
+          initial_admin_password = "$INITIAL_ADMIN_PASSWORD"
+          initial_admin_name = "$INITIAL_ADMIN_NAME"
+          EOF
+          
+          # 민감한 정보가 포함된 .env.prod 파일 삭제
+          rm -f .env.prod
+          
+          echo "✅ ENV_PROD에서 환경변수 추출 완료"
+          echo "📋 terraform.tfvars 파일이 생성되었습니다."
+
       - name: Terraform Plan
-        run: terraform plan -no-color -lock=false
-
-
-
+        run: terraform plan -no-color -lock=false -var-file=terraform.tfvars
+      
       # 실제 배포는 main 브랜치에서만 실행되도록 조건 분기
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -lock=false
+        run: terraform apply -auto-approve -lock=false -var-file=terraform.tfvars
 
       - name: Show Terraform Outputs
         if: github.ref == 'refs/heads/main'
@@ -66,6 +119,7 @@ jobs:
           echo "🏗️  VPC: $(terraform output -raw vpc_id 2>/dev/null || echo 'N/A')"
           echo "🌐 ALB DNS: $(terraform output -raw alb_dns_name 2>/dev/null || echo 'N/A')"
           echo "📦 ECR Repository: $(terraform output -raw ecr_repository_url 2>/dev/null || echo 'N/A')"
+          echo "🔗 RDS Endpoint: $(terraform output -raw rds_endpoint 2>/dev/null || echo 'N/A')"
           echo "🔗 ECS Cluster: mclass-cluster"
           echo "⚙️  ECS Service: mclass-service"
           echo "📋 Task Definition: mclass-task"

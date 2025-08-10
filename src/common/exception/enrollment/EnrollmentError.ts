@@ -1,4 +1,4 @@
-import { BaseError } from '../BaseError';
+import { BaseError } from '../BaseError.js';
 
 export class EnrollmentError extends BaseError {
   constructor(message: string, originalError?: unknown) {

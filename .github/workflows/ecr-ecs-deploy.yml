@@ -60,6 +60,134 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
     
+    - name: Debug ENV_PROD contents
+      run: |
+        echo "🔍 ENV_PROD 내용 디버깅 중..."
+        echo "ENV_PROD 길이: ${#ENV_PROD}"
+        
+        # .env.prod 파일 생성
+        echo "${{ secrets.ENV_PROD }}" > .env.prod
+        
+        echo "📄 .env.prod 파일이 생성되었습니다."
+        
+        echo "📊 환경변수 개수 확인:"
+        grep -c "=" .env.prod || echo "환경변수 없음"
+        
+        # 민감한 정보가 포함된 .env.prod 파일 삭제
+        rm -f .env.prod
+        
+        echo "✅ 디버깅 완료!"
+
+    - name: Setup Parameter Store secrets
+      run: |
+        echo "🔐 Parameter Store에 환경변수 설정 중..."
+        echo "${{ secrets.ENV_PROD }}" > .env.prod
+        
+        # 각 환경변수를 추출하여 Parameter Store에 저장
+        echo "📦 DATABASE_URL 설정 중..."
+        DATABASE_URL_VALUE=$(grep DATABASE_URL .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/database_url" \
+          --value "$DATABASE_URL_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "DATABASE_URL 설정 완료"
+        
+        echo "🔑 JWT_SECRET 설정 중..."
+        JWT_SECRET_VALUE=$(grep JWT_SECRET .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/jwt_secret" \
+          --value "$JWT_SECRET_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "JWT_SECRET 설정 완료"
+        
+        echo "🍊 KAKAO_CLIENT_ID 설정 중..."
+        KAKAO_CLIENT_ID_VALUE=$(grep KAKAO_CLIENT_ID .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/kakao_client_id" \
+          --value "$KAKAO_CLIENT_ID_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "KAKAO_CLIENT_ID 설정 완료"
+        
+        echo "🍊 KAKAO_CLIENT_SECRET 설정 중..."
+        KAKAO_CLIENT_SECRET_VALUE=$(grep KAKAO_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/kakao_client_secret" \
+          --value "$KAKAO_CLIENT_SECRET_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "KAKAO_CLIENT_SECRET 설정 완료"
+        
+        echo "🔍 GOOGLE_CLIENT_ID 설정 중..."
+        GOOGLE_CLIENT_ID_VALUE=$(grep GOOGLE_CLIENT_ID .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/google_client_id" \
+          --value "$GOOGLE_CLIENT_ID_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "GOOGLE_CLIENT_ID 설정 완료"
+        
+        echo "🔍 GOOGLE_CLIENT_SECRET 설정 중..."
+        GOOGLE_CLIENT_SECRET_VALUE=$(grep GOOGLE_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/google_client_secret" \
+          --value "$GOOGLE_CLIENT_SECRET_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "GOOGLE_CLIENT_SECRET 설정 완료"
+        
+        echo "🟢 NAVER_CLIENT_ID 설정 중..."
+        NAVER_CLIENT_ID_VALUE=$(grep NAVER_CLIENT_ID .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/naver_client_id" \
+          --value "$NAVER_CLIENT_ID_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "NAVER_CLIENT_ID 설정 완료"
+        
+        echo "🟢 NAVER_CLIENT_SECRET 설정 중..."
+        NAVER_CLIENT_SECRET_VALUE=$(grep NAVER_CLIENT_SECRET .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/naver_client_secret" \
+          --value "$NAVER_CLIENT_SECRET_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "NAVER_CLIENT_SECRET 설정 완료"
+        
+        echo "👑 INITIAL_ADMIN_EMAIL 설정 중..."
+        INITIAL_ADMIN_EMAIL_VALUE=$(grep INITIAL_ADMIN_EMAIL .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/initial_admin_email" \
+          --value "$INITIAL_ADMIN_EMAIL_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "INITIAL_ADMIN_EMAIL 설정 완료"
+        
+        echo "👑 INITIAL_ADMIN_PASSWORD 설정 중..."
+        INITIAL_ADMIN_PASSWORD_VALUE=$(grep INITIAL_ADMIN_PASSWORD .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/initial_admin_password" \
+          --value "$INITIAL_ADMIN_PASSWORD_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "INITIAL_ADMIN_PASSWORD 설정 완료"
+        
+        echo "👑 INITIAL_ADMIN_NAME 설정 중..."
+        INITIAL_ADMIN_NAME_VALUE=$(grep INITIAL_ADMIN_NAME .env.prod | cut -d '=' -f2-)
+        aws ssm put-parameter \
+          --name "/mclass/initial_admin_name" \
+          --value "$INITIAL_ADMIN_NAME_VALUE" \
+          --type "SecureString" \
+          --region ${{ env.AWS_REGION }} \
+          --overwrite || echo "INITIAL_ADMIN_NAME 설정 완료"
+        
+        # 민감한 정보가 포함된 .env.prod 파일 삭제
+        rm -f .env.prod
+        
+        echo "✅ Parameter Store 설정 완료"
+    
     - name: Verify existing infrastructure
       run: |
         echo "✅ Terraform으로 생성된 인프라 확인:"

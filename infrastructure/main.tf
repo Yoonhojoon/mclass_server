@@ -206,6 +206,26 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# ECS Task Execution Role Policy for Parameter Store access
+resource "aws_iam_role_policy" "ecs_task_execution_parameter_store" {
+  name = "ecs-task-execution-parameter-store"
+  role = aws_iam_role.ecs_task_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ]
+        Resource = "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/*"
+      }
+    ]
+  })
+}
+
 # ECS Task Role
 resource "aws_iam_role" "ecs_task_role" {
   name = "ecsTaskRole"
@@ -320,6 +340,56 @@ resource "aws_ecs_task_definition" "main" {
         {
           name  = "PORT"
           value = "3000"
+        }
+      ]
+      secrets = [
+        {
+          name      = "DATABASE_URL"
+          valueFrom = aws_ssm_parameter.database_url.arn
+        },
+        {
+          name      = "JWT_SECRET"
+          valueFrom = aws_ssm_parameter.jwt_secret.arn
+        },
+        {
+          name      = "KAKAO_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.kakao_client_id.arn
+        },
+        {
+          name      = "KAKAO_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.kakao_client_secret.arn
+        },
+        {
+          name      = "GOOGLE_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.google_client_id.arn
+        },
+        {
+          name      = "GOOGLE_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.google_client_secret.arn
+        },
+        {
+          name      = "NAVER_CLIENT_ID"
+          valueFrom = aws_ssm_parameter.naver_client_id.arn
+        },
+        {
+          name      = "NAVER_CLIENT_SECRET"
+          valueFrom = aws_ssm_parameter.naver_client_secret.arn
+        },
+        {
+          name      = "REDIS_URL"
+          valueFrom = aws_ssm_parameter.redis_url.arn
+        },
+        {
+          name      = "INITIAL_ADMIN_EMAIL"
+          valueFrom = aws_ssm_parameter.initial_admin_email.arn
+        },
+        {
+          name      = "INITIAL_ADMIN_PASSWORD"
+          valueFrom = aws_ssm_parameter.initial_admin_password.arn
+        },
+        {
+          name      = "INITIAL_ADMIN_NAME"
+          valueFrom = aws_ssm_parameter.initial_admin_name.arn
         }
       ]
       logConfiguration = {
@@ -537,6 +607,14 @@ output "ecr_repository_url" {
   value = aws_ecr_repository.app.repository_url
 }
 
+output "rds_endpoint" {
+  value = aws_db_instance.main.endpoint
+}
+
+output "rds_port" {
+  value = aws_db_instance.main.port
+}
+
 # output "prometheus_workspace_id" {
 #   value = aws_prometheus_workspace.main.id
 # }
@@ -588,6 +666,160 @@ output "ecr_repository_url" {
 #   })
 # }
 
+# Parameter Store for Environment Variables
+resource "aws_ssm_parameter" "database_url" {
+  name      = "/mclass/database_url"
+  type      = "SecureString"
+  value     = var.database_url
+  overwrite = true
+
+  tags = {
+    Name = "mclass-database-url"
+  }
+}
+
+resource "aws_ssm_parameter" "jwt_secret" {
+  name  = "/mclass/jwt_secret"
+  type  = "SecureString"
+  value = var.jwt_secret
+
+  tags = {
+    Name = "mclass-jwt-secret"
+  }
+}
+
+# Redis URL
+resource "aws_ssm_parameter" "redis_url" {
+  name      = "/mclass/redis_url"
+  type      = "SecureString"
+  value     = var.redis_url != "" ? var.redis_url : "redis://redis:6379"
+  overwrite = true
+
+  tags = {
+    Name = "mclass-redis-url"
+  }
+}
+
+resource "aws_ssm_parameter" "kakao_client_id" {
+  name      = "/mclass/kakao_client_id"
+  type      = "SecureString"
+  value     = var.kakao_client_id
+  overwrite = true
+
+  tags = {
+    Name = "mclass-kakao-client-id"
+  }
+}
+
+resource "aws_ssm_parameter" "kakao_client_secret" {
+  name      = "/mclass/kakao_client_secret"
+  type      = "SecureString"
+  value     = var.kakao_client_secret
+  overwrite = true
+
+  tags = {
+    Name = "mclass-kakao-client-secret"
+  }
+}
+
+resource "aws_ssm_parameter" "google_client_id" {
+  name      = "/mclass/google_client_id"
+  type      = "SecureString"
+  value     = var.google_client_id
+  overwrite = true
+
+  tags = {
+    Name = "mclass-google-client-id"
+  }
+}
+
+resource "aws_ssm_parameter" "google_client_secret" {
+  name      = "/mclass/google_client_secret"
+  type      = "SecureString"
+  value     = var.google_client_secret
+  overwrite = true
+
+  tags = {
+    Name = "mclass-google-client-secret"
+  }
+}
+
+resource "aws_ssm_parameter" "naver_client_id" {
+  name      = "/mclass/naver_client_id"
+  type      = "SecureString"
+  value     = var.naver_client_id
+  overwrite = true
+
+  tags = {
+    Name = "mclass-naver-client-id"
+  }
+}
+
+resource "aws_ssm_parameter" "naver_client_secret" {
+  name      = "/mclass/naver_client_secret"
+  type      = "SecureString"
+  value     = var.naver_client_secret
+  overwrite = true
+
+  tags = {
+    Name = "mclass-naver-client-secret"
+  }
+}
+
+# 초기 관리자 관련 SSM 파라미터들 추가
+resource "aws_ssm_parameter" "initial_admin_email" {
+  name      = "/mclass/initial_admin_email"
+  type      = "SecureString"
+  value     = var.initial_admin_email
+  overwrite = true
+
+  tags = {
+    Name = "mclass-initial-admin-email"
+  }
+}
+
+resource "aws_ssm_parameter" "initial_admin_password" {
+  name      = "/mclass/initial_admin_password"
+  type      = "SecureString"
+  value     = var.initial_admin_password
+  overwrite = true
+
+  tags = {
+    Name = "mclass-initial-admin-password"
+  }
+}
+
+resource "aws_ssm_parameter" "initial_admin_name" {
+  name      = "/mclass/initial_admin_name"
+  type      = "SecureString"
+  value     = var.initial_admin_name
+  overwrite = true
+
+  tags = {
+    Name = "mclass-initial-admin-name"
+  }
+}
+
+# ECS Task Role Policy for Parameter Store access
+resource "aws_iam_role_policy" "ecs_task_parameter_store" {
+  name = "ecs-task-parameter-store"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ]
+        Resource = "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/*"
+      }
+    ]
+  })
+}
+
 # Grafana IAM Role Policy (비용 발생 - 주석 처리)
 # resource "aws_iam_role_policy" "grafana_policy" {
 #   name = "grafana-policy"
@@ -614,3 +846,68 @@ output "ecr_repository_url" {
 #     ]
 #   })
 # } 
+
+# RDS PostgreSQL 인스턴스
+resource "aws_db_subnet_group" "main" {
+  name       = "mclass-db-subnet-group"
+  subnet_ids = aws_subnet.public[*].id
+
+  tags = {
+    Name = "mclass-db-subnet-group"
+  }
+}
+
+resource "aws_security_group" "rds" {
+  name        = "mclass-rds-sg"
+  description = "Security group for RDS PostgreSQL"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "mclass-rds-sg"
+  }
+}
+
+resource "aws_db_instance" "main" {
+  identifier = "mclass-postgresql"
+
+  engine         = "postgres"
+  engine_version = "15.10"
+  instance_class = "db.t3.micro" # 프리티어
+
+  allocated_storage     = 20
+  max_allocated_storage = 100
+  storage_type          = "gp2"
+  storage_encrypted     = true
+
+  db_name  = "mclass_prod"
+  username = "postgres"
+  password = var.database_password
+
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+
+  backup_retention_period = 7
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "sun:04:00-sun:05:00"
+
+  skip_final_snapshot = true
+  deletion_protection = false
+
+  tags = {
+    Name = "mclass-postgresql"
+  }
+} 

@@ -90,6 +90,11 @@ NAVER_CLIENT_SECRET=your-naver-client-secret
 NAVER_CALLBACK_URL=http://localhost:3000/api/auth/naver/callback
 
 FRONTEND_URL=http://localhost:3000
+
+# CORS 설정 (선택사항)
+# 추가로 허용할 origin들을 쉼표로 구분하여 설정
+# 예: ALLOWED_ORIGINS=https://example.com,https://app.example.com
+ALLOWED_ORIGINS=
 ```
 
 ## 🏗️ 프로젝트 구조
