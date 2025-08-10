@@ -9,9 +9,7 @@ const emailSchema = z
   .trim();
 
 // 사용자 역할 스키마
-const userRoleSchema = z.enum(['USER', 'ADMIN'], {
-  errorMap: () => ({ message: '사용자 역할은 USER 또는 ADMIN이어야 합니다.' }),
-});
+const userRoleSchema = z.enum(['USER', 'ADMIN']);
 
 // 사용자 정보 수정 스키마
 export const updateUserSchema = z
@@ -71,7 +69,7 @@ export const searchUsersSchema = z
         '페이지 번호는 1 이상의 정수여야 합니다.'
       )
       .optional()
-      .default('1'),
+      .default(1),
     limit: z
       .string()
       .transform(val => parseInt(val, 10))
@@ -80,7 +78,7 @@ export const searchUsersSchema = z
         '페이지 크기는 1-100 사이의 정수여야 합니다.'
       )
       .optional()
-      .default('10'),
+      .default(10),
   })
   .strict();
 
@@ -102,7 +100,7 @@ export const getUsersSchema = z
         '페이지 번호는 1 이상의 정수여야 합니다.'
       )
       .optional()
-      .default('1'),
+      .default(1),
     limit: z
       .string()
       .transform(val => parseInt(val, 10))
@@ -111,7 +109,7 @@ export const getUsersSchema = z
         '페이지 크기는 1-100 사이의 정수여야 합니다.'
       )
       .optional()
-      .default('10'),
+      .default(10),
   })
   .strict();
 

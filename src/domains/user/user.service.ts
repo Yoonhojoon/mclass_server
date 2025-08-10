@@ -1,6 +1,7 @@
-import { User, PrismaClient } from '@prisma/client';
+import { PrismaClient, User } from '@prisma/client';
+import { UpdateUserDto } from './user.schemas.js';
+import { UserProfileResponse } from './dto/index.js';
 import { UserRepository } from './user.repository.js';
-import { UpdateUserDto, UserProfileResponse } from './dto/index.js';
 
 export class UserService {
   private userRepository: UserRepository;

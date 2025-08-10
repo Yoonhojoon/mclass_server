@@ -1,6 +1,7 @@
 import { PrismaClient, User } from '@prisma/client';
 import { UserError } from '../../common/exception/user/UserError.js';
-import { UserProfileResponse, UpdateUserDto } from './dto/index.js';
+import { UserProfileResponse } from './dto/index.js';
+import { UpdateUserDto } from './user.schemas.js';
 
 export class UserRepository {
   private prisma: PrismaClient;

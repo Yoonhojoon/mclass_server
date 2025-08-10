@@ -67,16 +67,16 @@ async function handleOAuthCallback(
 
 // Google OAuth2.0 설정
 passport.use(
-  new GoogleStrategy(
+  new (GoogleStrategy as any)(
     {
       clientID:
         process.env.GOOGLE_CLIENT_ID ||
-        (() => {
+        ((): never => {
           throw new Error('GOOGLE_CLIENT_ID 환경변수가 설정되지 않았습니다.');
         })(),
       clientSecret:
         process.env.GOOGLE_CLIENT_SECRET ||
-        (() => {
+        ((): never => {
           throw new Error(
             'GOOGLE_CLIENT_SECRET 환경변수가 설정되지 않았습니다.'
           );
@@ -88,14 +88,14 @@ passport.use(
     async (
       accessToken: string,
       refreshToken: string,
-      profile: any,
+      profile: unknown,
       done: (error: Error | null, user?: unknown) => void
-    ) => {
+    ): Promise<void> => {
       // Google 프로필 파싱
       const parsedData = {
-        email: profile.emails?.[0]?.value,
-        name: profile.displayName,
-        socialId: profile.id,
+        email: (profile as any).emails?.[0]?.value,
+        name: (profile as any).displayName,
+        socialId: (profile as any).id,
       };
 
       await handleOAuthCallback(parsedData, 'GOOGLE', done);
@@ -109,12 +109,12 @@ passport.use(
     {
       clientID:
         process.env.KAKAO_CLIENT_ID ||
-        (() => {
+        ((): never => {
           throw new Error('KAKAO_CLIENT_ID 환경변수가 설정되지 않았습니다.');
         })(),
       clientSecret:
         process.env.KAKAO_CLIENT_SECRET ||
-        (() => {
+        ((): never => {
           throw new Error(
             'KAKAO_CLIENT_SECRET 환경변수가 설정되지 않았습니다.'
           );
@@ -126,14 +126,14 @@ passport.use(
     async (
       accessToken: string,
       refreshToken: string,
-      profile: any,
+      profile: unknown,
       done: (error: Error | null, user?: unknown) => void
-    ) => {
+    ): Promise<void> => {
       // Kakao 프로필 파싱
       const parsedData = {
-        email: profile._json?.kakao_account?.email,
-        name: profile._json?.properties?.nickname,
-        socialId: profile.id.toString(),
+        email: (profile as any)._json?.kakao_account?.email,
+        name: (profile as any)._json?.properties?.nickname,
+        socialId: (profile as any).id.toString(),
       };
 
       await handleOAuthCallback(parsedData, 'KAKAO', done);
@@ -147,12 +147,12 @@ passport.use(
     {
       clientID:
         process.env.NAVER_CLIENT_ID ||
-        (() => {
+        ((): never => {
           throw new Error('NAVER_CLIENT_ID 환경변수가 설정되지 않았습니다.');
         })(),
       clientSecret:
         process.env.NAVER_CLIENT_SECRET ||
-        (() => {
+        ((): never => {
           throw new Error(
             'NAVER_CLIENT_SECRET 환경변수가 설정되지 않았습니다.'
           );
@@ -164,14 +164,14 @@ passport.use(
     async (
       accessToken: string,
       refreshToken: string,
-      profile: any,
+      profile: unknown,
       done: (error: Error | null, user?: unknown) => void
-    ) => {
+    ): Promise<void> => {
       // Naver 프로필 파싱
       const parsedData = {
-        email: profile._json?.email,
-        name: profile._json?.name,
-        socialId: profile.id,
+        email: (profile as any)._json?.email,
+        name: (profile as any)._json?.name,
+        socialId: (profile as any).id,
       };
 
       await handleOAuthCallback(parsedData, 'NAVER', done);

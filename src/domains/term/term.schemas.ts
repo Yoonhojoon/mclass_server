@@ -4,11 +4,7 @@ import { z } from 'zod';
 const uuidSchema = z.string().uuid('유효한 UUID 형식이어야 합니다.');
 
 // 약관 유형 스키마
-const termTypeSchema = z.enum(['SERVICE', 'PRIVACY', 'ENROLLMENT'], {
-  errorMap: () => ({
-    message: '약관 유형은 SERVICE, PRIVACY, ENROLLMENT 중 하나여야 합니다.',
-  }),
-});
+const termTypeSchema = z.enum(['SERVICE', 'PRIVACY', 'ENROLLMENT']);
 
 // 약관 생성 스키마
 export const createTermSchema = z
@@ -81,7 +77,7 @@ export const getTermsSchema = z
         '페이지 번호는 1 이상의 정수여야 합니다.'
       )
       .optional()
-      .default('1'),
+      .default(1),
     limit: z
       .string()
       .transform(val => parseInt(val, 10))
@@ -90,7 +86,7 @@ export const getTermsSchema = z
         '페이지 크기는 1-100 사이의 정수여야 합니다.'
       )
       .optional()
-      .default('10'),
+      .default(10),
   })
   .strict();
 
@@ -131,7 +127,7 @@ export const searchTermsSchema = z
         '페이지 번호는 1 이상의 정수여야 합니다.'
       )
       .optional()
-      .default('1'),
+      .default(1),
     limit: z
       .string()
       .transform(val => parseInt(val, 10))
@@ -140,7 +136,7 @@ export const searchTermsSchema = z
         '페이지 크기는 1-100 사이의 정수여야 합니다.'
       )
       .optional()
-      .default('10'),
+      .default(10),
   })
   .strict();
 
