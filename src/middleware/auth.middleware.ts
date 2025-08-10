@@ -7,6 +7,7 @@ export interface AuthenticatedRequest extends Request {
     userId: string;
     email: string;
     role: string;
+    isAdmin: boolean;
     signUpCompleted: boolean;
     provider?: string;
   };
@@ -97,7 +98,7 @@ export const requireAdmin = async (
       throw AuthError.authenticationFailed('인증이 필요합니다.');
     }
 
-    if ((req as AuthenticatedRequest).user?.role !== 'ADMIN') {
+    if (!(req as AuthenticatedRequest).user?.isAdmin) {
       return res.status(403).json({
         success: false,
         error: {

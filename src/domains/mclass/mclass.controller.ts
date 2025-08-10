@@ -25,7 +25,7 @@ export class MClassController {
       const query = ListQueryDtoSchema.parse(req.query);
 
       // 사용자 권한 확인 (UNLISTED 조회 권한)
-      const isAdmin = req.user?.role === 'ADMIN' || false;
+      const isAdmin = req.user?.isAdmin || false;
 
       // 서비스 호출
       const result = await this.service.list(query, isAdmin);
@@ -111,7 +111,7 @@ export class MClassController {
   ) {
     try {
       // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.role || req.user.role !== 'ADMIN') {
+      if (!req.user?.isAdmin) {
         throw MClassError.forbidden();
       }
 
@@ -146,7 +146,7 @@ export class MClassController {
       const { id } = req.params;
 
       // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.role || req.user.role !== 'ADMIN') {
+      if (!req.user?.isAdmin) {
         throw MClassError.forbidden();
       }
 
@@ -181,7 +181,7 @@ export class MClassController {
       const { id } = req.params;
 
       // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.role || req.user.role !== 'ADMIN') {
+      if (!req.user?.isAdmin) {
         throw MClassError.forbidden();
       }
 
