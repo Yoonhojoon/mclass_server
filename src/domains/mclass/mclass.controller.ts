@@ -6,6 +6,7 @@ import { CreateMClassDtoSchema } from './dto/CreateMClassDto.js';
 import { UpdateMClassDtoSchema } from './dto/UpdateMClassDto.js';
 import { ListQueryDtoSchema } from './dto/ListQueryDto.js';
 import { ZodError } from 'zod';
+import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 
 export class MClassController {
   constructor(private service: MClassService) {}
@@ -14,13 +15,17 @@ export class MClassController {
    * MClass 목록 조회
    * GET /api/mclasses
    */
-  async getMClasses(req: Request, res: Response, next: NextFunction) {
+  async getMClasses(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       // 쿼리 파라미터 파싱 및 검증
       const query = ListQueryDtoSchema.parse(req.query);
 
       // 사용자 권한 확인 (UNLISTED 조회 권한)
-      const isAdmin = req.user?.isAdmin || false;
+      const isAdmin = req.user?.role === 'ADMIN' || false;
 
       // 서비스 호출
       const result = await this.service.list(query, isAdmin);
@@ -99,10 +104,14 @@ export class MClassController {
    * MClass 생성
    * POST /api/mclasses
    */
-  async createMClass(req: Request, res: Response, next: NextFunction) {
+  async createMClass(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.isAdmin) {
+      if (!req.user?.role || req.user.role !== 'ADMIN') {
         throw MClassError.forbidden();
       }
 
@@ -110,7 +119,7 @@ export class MClassController {
       const data = CreateMClassDtoSchema.parse(req.body);
 
       // 서비스 호출
-      const mclass = await this.service.create(req.user.id, data);
+      const mclass = await this.service.create(req.user.userId, data);
 
       // 응답 전송
       const response = MClassSuccess.created(mclass.id, mclass);
@@ -128,12 +137,16 @@ export class MClassController {
    * MClass 수정
    * PATCH /api/mclasses/:id
    */
-  async updateMClass(req: Request, res: Response, next: NextFunction) {
+  async updateMClass(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const { id } = req.params;
 
       // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.isAdmin) {
+      if (!req.user?.role || req.user.role !== 'ADMIN') {
         throw MClassError.forbidden();
       }
 
@@ -159,12 +172,16 @@ export class MClassController {
    * MClass 삭제
    * DELETE /api/mclasses/:id
    */
-  async deleteMClass(req: Request, res: Response, next: NextFunction) {
+  async deleteMClass(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const { id } = req.params;
 
       // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.isAdmin) {
+      if (!req.user?.role || req.user.role !== 'ADMIN') {
         throw MClassError.forbidden();
       }
 
