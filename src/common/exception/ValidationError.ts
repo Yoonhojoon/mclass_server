@@ -97,6 +97,16 @@ export class ValidationError extends BaseError {
     return new ValidationError(message, 400, 'BAD_REQUEST');
   }
 
+  // Zod 검증 실패
+  static invalidRequest(details: unknown): ValidationError {
+    return new ValidationError(
+      '요청 데이터가 유효하지 않습니다.',
+      400,
+      'INVALID_REQUEST',
+      details
+    );
+  }
+
   // 내부 서버 오류
   static internalServerError(
     message: string = '내부 서버 오류가 발생했습니다.'

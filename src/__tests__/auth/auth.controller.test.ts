@@ -287,7 +287,7 @@ describe('AuthController', () => {
 
       // Assert
       expect(mockAuthService.handleSocialLogin).toHaveBeenCalledWith(
-        mockSocialData.profile
+        mockSocialData
       );
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
@@ -314,7 +314,7 @@ describe('AuthController', () => {
 
       // Assert
       expect(mockAuthService.handleSocialLogin).toHaveBeenCalledWith(
-        mockSocialData.profile
+        mockSocialData
       );
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
@@ -407,7 +407,12 @@ describe('AuthController', () => {
 
     it('❌ termIds가 없을 때 400 상태를 반환해야 함', async () => {
       // Arrange
-      mockRequest.body = {};
+      const authError = new AuthError(
+        '약관 ID 목록이 필요합니다.',
+        400,
+        'INVALID_TERM_IDS'
+      );
+      mockAuthService.completeSignUp.mockRejectedValue(authError);
 
       // Act
       await authController.completeSignUp(
@@ -416,7 +421,10 @@ describe('AuthController', () => {
       );
 
       // Assert
-      expect(mockAuthService.completeSignUp).not.toHaveBeenCalled();
+      expect(mockAuthService.completeSignUp).toHaveBeenCalledWith(
+        'user-123',
+        mockCompleteSignUpData.termIds
+      );
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,

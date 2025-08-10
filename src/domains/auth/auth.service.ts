@@ -5,12 +5,8 @@ import { UserError } from '../../common/exception/user/UserError.js';
 import logger from '../../config/logger.config.js';
 import { PrismaClient, User } from '@prisma/client';
 import { AuthRepository } from './auth.repository.js';
-import {
-  LoginDto,
-  RegisterDto,
-  UserResponse,
-  OAuthProfile,
-} from './dto/index.js';
+import { LoginDto, RegisterDto, SocialLoginDto } from './auth.schemas.js';
+import { UserResponse } from './dto/index.js';
 
 export class AuthService {
   private userService: UserService;
@@ -264,7 +260,7 @@ export class AuthService {
   /**
    * 소셜 로그인 처리
    */
-  async handleSocialLogin(profile: OAuthProfile): Promise<{
+  async handleSocialLogin(profile: SocialLoginDto): Promise<{
     user: UserResponse;
     accessToken: string;
     refreshToken: string;
@@ -273,11 +269,15 @@ export class AuthService {
       logger.info('🔗 소셜 로그인 처리', {
         provider: profile.provider,
         email: profile.email,
-        socialId: profile.id,
       });
 
       // 1. 기존 사용자 확인
-      let user = await this.findBySocialId(profile.id, profile.provider);
+      const socialId =
+        profile.provider === 'kakao' ? profile.kakaoId : profile.sub;
+      let user = await this.findBySocialId(
+        socialId,
+        profile.provider.toUpperCase()
+      );
 
       if (!user) {
         logger.info('👤 새 소셜 사용자 생성', {
@@ -286,18 +286,14 @@ export class AuthService {
         });
 
         // 2. 새 사용자 생성 (준회원 상태)
-        const email =
-          profile.emails?.[0]?.value ||
-          String((profile as Record<string, unknown>).email || '');
-        const name =
-          profile.displayName ||
-          String((profile as Record<string, unknown>).name || '');
-
         user = await this.createSocialUser({
-          email,
-          name,
-          provider: 'GOOGLE',
-          socialId: profile.id,
+          email: profile.email,
+          name: profile.name,
+          provider: profile.provider.toUpperCase() as
+            | 'KAKAO'
+            | 'GOOGLE'
+            | 'NAVER',
+          socialId,
           isSignUpCompleted: false,
         });
       } else {

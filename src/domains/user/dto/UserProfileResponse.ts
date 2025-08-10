@@ -18,7 +18,7 @@ interface EnrollmentMclass {
 
 interface EnrollmentData {
   mclass: EnrollmentMclass;
-  form: Record<string, unknown>;
+  form: Record<string, unknown> | null;
 }
 
 export interface UserProfileResponse {

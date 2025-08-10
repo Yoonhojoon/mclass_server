@@ -6,7 +6,14 @@ import { AuthSuccessResponse } from '../../common/exception/auth/AuthSuccess.js'
 import logger from '../../config/logger.config.js';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import { PrismaClient } from '@prisma/client';
-import { LoginDto, RegisterDto, OAuthProfile } from './dto/index.js';
+import {
+  LoginDto,
+  RegisterDto,
+  SocialLoginDto,
+  CompleteSignUpDto,
+  RefreshTokenDto,
+  ChangePasswordDto,
+} from './auth.schemas.js';
 
 export class AuthController {
   private authService: AuthService;
@@ -89,7 +96,7 @@ export class AuthController {
    */
   async socialLogin(req: Request, res: Response): Promise<void> {
     try {
-      const { profile }: { profile: OAuthProfile } = req.body;
+      const profile: SocialLoginDto = req.body;
       logger.info('🔗 소셜 로그인 컨트롤러 호출', {
         provider: profile.provider,
         email: profile.email,
@@ -124,21 +131,15 @@ export class AuthController {
    * 약관 동의 완료 (회원가입 완료)
    */
   async completeSignUp(
-    req: AuthenticatedRequest,
+    req: AuthenticatedRequest & { body: CompleteSignUpDto },
     res: Response
   ): Promise<void> {
     try {
-      const { termIds } = req.body;
+      const { termIds }: CompleteSignUpDto = req.body;
       const userId = req.user?.userId;
 
       if (!userId) {
         const error = ValidationError.unauthorized();
-        res.status(error.statusCode).json(error.toResponse());
-        return;
-      }
-
-      if (!termIds || !Array.isArray(termIds)) {
-        const error = ValidationError.invalidTermIds();
         res.status(error.statusCode).json(error.toResponse());
         return;
       }
@@ -200,7 +201,7 @@ export class AuthController {
    */
   async refreshToken(req: Request, res: Response): Promise<void> {
     try {
-      const { refreshToken } = req.body;
+      const { refreshToken }: RefreshTokenDto = req.body;
       logger.info('🔄 토큰 갱신 컨트롤러 호출');
 
       const result = await this.authService.refreshToken(refreshToken);
@@ -226,11 +227,11 @@ export class AuthController {
    * 비밀번호 변경
    */
   async changePassword(
-    req: AuthenticatedRequest,
+    req: AuthenticatedRequest & { body: ChangePasswordDto },
     res: Response
   ): Promise<void> {
     try {
-      const { currentPassword, newPassword } = req.body;
+      const { currentPassword, newPassword }: ChangePasswordDto = req.body;
       const userId = req.user?.userId;
 
       if (!userId) {

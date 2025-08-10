@@ -5,6 +5,15 @@ import {
   requireSignUpCompleted,
   AuthenticatedRequest,
 } from '../middleware/auth.middleware.js';
+import { validateBody } from '../middleware/validate.middleware.js';
+import {
+  loginSchema,
+  registerSchema,
+  socialLoginSchema,
+  completeSignUpSchema,
+  refreshTokenSchema,
+  changePasswordSchema,
+} from '../domains/auth/auth.schemas.js';
 import passport from '../config/passport.config.js';
 import { PrismaClient } from '@prisma/client';
 
@@ -140,7 +149,9 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/login', (req, res) => authController.login(req, res));
+  router.post('/login', validateBody(loginSchema), (req, res) =>
+    authController.login(req, res)
+  );
 
   /**
    * @swagger
@@ -181,7 +192,9 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/register', (req, res) => authController.register(req, res));
+  router.post('/register', validateBody(registerSchema), (req, res) =>
+    authController.register(req, res)
+  );
 
   /**
    * @swagger
@@ -222,7 +235,9 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/social', (req, res) => authController.socialLogin(req, res));
+  router.post('/social', validateBody(socialLoginSchema), (req, res) =>
+    authController.socialLogin(req, res)
+  );
 
   /**
    * @swagger
@@ -265,8 +280,15 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/complete-signup', authenticateToken, (req, res) =>
-    authController.completeSignUp(req as AuthenticatedRequest, res)
+  router.post(
+    '/complete-signup',
+    authenticateToken,
+    validateBody(completeSignUpSchema),
+    (req, res) =>
+      authController.completeSignUp(
+        req as AuthenticatedRequest & { body: any },
+        res
+      )
   );
 
   /**
@@ -353,7 +375,9 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.post('/refresh', (req, res) => authController.refreshToken(req, res));
+  router.post('/refresh', validateBody(refreshTokenSchema), (req, res) =>
+    authController.refreshToken(req, res)
+  );
 
   /**
    * @swagger
@@ -415,8 +439,12 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
     '/change-password',
     authenticateToken,
     requireSignUpCompleted,
+    validateBody(changePasswordSchema),
     (req, res) =>
-      authController.changePassword(req as AuthenticatedRequest, res)
+      authController.changePassword(
+        req as AuthenticatedRequest & { body: any },
+        res
+      )
   );
 
   /**
