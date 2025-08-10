@@ -15,7 +15,7 @@ const controller = new MClassController(service);
 
 /**
  * @swagger
- * /api/mclasses:
+ * /api/mclass:
  *   get:
  *     summary: MClass 목록 조회
  *     description: 필터링, 정렬, 페이지네이션을 지원하는 MClass 목록을 조회합니다.
@@ -83,11 +83,11 @@ const controller = new MClassController(service);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/mclasses', controller.getMClasses.bind(controller));
+router.get('/mclass', controller.getMClasses.bind(controller));
 
 /**
  * @swagger
- * /api/mclasses/{id}:
+ * /api/mclass/{id}:
  *   get:
  *     summary: MClass 상세 조회
  *     description: 특정 MClass의 상세 정보를 조회합니다.
@@ -120,11 +120,11 @@ router.get('/mclasses', controller.getMClasses.bind(controller));
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/mclasses/:id', controller.getMClass.bind(controller));
+router.get('/mclass/:id', controller.getMClass.bind(controller));
 
 /**
  * @swagger
- * /api/mclasses/{id}/statistics:
+ * /api/mclass/{id}/statistics:
  *   get:
  *     summary: MClass 통계 조회
  *     description: MClass의 승인된 인원 수와 대기열 인원 수를 조회합니다.
@@ -158,7 +158,7 @@ router.get('/mclasses/:id', controller.getMClass.bind(controller));
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.get(
-  '/mclasses/:id/statistics',
+  '/mclass/:id/statistics',
   controller.getMClassStatistics.bind(controller)
 );
 
@@ -166,7 +166,7 @@ router.get(
 
 /**
  * @swagger
- * /api/mclasses:
+ * /api/mclass:
  *   post:
  *     summary: MClass 생성
  *     description: 새로운 MClass를 생성합니다. (관리자만 가능)
@@ -251,14 +251,14 @@ router.get(
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post(
-  '/mclasses',
+  '/mclass',
   authenticateToken,
   controller.createMClass.bind(controller)
 );
 
 /**
  * @swagger
- * /api/mclasses/{id}:
+ * /api/mclass/{id}:
  *   patch:
  *     summary: MClass 수정
  *     description: 기존 MClass를 수정합니다. (관리자만 가능)
@@ -330,14 +330,14 @@ router.post(
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.patch(
-  '/mclasses/:id',
+  '/mclass/:id',
   authenticateToken,
   controller.updateMClass.bind(controller)
 );
 
 /**
  * @swagger
- * /api/mclasses/{id}:
+ * /api/mclass/{id}:
  *   delete:
  *     summary: MClass 삭제
  *     description: MClass를 삭제합니다. (관리자만 가능)
@@ -389,7 +389,7 @@ router.patch(
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.delete(
-  '/mclasses/:id',
+  '/mclass/:id',
   authenticateToken,
   controller.deleteMClass.bind(controller)
 );

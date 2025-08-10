@@ -13,7 +13,7 @@ export class MClassController {
 
   /**
    * MClass 목록 조회
-   * GET /api/mclasses
+   * GET /api/mclass
    */
   async getMClasses(
     req: AuthenticatedRequest,
@@ -50,9 +50,9 @@ export class MClassController {
 
   /**
    * MClass 단일 조회
-   * GET /api/mclasses/:id
+   * GET /api/mclass/:id
    * @swagger
-   * /api/mclasses/{id}:
+   * /api/mclass/{id}:
    *   get:
    *     summary: MClass 단일 조회
    *     description: 특정 MClass의 상세 정보를 조회합니다.
@@ -102,7 +102,7 @@ export class MClassController {
 
   /**
    * MClass 생성
-   * POST /api/mclasses
+   * POST /api/mclass
    */
   async createMClass(
     req: AuthenticatedRequest,
@@ -135,7 +135,7 @@ export class MClassController {
 
   /**
    * MClass 수정
-   * PATCH /api/mclasses/:id
+   * PATCH /api/mclass/:id
    */
   async updateMClass(
     req: AuthenticatedRequest,
@@ -170,7 +170,7 @@ export class MClassController {
 
   /**
    * MClass 삭제
-   * DELETE /api/mclasses/:id
+   * DELETE /api/mclass/:id
    */
   async deleteMClass(
     req: AuthenticatedRequest,
@@ -198,7 +198,7 @@ export class MClassController {
 
   /**
    * MClass 통계 조회
-   * GET /api/mclasses/:id/statistics
+   * GET /api/mclass/:id/statistics
    */
   async getMClassStatistics(req: Request, res: Response, next: NextFunction) {
     try {
