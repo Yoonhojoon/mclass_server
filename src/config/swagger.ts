@@ -95,35 +95,366 @@ const options = {
             },
             title: {
               type: 'string',
-              description: '클래스 제목',
+              minLength: 1,
+              maxLength: 120,
+              description: '클래스 제목 (1-120자)',
             },
             description: {
               type: 'string',
+              nullable: true,
               description: '클래스 설명',
+            },
+            recruitStartAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '모집 시작일시',
+            },
+            recruitEndAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '모집 종료일시',
+            },
+            startAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '클래스 시작일시',
+            },
+            endAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '클래스 종료일시',
+            },
+            selectionType: {
+              type: 'string',
+              enum: ['FIRST_COME', 'REVIEW'],
+              default: 'FIRST_COME',
+              description: '선발 방식',
             },
             capacity: {
               type: 'integer',
-              description: '수용 인원',
+              minimum: 1,
+              nullable: true,
+              description: '수용 인원 (null이면 무제한)',
             },
-            start_at: {
+            approvedCount: {
+              type: 'integer',
+              minimum: 0,
+              default: 0,
+              description: '승인된 인원 수',
+            },
+            allowWaitlist: {
+              type: 'boolean',
+              default: false,
+              description: '대기열 허용 여부',
+            },
+            waitlistCapacity: {
+              type: 'integer',
+              minimum: 1,
+              nullable: true,
+              description: '대기열 수용 인원',
+            },
+            visibility: {
               type: 'string',
-              format: 'date-time',
-              description: '시작일시',
+              enum: ['PUBLIC', 'UNLISTED'],
+              default: 'PUBLIC',
+              description: '공개 여부',
             },
-            end_at: {
+            isOnline: {
+              type: 'boolean',
+              default: true,
+              description: '온라인 클래스 여부',
+            },
+            location: {
               type: 'string',
-              format: 'date-time',
-              description: '종료일시',
+              nullable: true,
+              description: '오프라인 장소',
             },
-            created_by: {
+            fee: {
+              type: 'integer',
+              minimum: 0,
+              nullable: true,
+              description: '수강료 (0이면 무료)',
+            },
+            phase: {
+              type: 'string',
+              enum: ['UPCOMING', 'RECRUITING', 'IN_PROGRESS', 'ENDED'],
+              description: '클래스 단계 (서버에서 계산)',
+            },
+            createdBy: {
               type: 'string',
               format: 'uuid',
               description: '생성자 ID',
             },
-            created_at: {
+            createdAt: {
               type: 'string',
               format: 'date-time',
               description: '생성일시',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '수정일시',
+            },
+          },
+          required: ['title', 'startAt', 'endAt'],
+        },
+        CreateMClassRequest: {
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 120,
+              description: '클래스 제목 (1-120자)',
+            },
+            description: {
+              type: 'string',
+              nullable: true,
+              description: '클래스 설명',
+            },
+            selectionType: {
+              type: 'string',
+              enum: ['FIRST_COME', 'REVIEW'],
+              default: 'FIRST_COME',
+              description: '선발 방식',
+            },
+            capacity: {
+              type: 'integer',
+              minimum: 1,
+              nullable: true,
+              description: '수용 인원 (null이면 무제한)',
+            },
+            allowWaitlist: {
+              type: 'boolean',
+              default: false,
+              description: '대기열 허용 여부',
+            },
+            waitlistCapacity: {
+              type: 'integer',
+              minimum: 1,
+              nullable: true,
+              description: '대기열 수용 인원',
+            },
+            visibility: {
+              type: 'string',
+              enum: ['PUBLIC', 'UNLISTED'],
+              default: 'PUBLIC',
+              description: '공개 여부',
+            },
+            recruitStartAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '모집 시작일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            recruitEndAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '모집 종료일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            startAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '클래스 시작일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            endAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '클래스 종료일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            isOnline: {
+              type: 'boolean',
+              default: true,
+              description: '온라인 클래스 여부',
+            },
+            location: {
+              type: 'string',
+              nullable: true,
+              description: '오프라인 장소',
+            },
+            fee: {
+              type: 'integer',
+              minimum: 0,
+              nullable: true,
+              description: '수강료 (0이면 무료)',
+            },
+          },
+          required: ['title', 'startAt', 'endAt'],
+        },
+        UpdateMClassRequest: {
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 120,
+              description: '클래스 제목 (1-120자)',
+            },
+            description: {
+              type: 'string',
+              nullable: true,
+              description: '클래스 설명',
+            },
+            selectionType: {
+              type: 'string',
+              enum: ['FIRST_COME', 'REVIEW'],
+              description: '선발 방식',
+            },
+            capacity: {
+              type: 'integer',
+              minimum: 1,
+              nullable: true,
+              description: '수용 인원 (null이면 무제한)',
+            },
+            allowWaitlist: {
+              type: 'boolean',
+              description: '대기열 허용 여부',
+            },
+            waitlistCapacity: {
+              type: 'integer',
+              minimum: 1,
+              nullable: true,
+              description: '대기열 수용 인원',
+            },
+            visibility: {
+              type: 'string',
+              enum: ['PUBLIC', 'UNLISTED'],
+              description: '공개 여부',
+            },
+            recruitStartAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '모집 시작일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            recruitEndAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '모집 종료일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            startAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '클래스 시작일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            endAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '클래스 종료일시 (YYYY-MM-DDTHH:mm:ss.sssZ 형식)',
+            },
+            isOnline: {
+              type: 'boolean',
+              description: '온라인 클래스 여부',
+            },
+            location: {
+              type: 'string',
+              nullable: true,
+              description: '오프라인 장소',
+            },
+            fee: {
+              type: 'integer',
+              minimum: 0,
+              nullable: true,
+              description: '수강료 (0이면 무료)',
+            },
+          },
+        },
+        MClassListQuery: {
+          type: 'object',
+          properties: {
+            phase: {
+              type: 'string',
+              enum: ['UPCOMING', 'RECRUITING', 'IN_PROGRESS', 'ENDED'],
+              description: '클래스 단계 필터',
+            },
+            selectionType: {
+              type: 'string',
+              enum: ['FIRST_COME', 'REVIEW'],
+              description: '선발 방식 필터',
+            },
+            visibility: {
+              type: 'string',
+              enum: ['PUBLIC', 'UNLISTED'],
+              default: 'PUBLIC',
+              description: '공개 여부 필터 (관리자만 UNLISTED 조회 가능)',
+            },
+            page: {
+              type: 'integer',
+              minimum: 1,
+              default: 1,
+              description: '페이지 번호',
+            },
+            size: {
+              type: 'integer',
+              minimum: 1,
+              maximum: 100,
+              default: 20,
+              description: '페이지 크기 (최대 100)',
+            },
+            sort: {
+              type: 'string',
+              enum: ['startAt', 'recruitStartAt', 'createdAt'],
+              default: 'startAt',
+              description: '정렬 기준',
+            },
+            order: {
+              type: 'string',
+              enum: ['asc', 'desc'],
+              default: 'asc',
+              description: '정렬 순서',
+            },
+          },
+        },
+        MClassListResponse: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              example: true,
+            },
+            data: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/MClass',
+              },
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                page: {
+                  type: 'integer',
+                  example: 1,
+                },
+                size: {
+                  type: 'integer',
+                  example: 20,
+                },
+                total: {
+                  type: 'integer',
+                  example: 100,
+                },
+                totalPages: {
+                  type: 'integer',
+                  example: 5,
+                },
+              },
+            },
+          },
+        },
+        MClassStatistics: {
+          type: 'object',
+          properties: {
+            approvedCount: {
+              type: 'integer',
+              description: '승인된 인원 수',
+            },
+            waitlistedCount: {
+              type: 'integer',
+              description: '대기열 인원 수',
             },
           },
         },
