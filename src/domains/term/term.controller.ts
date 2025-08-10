@@ -31,7 +31,9 @@ export class TermController {
     try {
       const terms = await this.termService.getAllTerms();
       logger.info('✅ 모든 약관 목록 응답 성공', { count: terms.length });
-      res.json(TermSuccess.termsRetrieved(terms).toResponse());
+      return TermSuccess.termsRetrieved(terms, { count: terms.length }).send(
+        res
+      );
     } catch (error) {
       logger.error('약관 목록 조회 중 오류 발생:', error);
       const termError = TermError.listRetrievalFailed('약관 목록 조회 실패');
@@ -51,7 +53,7 @@ export class TermController {
         type: term.type,
         version: term.version,
       });
-      res.json(TermSuccess.termRetrieved(term).toResponse());
+      return TermSuccess.termRetrieved(term).send(res);
     } catch (error) {
       logger.error('약관 조회 중 오류 발생:', error);
       const termError = TermError.notFound(req.params.id);
@@ -91,7 +93,7 @@ export class TermController {
         type: createData.type,
         version: createData.version,
       });
-      res.status(201).json(TermSuccess.termCreated(term).toResponse());
+      return TermSuccess.termCreated(term).send(res);
     } catch (error) {
       logger.error('약관 생성 중 오류 발생:', error);
       const termError = TermError.creationFailed('약관 생성에 실패했습니다.');
@@ -130,7 +132,7 @@ export class TermController {
         adminId,
         version: term.version,
       });
-      res.json(TermSuccess.termUpdated(term).toResponse());
+      return TermSuccess.termUpdated(term).send(res);
     } catch (error) {
       logger.error('약관 수정 중 오류 발생:', error);
       const termError = TermError.updateFailed('약관 수정에 실패했습니다.');
@@ -158,7 +160,7 @@ export class TermController {
 
       await this.termService.deleteTerm(id);
       logger.info('✅ 약관 삭제 성공', { termId: id, adminId });
-      res.json(TermSuccess.termDeleted().toResponse());
+      return TermSuccess.termDeleted().send(res);
     } catch (error) {
       logger.error('약관 삭제 중 오류 발생:', error);
       const termError = TermError.deletionFailed('약관 삭제에 실패했습니다.');
@@ -192,7 +194,7 @@ export class TermController {
         termId: agreeData.termId,
         agreedAt: agreement.agreedAt,
       });
-      res.status(201).json(TermSuccess.termAgreed(agreement).toResponse());
+      return TermSuccess.termAgreed(agreement).send(res);
     } catch (error) {
       logger.error('약관 동의 중 오류 발생:', error);
       const termError = TermError.agreementFailed('약관 동의에 실패했습니다.');
@@ -221,7 +223,9 @@ export class TermController {
         userId,
         count: agreements.length,
       });
-      res.json(TermSuccess.userAgreementsRetrieved(agreements).toResponse());
+      return TermSuccess.userAgreementsRetrieved(agreements, {
+        count: agreements.length,
+      }).send(res);
     } catch (error) {
       logger.error('사용자 약관 동의 목록 조회 중 오류 발생:', error);
       const termError = TermError.userAgreementsRetrievalFailed(

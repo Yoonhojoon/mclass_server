@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
 import { AuthError } from '../../common/exception/auth/AuthError.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
-import { AuthSuccessResponse } from '../../common/exception/auth/AuthSuccess.js';
+import { AuthSuccess } from '../../common/exception/auth/AuthSuccess.js';
 import logger from '../../config/logger.config.js';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import { PrismaClient } from '@prisma/client';
@@ -32,13 +32,11 @@ export class AuthController {
 
       const result = await this.authService.login(loginData);
 
-      res.json(
-        AuthSuccessResponse.loginSuccess(
-          result.user.id,
-          result.user.role,
-          result
-        )
-      );
+      return AuthSuccess.loginSuccess(
+        result.user.id,
+        result.user.role,
+        result
+      ).send(res);
     } catch (error) {
       logger.error('❌ 로그인 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -68,13 +66,11 @@ export class AuthController {
 
       const result = await this.authService.register(registerData);
 
-      res.json(
-        AuthSuccessResponse.loginSuccess(
-          result.user.id,
-          result.user.role,
-          result
-        )
-      );
+      return AuthSuccess.loginSuccess(
+        result.user.id,
+        result.user.role,
+        result
+      ).send(res);
     } catch (error) {
       logger.error('❌ 회원가입 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -104,13 +100,11 @@ export class AuthController {
 
       const result = await this.authService.handleSocialLogin(profile);
 
-      res.json(
-        AuthSuccessResponse.loginSuccess(
-          result.user.id,
-          result.user.role,
-          result
-        )
-      );
+      return AuthSuccess.loginSuccess(
+        result.user.id,
+        result.user.role,
+        result
+      ).send(res);
     } catch (error) {
       logger.error('❌ 소셜 로그인 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -128,7 +122,7 @@ export class AuthController {
   }
 
   /**
-   * 약관 동의 완료 (회원가입 완료)
+   * 회원가입 완료
    */
   async completeSignUp(
     req: AuthenticatedRequest & { body: CompleteSignUpDto },
@@ -144,19 +138,20 @@ export class AuthController {
         return;
       }
 
-      logger.info('📋 약관 동의 완료 컨트롤러 호출', { userId, termIds });
+      logger.info('✅ 회원가입 완료 컨트롤러 호출', {
+        userId,
+        termIds,
+      });
 
       const result = await this.authService.completeSignUp(userId, termIds);
 
-      res.json(
-        AuthSuccessResponse.loginSuccess(
-          result.user.id,
-          result.user.role,
-          result
-        )
-      );
+      return AuthSuccess.loginSuccess(
+        result.user.id,
+        result.user.role,
+        result
+      ).send(res);
     } catch (error) {
-      logger.error('❌ 약관 동의 완료 컨트롤러 오류', {
+      logger.error('❌ 회원가입 완료 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
@@ -183,16 +178,20 @@ export class AuthController {
         await this.authService.logout(token);
       }
 
-      res.json(AuthSuccessResponse.logoutSuccess());
+      return AuthSuccess.logoutSuccess().send(res);
     } catch (error) {
       logger.error('❌ 로그아웃 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      const authError = AuthError.internalError(
-        '로그아웃 처리 중 오류가 발생했습니다.'
-      );
-      res.status(authError.statusCode).json(authError.toResponse());
+      if (error instanceof AuthError) {
+        res.status(error.statusCode).json(error.toResponse());
+      } else {
+        const authError = AuthError.internalError(
+          '로그아웃 처리 중 오류가 발생했습니다.'
+        );
+        res.status(authError.statusCode).json(authError.toResponse());
+      }
     }
   }
 
@@ -206,7 +205,7 @@ export class AuthController {
 
       const result = await this.authService.refreshToken(refreshToken);
 
-      res.json(AuthSuccessResponse.tokenRefreshSuccess(3600, result));
+      return AuthSuccess.tokenRefreshSuccess(3600, result).send(res);
     } catch (error) {
       logger.error('❌ 토큰 갱신 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -239,7 +238,8 @@ export class AuthController {
         res.status(error.statusCode).json(error.toResponse());
         return;
       }
-      logger.info('🔑 비밀번호 변경 컨트롤러 호출', { userId });
+
+      logger.info('🔒 비밀번호 변경 컨트롤러 호출', { userId });
 
       await this.authService.changePassword(
         userId,
@@ -247,7 +247,7 @@ export class AuthController {
         newPassword
       );
 
-      res.json(AuthSuccessResponse.passwordChangeSuccess());
+      return AuthSuccess.passwordChangeSuccess().send(res);
     } catch (error) {
       logger.error('❌ 비밀번호 변경 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',

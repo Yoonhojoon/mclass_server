@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { UserService } from './user.service.js';
 import { UserError } from '../../common/exception/user/UserError.js';
+import { UserSuccess } from '../../common/exception/user/UserSuccess.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import logger from '../../config/logger.config.js';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
@@ -31,10 +32,7 @@ export class UserController {
 
       const userProfile = await this.userService.getUserProfile(userId);
 
-      res.json({
-        success: true,
-        data: userProfile,
-      });
+      return UserSuccess.profileGetSuccess(userProfile).send(res);
     } catch (error) {
       logger.error('❌ 사용자 프로필 조회 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -68,10 +66,7 @@ export class UserController {
         return;
       }
 
-      res.json({
-        success: true,
-        data: user,
-      });
+      return UserSuccess.userDetailsFetchSuccess(user).send(res);
     } catch (error) {
       logger.error('❌ 사용자 조회 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -100,10 +95,7 @@ export class UserController {
         return;
       }
 
-      res.json({
-        success: true,
-        data: user,
-      });
+      return UserSuccess.userDetailsFetchSuccess(user).send(res);
     } catch (error) {
       logger.error('❌ 사용자 조회 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -115,7 +107,7 @@ export class UserController {
   }
 
   /**
-   * 사용자 정보 수정
+   * 사용자 정보 업데이트
    */
   async updateUser(req: Request, res: Response): Promise<void> {
     try {
@@ -128,20 +120,15 @@ export class UserController {
         return;
       }
 
-      logger.info('✏️ 사용자 정보 수정', { userId, updateData });
+      logger.info('✏️ 사용자 정보 업데이트', { userId });
 
-      const updatedUser = await this.userService.updateUser(userId, {
-        name: updateData.name,
-        role: updateData.role,
-      });
+      const updatedUser = await this.userService.updateUser(userId, updateData);
 
-      res.json({
-        success: true,
-        message: '사용자 정보가 성공적으로 수정되었습니다.',
-        data: updatedUser,
-      });
+      return UserSuccess.profileUpdateSuccess('사용자 정보', updatedUser).send(
+        res
+      );
     } catch (error) {
-      logger.error('❌ 사용자 정보 수정 오류', {
+      logger.error('❌ 사용자 정보 업데이트 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
@@ -149,7 +136,7 @@ export class UserController {
         res.status(error.statusCode).json(error.toResponse());
       } else {
         const userError = UserError.updateFailed(
-          '사용자 정보 수정 중 오류가 발생했습니다.'
+          '사용자 정보 업데이트에 실패했습니다.'
         );
         res.status(userError.statusCode).json(userError.toResponse());
       }
