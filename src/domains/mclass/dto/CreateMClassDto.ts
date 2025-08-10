@@ -104,6 +104,23 @@ export const CreateMClassDtoSchema = z
         '대기열을 허용하지 않는 경우 대기열 수용 인원을 설정할 수 없습니다',
       path: ['waitlistCapacity'],
     }
+  )
+  .refine(
+    data => {
+      // REVIEW 선발 방식은 모집 기간 설정이 필요
+      if (
+        data.selectionType === 'REVIEW' &&
+        (!data.recruitStartAt || !data.recruitEndAt)
+      ) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        'REVIEW 선발 방식은 모집 시작 시간과 종료 시간 설정이 필요합니다',
+      path: ['selectionType'],
+    }
   );
 
 export type CreateMClassDto = z.infer<typeof CreateMClassDtoSchema>;
