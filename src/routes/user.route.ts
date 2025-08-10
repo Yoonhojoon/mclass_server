@@ -13,10 +13,6 @@ import {
   getUserByEmailSchema,
 } from '../domains/user/user.schemas.js';
 
-/**
- * 사용자 라우트 팩토리 함수
- * 의존성 주입을 통해 테스트 가능하고 유연한 구조 제공
- */
 export const createUserRoutes = (prisma: PrismaClient): express.Router => {
   const router = express.Router();
   const userController = new UserController(prisma);
@@ -80,7 +76,7 @@ export const createUserRoutes = (prisma: PrismaClient): express.Router => {
 
   /**
    * @swagger
-   * /api/users/search:
+   * /api/users/searchByEmail:
    *   get:
    *     summary: 이메일로 사용자 조회
    *     description: 이메일로 사용자 정보를 조회합니다.
@@ -104,7 +100,7 @@ export const createUserRoutes = (prisma: PrismaClient): express.Router => {
    *         description: 사용자를 찾을 수 없음
    */
   router.get(
-    '/search',
+    '/searchByEmail',
     validateQuery(getUserByEmailSchema),
     userController.getUserByEmail.bind(userController)
   );
