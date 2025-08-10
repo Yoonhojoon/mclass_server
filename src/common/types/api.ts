@@ -11,6 +11,7 @@ export interface SuccessResponse<T = unknown> extends BaseResponse {
   data: T;
   message?: string;
   code?: string;
+  meta?: Record<string, unknown>;
 }
 
 // 에러 응답

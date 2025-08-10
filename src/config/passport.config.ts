@@ -2,13 +2,11 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as KakaoStrategy } from 'passport-kakao';
 import { Strategy as NaverStrategy } from 'passport-naver';
-import { UserService } from '../domains/user/user.service.js';
-// TokenService는 현재 사용되지 않으므로 주석 처리
-// import { TokenService } from '../domains/token/token.service.js';
+import { AuthService } from '../domains/auth/auth.service.js';
 import logger from './logger.config.js';
 import { prisma } from './prisma.config.js';
 
-const userService = new UserService(prisma);
+const authService = new AuthService(prisma);
 
 // OAuth 공통 처리 함수 (파싱된 데이터로 처리)
 async function handleOAuthCallback(
@@ -18,7 +16,7 @@ async function handleOAuthCallback(
     socialId: string;
   },
   provider: 'GOOGLE' | 'KAKAO' | 'NAVER',
-  done: (error: Error | null, user?: any) => void
+  done: (error: Error | null, user?: unknown) => void
 ): Promise<void> {
   try {
     logger.info(`🔐 ${provider} OAuth 인증 시작`);
@@ -35,37 +33,32 @@ async function handleOAuthCallback(
       return done(new Error(`Email not provided by ${provider}`));
     }
 
-    // 기존 사용자 확인
-    logger.info('🔍 기존 사용자 확인 중...');
-    let user = await userService.findByEmail(email);
-
-    if (!user) {
-      logger.info('🆕 새 사용자 생성 중...');
-      // 새 사용자 생성
-      user = await userService.createSocialUser({
-        email: email,
-        name: name,
-        provider: provider,
-        socialId: socialId,
-      });
-      logger.info('✅ 새 사용자 생성 완료:', user.id);
-    } else if (user.provider === 'LOCAL') {
-      logger.info('🔗 기존 로컬 사용자를 소셜 로그인으로 연결 중...');
-      // 기존 로컬 사용자를 소셜 로그인으로 연결
-      user = await userService.updateUserProvider(user.id, provider, socialId);
-      logger.info('✅ 사용자 소셜 정보 업데이트 완료');
-    } else {
-      logger.info('✅ 기존 소셜 사용자 확인됨');
-    }
+    // AuthService를 사용하여 소셜 로그인 처리
+    logger.info('🔍 소셜 로그인 처리 중...');
+    const result = await authService.handleSocialLogin(
+      provider === 'GOOGLE'
+        ? {
+            email: email,
+            name: name || undefined,
+            provider: 'google' as const,
+            sub: socialId,
+          }
+        : {
+            email: email,
+            name: name || undefined,
+            provider: 'kakao' as const,
+            kakaoId: socialId,
+          }
+    );
 
     logger.info('👤 최종 사용자 정보:', {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      provider: user.provider,
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.name,
+      provider: provider,
     });
 
-    return done(null, user);
+    return done(null, result.user);
   } catch (error) {
     logger.error(`❌ ${provider} OAuth 처리 중 오류 발생:`, error);
     return done(error as Error);
@@ -74,16 +67,16 @@ async function handleOAuthCallback(
 
 // Google OAuth2.0 설정
 passport.use(
-  new GoogleStrategy(
+  new (GoogleStrategy as any)(
     {
       clientID:
         process.env.GOOGLE_CLIENT_ID ||
-        (() => {
+        ((): never => {
           throw new Error('GOOGLE_CLIENT_ID 환경변수가 설정되지 않았습니다.');
         })(),
       clientSecret:
         process.env.GOOGLE_CLIENT_SECRET ||
-        (() => {
+        ((): never => {
           throw new Error(
             'GOOGLE_CLIENT_SECRET 환경변수가 설정되지 않았습니다.'
           );
@@ -95,14 +88,14 @@ passport.use(
     async (
       accessToken: string,
       refreshToken: string,
-      profile: any,
-      done: (error: Error | null, user?: any) => void
-    ) => {
+      profile: unknown,
+      done: (error: Error | null, user?: unknown) => void
+    ): Promise<void> => {
       // Google 프로필 파싱
       const parsedData = {
-        email: profile.emails?.[0]?.value,
-        name: profile.displayName,
-        socialId: profile.id,
+        email: (profile as any).emails?.[0]?.value,
+        name: (profile as any).displayName,
+        socialId: (profile as any).id,
       };
 
       await handleOAuthCallback(parsedData, 'GOOGLE', done);
@@ -116,12 +109,12 @@ passport.use(
     {
       clientID:
         process.env.KAKAO_CLIENT_ID ||
-        (() => {
+        ((): never => {
           throw new Error('KAKAO_CLIENT_ID 환경변수가 설정되지 않았습니다.');
         })(),
       clientSecret:
         process.env.KAKAO_CLIENT_SECRET ||
-        (() => {
+        ((): never => {
           throw new Error(
             'KAKAO_CLIENT_SECRET 환경변수가 설정되지 않았습니다.'
           );
@@ -133,14 +126,14 @@ passport.use(
     async (
       accessToken: string,
       refreshToken: string,
-      profile: any,
-      done: (error: Error | null, user?: any) => void
-    ) => {
+      profile: unknown,
+      done: (error: Error | null, user?: unknown) => void
+    ): Promise<void> => {
       // Kakao 프로필 파싱
       const parsedData = {
-        email: profile._json?.kakao_account?.email,
-        name: profile._json?.properties?.nickname,
-        socialId: profile.id.toString(),
+        email: (profile as any)._json?.kakao_account?.email,
+        name: (profile as any)._json?.properties?.nickname,
+        socialId: (profile as any).id.toString(),
       };
 
       await handleOAuthCallback(parsedData, 'KAKAO', done);
@@ -154,12 +147,12 @@ passport.use(
     {
       clientID:
         process.env.NAVER_CLIENT_ID ||
-        (() => {
+        ((): never => {
           throw new Error('NAVER_CLIENT_ID 환경변수가 설정되지 않았습니다.');
         })(),
       clientSecret:
         process.env.NAVER_CLIENT_SECRET ||
-        (() => {
+        ((): never => {
           throw new Error(
             'NAVER_CLIENT_SECRET 환경변수가 설정되지 않았습니다.'
           );
@@ -171,14 +164,14 @@ passport.use(
     async (
       accessToken: string,
       refreshToken: string,
-      profile: any,
-      done: (error: Error | null, user?: any) => void
-    ) => {
+      profile: unknown,
+      done: (error: Error | null, user?: unknown) => void
+    ): Promise<void> => {
       // Naver 프로필 파싱
       const parsedData = {
-        email: profile._json?.email,
-        name: profile._json?.name,
-        socialId: profile.id,
+        email: (profile as any)._json?.email,
+        name: (profile as any)._json?.name,
+        socialId: (profile as any).id,
       };
 
       await handleOAuthCallback(parsedData, 'NAVER', done);
@@ -194,7 +187,7 @@ passport.serializeUser((user: any, done): void => {
 // 사용자 역직렬화
 passport.deserializeUser(async (id: string, done): Promise<void> => {
   try {
-    const user = await userService.findById(id);
+    const user = await authService['userService'].findById(id);
     done(null, user);
   } catch (error) {
     done(error as Error);

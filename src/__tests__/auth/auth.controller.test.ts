@@ -115,8 +115,9 @@ describe('AuthController', () => {
         success: true,
         data: mockLoginResult,
         message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-123, 역할: USER)`,
+        code: 'LOGIN_SUCCESS',
       });
-      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(200);
     });
 
     it('❌ AuthError 발생 시 400 상태와 에러 메시지를 반환해야 함', async () => {
@@ -213,8 +214,9 @@ describe('AuthController', () => {
         success: true,
         data: mockRegisterResult,
         message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-456, 역할: USER)`,
+        code: 'LOGIN_SUCCESS',
       });
-      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(200);
     });
 
     it('❌ AuthError 발생 시 400 상태와 에러 메시지를 반환해야 함', async () => {
@@ -287,14 +289,15 @@ describe('AuthController', () => {
 
       // Assert
       expect(mockAuthService.handleSocialLogin).toHaveBeenCalledWith(
-        mockSocialData.profile
+        mockSocialData
       );
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockSocialResult,
         message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-789, 역할: USER)`,
+        code: 'LOGIN_SUCCESS',
       });
-      expect(mockStatus).not.toHaveBeenCalled();
+      expect(mockStatus).toHaveBeenCalledWith(200);
     });
 
     it('❌ AuthError 발생 시 400 상태와 에러 메시지를 반환해야 함', async () => {
@@ -314,7 +317,7 @@ describe('AuthController', () => {
 
       // Assert
       expect(mockAuthService.handleSocialLogin).toHaveBeenCalledWith(
-        mockSocialData.profile
+        mockSocialData
       );
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
@@ -375,12 +378,13 @@ describe('AuthController', () => {
         'user-123',
         mockCompleteSignUpData.termIds
       );
+      expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockCompleteSignUpResult,
         message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-789, 역할: USER)`,
+        code: 'LOGIN_SUCCESS',
       });
-      expect(mockStatus).not.toHaveBeenCalled();
     });
 
     it('❌ 사용자 인증이 없을 때 401 상태를 반환해야 함', async () => {
@@ -407,7 +411,12 @@ describe('AuthController', () => {
 
     it('❌ termIds가 없을 때 400 상태를 반환해야 함', async () => {
       // Arrange
-      mockRequest.body = {};
+      const authError = new AuthError(
+        '약관 ID 목록이 필요합니다.',
+        400,
+        'INVALID_TERM_IDS'
+      );
+      mockAuthService.completeSignUp.mockRejectedValue(authError);
 
       // Act
       await authController.completeSignUp(
@@ -416,7 +425,10 @@ describe('AuthController', () => {
       );
 
       // Assert
-      expect(mockAuthService.completeSignUp).not.toHaveBeenCalled();
+      expect(mockAuthService.completeSignUp).toHaveBeenCalledWith(
+        'user-123',
+        mockCompleteSignUpData.termIds
+      );
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
@@ -479,12 +491,13 @@ describe('AuthController', () => {
 
       // Assert
       expect(mockAuthService.logout).toHaveBeenCalledWith('mock-token');
+      expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: null,
         message: '로그아웃이 성공적으로 완료되었습니다.',
+        code: 'LOGOUT_SUCCESS',
       });
-      expect(mockStatus).not.toHaveBeenCalled();
     });
 
     it('✅ 토큰이 없어도 성공 메시지를 반환해야 함', async () => {
@@ -503,6 +516,7 @@ describe('AuthController', () => {
         success: true,
         data: null,
         message: '로그아웃이 성공적으로 완료되었습니다.',
+        code: 'LOGOUT_SUCCESS',
       });
     });
 
@@ -560,12 +574,13 @@ describe('AuthController', () => {
       expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
         mockRefreshData.refreshToken
       );
+      expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockRefreshResult,
         message: `토큰이 성공적으로 갱신되었습니다. (만료 시간: 3600초)`,
+        code: 'TOKEN_REFRESH_SUCCESS',
       });
-      expect(mockStatus).not.toHaveBeenCalled();
     });
 
     it('❌ AuthError 발생 시 400 상태와 에러 메시지를 반환해야 함', async () => {
@@ -632,13 +647,14 @@ describe('AuthController', () => {
         mockChangePasswordData.currentPassword,
         mockChangePasswordData.newPassword
       );
+      expect(mockStatus).toHaveBeenCalledWith(200);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: null,
         message:
           '비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해주세요.',
+        code: 'PASSWORD_CHANGE_SUCCESS',
       });
-      expect(mockStatus).not.toHaveBeenCalled();
     });
 
     it('❌ 사용자 인증이 없을 때 401 상태를 반환해야 함', async () => {

@@ -5,7 +5,7 @@ import cors from 'cors';
 import session from 'express-session';
 import { RedisStore } from 'connect-redis';
 import { specs } from './config/swagger.js';
-import { createUserRoutes } from './routes/users.js';
+import { createUserRoutes } from './routes/user.route.js';
 import { createAuthRoutes } from './routes/auth.routes.js';
 import { createTermRoutes } from './routes/term.routes.js';
 import { createAdminRoutes } from './routes/admin.routes.js';
