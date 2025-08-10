@@ -6,6 +6,7 @@ import { AuthSuccessResponse } from '../../common/exception/auth/AuthSuccess.js'
 import logger from '../../config/logger.config.js';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import { PrismaClient } from '@prisma/client';
+import { LoginDto, RegisterDto, OAuthProfile } from './dto/index.js';
 
 export class AuthController {
   private authService: AuthService;
@@ -19,10 +20,10 @@ export class AuthController {
    */
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password } = req.body;
-      logger.info('🔐 로그인 컨트롤러 호출', { email });
+      const loginData: LoginDto = req.body;
+      logger.info('🔐 로그인 컨트롤러 호출', { email: loginData.email });
 
-      const result = await this.authService.login({ email, password });
+      const result = await this.authService.login(loginData);
 
       res.json(
         AuthSuccessResponse.loginSuccess(
@@ -52,15 +53,13 @@ export class AuthController {
    */
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, name, role } = req.body;
-      logger.info('📝 회원가입 컨트롤러 호출', { email, name });
-
-      const result = await this.authService.register({
-        email,
-        password,
-        name,
-        role,
+      const registerData: RegisterDto = req.body;
+      logger.info('📝 회원가입 컨트롤러 호출', {
+        email: registerData.email,
+        name: registerData.name,
       });
+
+      const result = await this.authService.register(registerData);
 
       res.json(
         AuthSuccessResponse.loginSuccess(
@@ -90,7 +89,7 @@ export class AuthController {
    */
   async socialLogin(req: Request, res: Response): Promise<void> {
     try {
-      const { profile } = req.body;
+      const { profile }: { profile: OAuthProfile } = req.body;
       logger.info('🔗 소셜 로그인 컨트롤러 호출', {
         provider: profile.provider,
         email: profile.email,

@@ -1,47 +1,42 @@
-import express, { Request, Response } from 'express';
-import { UserService } from '../domains/user/user.service.js';
+import express from 'express';
+import { UserController } from '../domains/user/user.controller.js';
 import { PrismaClient } from '@prisma/client';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 
 /**
  * 사용자 라우트 팩토리 함수
  * 의존성 주입을 통해 테스트 가능하고 유연한 구조 제공
  */
-export const createUserRoutes = (prisma: PrismaClient) => {
+export const createUserRoutes = (prisma: PrismaClient): express.Router => {
   const router = express.Router();
-  const userService = new UserService(prisma);
+  const userController = new UserController(prisma);
 
   /**
    * @swagger
-   * /api/users:
+   * /api/users/profile:
    *   get:
-   *     summary: 모든 사용자 조회
-   *     description: 시스템에 등록된 모든 사용자 목록을 반환합니다.
+   *     summary: 내 프로필 조회
+   *     description: 현재 로그인한 사용자의 프로필 정보를 조회합니다.
    *     tags: [Users]
+   *     security:
+   *       - bearerAuth: []
    *     responses:
    *       200:
-   *         description: 성공적으로 사용자 목록을 반환
+   *         description: 성공적으로 프로필 정보를 반환
    *         content:
    *           application/json:
    *             schema:
-   *               type: array
-   *               items:
-   *                 $ref: '#/components/schemas/User'
-   *       500:
-   *         description: 서버 오류
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *               $ref: '#/components/schemas/User'
+   *       401:
+   *         description: 인증되지 않은 요청
+   *       404:
+   *         description: 사용자를 찾을 수 없음
    */
-  router.get('/', async (req: Request, res: Response) => {
-    try {
-      const users = await userService.findAllUsers();
-      res.json(users);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-      res.status(500).json({ message: 'Failed to fetch users' });
-    }
-  });
+  router.get(
+    '/profile',
+    authenticateToken,
+    userController.getUserProfile.bind(userController)
+  );
 
   /**
    * @swagger
@@ -55,7 +50,7 @@ export const createUserRoutes = (prisma: PrismaClient) => {
    *         name: id
    *         required: true
    *         schema:
-   *           type: integer
+   *           type: string
    *         description: 사용자 ID
    *     responses:
    *       200:
@@ -66,88 +61,76 @@ export const createUserRoutes = (prisma: PrismaClient) => {
    *               $ref: '#/components/schemas/User'
    *       404:
    *         description: 사용자를 찾을 수 없음
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.get('/:id', async (req: Request, res: Response) => {
-    try {
-      const userId = req.params.id;
-      const user = await userService.findById(userId);
-
-      if (!user) {
-        return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
-      }
-
-      return res.json(user);
-    } catch (error) {
-      console.error('Failed to fetch user:', error);
-      res.status(500).json({ message: 'Failed to fetch user' });
-    }
-  });
+  router.get('/:id', userController.getUserById.bind(userController));
 
   /**
    * @swagger
-   * /api/users:
-   *   post:
-   *     summary: 새 사용자 생성
-   *     description: 새로운 사용자를 시스템에 등록합니다.
+   * /api/users/search:
+   *   get:
+   *     summary: 이메일로 사용자 조회
+   *     description: 이메일로 사용자 정보를 조회합니다.
    *     tags: [Users]
+   *     parameters:
+   *       - in: query
+   *         name: email
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: email
+   *         description: 사용자 이메일
+   *     responses:
+   *       200:
+   *         description: 성공적으로 사용자 정보를 반환
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *       404:
+   *         description: 사용자를 찾을 수 없음
+   */
+  router.get('/search', userController.getUserByEmail.bind(userController));
+
+  /**
+   * @swagger
+   * /api/users/profile:
+   *   put:
+   *     summary: 사용자 정보 수정
+   *     description: 현재 로그인한 사용자의 정보를 수정합니다.
+   *     tags: [Users]
+   *     security:
+   *       - bearerAuth: []
    *     requestBody:
    *       required: true
    *       content:
    *         application/json:
    *           schema:
    *             type: object
-   *             required:
-   *               - name
-   *               - email
    *             properties:
    *               name:
    *                 type: string
    *                 description: 사용자 이름
-   *               email:
+   *               role:
    *                 type: string
-   *                 format: email
-   *                 description: 사용자 이메일
+   *                 enum: [USER, ADMIN]
+   *                 description: 사용자 역할
    *     responses:
-   *       201:
-   *         description: 성공적으로 사용자가 생성됨
+   *       200:
+   *         description: 성공적으로 사용자 정보가 수정됨
    *         content:
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/User'
-   *       400:
-   *         description: 잘못된 요청 데이터
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/ErrorResponse'
+   *       401:
+   *         description: 인증되지 않은 요청
+   *       404:
+   *         description: 사용자를 찾을 수 없음
    */
-  router.post('/', async (req: Request, res: Response) => {
-    try {
-      const { email, password, name, role } = req.body;
-
-      if (!email || !password) {
-        return res
-          .status(400)
-          .json({ message: '이메일과 비밀번호는 필수입니다.' });
-      }
-
-      const user = await userService.createUser({
-        email,
-        password,
-        name,
-        role: role || 'USER',
-      });
-
-      return res.status(201).json(user);
-    } catch (error) {
-      console.error('Failed to create user:', error);
-      res.status(500).json({ message: 'Failed to create user' });
-    }
-  });
+  router.put(
+    '/profile',
+    authenticateToken,
+    userController.updateUser.bind(userController)
+  );
 
   return router;
 };
