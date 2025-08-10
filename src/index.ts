@@ -9,6 +9,7 @@ import { createUserRoutes } from './routes/user.route.js';
 import { createAuthRoutes } from './routes/auth.routes.js';
 import { createTermRoutes } from './routes/term.routes.js';
 import { createAdminRoutes } from './routes/admin.routes.js';
+import mclassRoutes from './routes/mclass.routes.js';
 import {
   prometheusMiddleware,
   metricsEndpoint,
@@ -102,6 +103,7 @@ app.use('/api/users', createUserRoutes(prisma));
 app.use('/api/auth', createAuthRoutes(prisma));
 app.use('/api', createTermRoutes(prisma));
 app.use('/api/admin', createAdminRoutes(prisma));
+app.use('/api', mclassRoutes);
 
 // Prometheus 메트릭 엔드포인트
 app.get('/metrics', metricsEndpoint);
