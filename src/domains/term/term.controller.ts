@@ -4,6 +4,11 @@ import { TermError } from '../../common/exception/term/TermError.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import { TermSuccess } from '../../common/exception/term/TermSuccess.js';
 import logger from '../../config/logger.config.js';
+import {
+  CreateTermDto,
+  UpdateTermDto,
+  AgreeToTermDto,
+} from './term.schemas.js';
 
 // 사용자 타입 정의
 interface AuthenticatedUser {
@@ -12,7 +17,7 @@ interface AuthenticatedUser {
   isAdmin?: boolean;
 }
 
-interface AuthenticatedRequest extends Request {
+interface TermAuthenticatedRequest extends Request {
   user?: AuthenticatedUser;
 }
 
@@ -57,9 +62,12 @@ export class TermController {
   /**
    * 약관 생성 (관리자 전용)
    */
-  async createTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async createTerm(
+    req: TermAuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
-      const { type, title, content, isRequired, version } = req.body;
+      const createData: CreateTermDto = req.body;
       const adminId = req.user?.id;
 
       // 관리자 권한 확인
@@ -70,18 +78,18 @@ export class TermController {
       }
 
       const term = await this.termService.createTerm({
-        type,
-        title,
-        content,
-        isRequired: isRequired || false,
-        version,
+        type: createData.type,
+        title: createData.title,
+        content: createData.content,
+        isRequired: createData.isRequired || false,
+        version: createData.version,
       });
 
       logger.info('✅ 약관 생성 성공', {
         termId: term.id,
         adminId,
-        type,
-        version,
+        type: createData.type,
+        version: createData.version,
       });
       res.status(201).json(TermSuccess.termCreated(term).toResponse());
     } catch (error) {
@@ -94,10 +102,13 @@ export class TermController {
   /**
    * 약관 수정 (관리자 전용)
    */
-  async updateTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async updateTerm(
+    req: TermAuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
       const { id } = req.params;
-      const { title, content, isRequired, version } = req.body;
+      const updateData: UpdateTermDto = req.body;
       const adminId = req.user?.id;
 
       // 관리자 권한 확인
@@ -108,10 +119,10 @@ export class TermController {
       }
 
       const term = await this.termService.updateTerm(id, {
-        title,
-        content,
-        isRequired,
-        version,
+        title: updateData.title,
+        content: updateData.content,
+        isRequired: updateData.isRequired,
+        version: updateData.version,
       });
 
       logger.info('✅ 약관 수정 성공', {
@@ -130,7 +141,10 @@ export class TermController {
   /**
    * 약관 삭제 (관리자 전용)
    */
-  async deleteTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async deleteTerm(
+    req: TermAuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
       const { id } = req.params;
       const adminId = req.user?.id;
@@ -155,9 +169,12 @@ export class TermController {
   /**
    * 사용자 약관 동의
    */
-  async agreeToTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async agreeToTerm(
+    req: TermAuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
     try {
-      const { termId } = req.body;
+      const agreeData: AgreeToTermDto = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -166,10 +183,13 @@ export class TermController {
         return;
       }
 
-      const agreement = await this.termService.agreeToTerm(userId, termId);
+      const agreement = await this.termService.agreeToTerm(
+        userId,
+        agreeData.termId
+      );
       logger.info('✅ 사용자 약관 동의 성공', {
         userId,
-        termId,
+        termId: agreeData.termId,
         agreedAt: agreement.agreedAt,
       });
       res.status(201).json(TermSuccess.termAgreed(agreement).toResponse());
@@ -184,7 +204,7 @@ export class TermController {
    * 사용자 동의한 약관 목록 조회
    */
   async getUserAgreements(
-    req: AuthenticatedRequest,
+    req: TermAuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {

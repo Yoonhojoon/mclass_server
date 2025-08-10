@@ -6,7 +6,16 @@ import {
   authenticateToken,
   requireAdmin,
 } from '../middleware/auth.middleware.js';
-import { validateId } from '../middleware/validation.middleware.js';
+import {
+  validateBody,
+  validateParams,
+} from '../middleware/validate.middleware.js';
+import {
+  createTermSchema,
+  updateTermSchema,
+  agreeToTermSchema,
+  termIdParamSchema,
+} from '../domains/term/term.schemas.js';
 
 /**
  * @swagger
@@ -45,7 +54,9 @@ export const createTermRoutes = (prisma: PrismaClient) => {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  router.get('/terms', (req, res) => termController.getAllTerms(req, res));
+  router.get('/terms', (req: Request, res: Response): void => {
+    termController.getAllTerms(req, res);
+  });
 
   /**
    * @swagger
@@ -103,7 +114,7 @@ export const createTermRoutes = (prisma: PrismaClient) => {
    *                 code: 'INTERNAL_SERVER_ERROR'
    *                 message: '서버 내부 오류가 발생했습니다.'
    */
-  router.get('/terms/:id', validateId, (req, res) =>
+  router.get('/terms/:id', validateParams(termIdParamSchema), (req, res) =>
     termController.getTermById(req, res)
   );
 
@@ -207,6 +218,7 @@ export const createTermRoutes = (prisma: PrismaClient) => {
     '/terms',
     authenticateToken,
     requireAdmin,
+    validateBody(createTermSchema),
     (req: Request, res: Response) =>
       termController.createTerm(
         req as unknown as Request & {
@@ -325,6 +337,8 @@ export const createTermRoutes = (prisma: PrismaClient) => {
     '/terms/:id',
     authenticateToken,
     requireAdmin,
+    validateParams(termIdParamSchema),
+    validateBody(updateTermSchema),
     (req: Request, res: Response) =>
       termController.updateTerm(
         req as unknown as Request & {
@@ -425,6 +439,7 @@ export const createTermRoutes = (prisma: PrismaClient) => {
     '/terms/:id',
     authenticateToken,
     requireAdmin,
+    validateParams(termIdParamSchema),
     (req: Request, res: Response) =>
       termController.deleteTerm(
         req as unknown as Request & {
@@ -528,6 +543,7 @@ export const createTermRoutes = (prisma: PrismaClient) => {
   router.post(
     '/users/agreements',
     authenticateToken,
+    validateBody(agreeToTermSchema),
     (req: Request, res: Response) =>
       termController.agreeToTerm(
         req as unknown as Request & {

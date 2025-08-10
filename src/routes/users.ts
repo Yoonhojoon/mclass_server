@@ -2,6 +2,16 @@ import express from 'express';
 import { UserController } from '../domains/user/user.controller.js';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../middleware/validate.middleware.js';
+import {
+  updateUserSchema,
+  getUserByIdSchema,
+  getUserByEmailSchema,
+} from '../domains/user/user.schemas.js';
 
 /**
  * 사용자 라우트 팩토리 함수
@@ -62,7 +72,11 @@ export const createUserRoutes = (prisma: PrismaClient): express.Router => {
    *       404:
    *         description: 사용자를 찾을 수 없음
    */
-  router.get('/:id', userController.getUserById.bind(userController));
+  router.get(
+    '/:id',
+    validateParams(getUserByIdSchema),
+    userController.getUserById.bind(userController)
+  );
 
   /**
    * @swagger
@@ -89,7 +103,11 @@ export const createUserRoutes = (prisma: PrismaClient): express.Router => {
    *       404:
    *         description: 사용자를 찾을 수 없음
    */
-  router.get('/search', userController.getUserByEmail.bind(userController));
+  router.get(
+    '/search',
+    validateQuery(getUserByEmailSchema),
+    userController.getUserByEmail.bind(userController)
+  );
 
   /**
    * @swagger
@@ -129,6 +147,7 @@ export const createUserRoutes = (prisma: PrismaClient): express.Router => {
   router.put(
     '/profile',
     authenticateToken,
+    validateBody(updateUserSchema),
     userController.updateUser.bind(userController)
   );
 

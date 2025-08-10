@@ -5,6 +5,7 @@ import { ValidationError } from '../../common/exception/ValidationError.js';
 import logger from '../../config/logger.config.js';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import { PrismaClient } from '@prisma/client';
+import { UpdateUserDto, GetUserByEmailDto } from './user.schemas.js';
 
 export class UserController {
   private userService: UserService;
@@ -57,12 +58,6 @@ export class UserController {
     try {
       const { id } = req.params;
 
-      if (!id) {
-        const error = ValidationError.badRequest('사용자 ID가 필요합니다.');
-        res.status(error.statusCode).json(error.toResponse());
-        return;
-      }
-
       logger.info('👤 사용자 조회 (ID)', { userId: id });
 
       const user = await this.userService.findById(id);
@@ -93,16 +88,11 @@ export class UserController {
   async getUserByEmail(req: Request, res: Response): Promise<void> {
     try {
       const { email } = req.query;
-
-      if (!email || typeof email !== 'string') {
-        const error = ValidationError.badRequest('이메일이 필요합니다.');
-        res.status(error.statusCode).json(error.toResponse());
-        return;
-      }
+      const emailData: GetUserByEmailDto = { email: email as string };
 
       logger.info('👤 사용자 조회 (이메일)', { email });
 
-      const user = await this.userService.findByEmail(email);
+      const user = await this.userService.findByEmail(emailData.email);
 
       if (!user) {
         const error = ValidationError.notFound('사용자를 찾을 수 없습니다.');
@@ -130,7 +120,7 @@ export class UserController {
   async updateUser(req: Request, res: Response): Promise<void> {
     try {
       const userId = (req as AuthenticatedRequest).user?.userId;
-      const { name, role } = req.body;
+      const updateData: UpdateUserDto = req.body;
 
       if (!userId) {
         const error = ValidationError.unauthorized();
@@ -138,11 +128,11 @@ export class UserController {
         return;
       }
 
-      logger.info('✏️ 사용자 정보 수정', { userId, name, role });
+      logger.info('✏️ 사용자 정보 수정', { userId, updateData });
 
       const updatedUser = await this.userService.updateUser(userId, {
-        name,
-        role,
+        name: updateData.name,
+        role: updateData.role,
       });
 
       res.json({
