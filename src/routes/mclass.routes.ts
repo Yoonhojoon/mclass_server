@@ -3,7 +3,7 @@ import { MClassController } from '../domains/mclass/mclass.controller.js';
 import { MClassService } from '../domains/mclass/mclass.service.js';
 import { MClassRepository } from '../domains/mclass/mclass.repository.js';
 import { PrismaClient } from '@prisma/client';
-import { authMiddleware } from '../middleware/auth.middleware.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -252,7 +252,7 @@ router.get(
  */
 router.post(
   '/mclasses',
-  authMiddleware,
+  authenticateToken,
   controller.createMClass.bind(controller)
 );
 
@@ -331,7 +331,7 @@ router.post(
  */
 router.patch(
   '/mclasses/:id',
-  authMiddleware,
+  authenticateToken,
   controller.updateMClass.bind(controller)
 );
 
@@ -390,7 +390,7 @@ router.patch(
  */
 router.delete(
   '/mclasses/:id',
-  authMiddleware,
+  authenticateToken,
   controller.deleteMClass.bind(controller)
 );
 
