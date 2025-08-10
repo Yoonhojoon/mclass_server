@@ -60,11 +60,7 @@ const isAllowed = (origin?: string | null) => {
   return allowedPatterns.some(re => re.test(origin));
 };
 
-app.use((req, res, next) => {
-  res.vary('Origin');
-  next();
-});
-app.options('*', cors());
+// CORS 설정
 app.use(
   cors({
     origin: (origin, callback) => {
