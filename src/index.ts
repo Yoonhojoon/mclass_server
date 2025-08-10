@@ -34,40 +34,55 @@ const redisStore = new RedisStore({
   prefix: 'mclass:session:',
 });
 
-// 미들웨어 설정
-const allowedOrigins = [
+const allowedOrigins = new Set<string>([
   'http://localhost:3000',
   'https://localhost:3000',
   'http://127.0.0.1:3000',
   'https://127.0.0.1:3000',
   'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
   'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
-];
+]);
 
-// 환경 변수에서 추가 origin이 있다면 추가
 if (process.env.ALLOWED_ORIGINS) {
-  const additionalOrigins = process.env.ALLOWED_ORIGINS.split(',').map(origin =>
-    origin.trim()
-  );
-  allowedOrigins.push(...additionalOrigins);
+  process.env.ALLOWED_ORIGINS.split(',')
+    .map(s => s.trim())
+    .forEach(o => allowedOrigins.add(o));
 }
 
+// 2) 패턴 허용 (예: 배포 도메인 서브도메인 전부)
+const allowedPatterns = [
+  /^https?:\/\/([a-z0-9-]+\.)*example\.com(:\d+)?$/i, // 예시: *.example.com[:port]
+];
+
+const isAllowed = (origin?: string | null) => {
+  if (!origin) return true; // 서버-서버/모바일 클라이언트 허용 (정책에 맞게 조정)
+  if (allowedOrigins.has(origin)) return true;
+  return allowedPatterns.some(re => re.test(origin));
+};
+
+app.use((req, res, next) => {
+  res.vary('Origin');
+  next();
+});
+app.options('*', cors());
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // origin이 없는 경우 (같은 origin에서의 요청) 허용
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        logger.warn(`🚫 CORS 차단된 origin: ${origin}`);
-        callback(new Error('CORS 정책에 의해 차단되었습니다.'));
-      }
+    origin: (origin, callback) => {
+      if (isAllowed(origin)) return callback(null, true);
+      logger.warn(`🚫 CORS 차단: ${origin}`);
+      return callback(new Error('CORS 정책에 의해 차단되었습니다.'));
     },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true, // 쿠키/자격 증명 사용 시 필수
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-CSRF-Token',
+      'X-Request-Id',
+    ],
+    // 필요 시 preflight 캐시 시간
+    // maxAge: 600,
   })
 );
 app.use(express.json());
