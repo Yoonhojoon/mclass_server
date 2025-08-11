@@ -26,16 +26,12 @@ export const CreateMClassDtoSchema = z
       .string()
       .datetime(
         '모집 시작 시간은 ISO 8601 형식이어야 합니다 (예: 2025-01-15T10:00:00.000Z)'
-      )
-      .nullable()
-      .optional(),
+      ),
     recruitEndAt: z
       .string()
       .datetime(
         '모집 종료 시간은 ISO 8601 형식이어야 합니다 (예: 2025-01-15T18:00:00.000Z)'
-      )
-      .nullable()
-      .optional(),
+      ),
     startAt: z
       .string()
       .datetime(
@@ -57,11 +53,8 @@ export const CreateMClassDtoSchema = z
   })
   .refine(
     data => {
-      // recruitStartAt과 recruitEndAt이 모두 제공된 경우
-      if (data.recruitStartAt && data.recruitEndAt) {
-        return new Date(data.recruitStartAt) <= new Date(data.recruitEndAt);
-      }
-      return true;
+      // recruitStartAt과 recruitEndAt 검증 (이제 필수 필드)
+      return new Date(data.recruitStartAt) <= new Date(data.recruitEndAt);
     },
     {
       message: '모집 시작 시간은 모집 종료 시간보다 이전이어야 합니다',
@@ -80,11 +73,8 @@ export const CreateMClassDtoSchema = z
   )
   .refine(
     data => {
-      // recruitEndAt과 startAt 검증 (권장사항)
-      if (data.recruitEndAt) {
-        return new Date(data.recruitEndAt) <= new Date(data.startAt);
-      }
-      return true;
+      // recruitEndAt과 startAt 검증 (이제 필수 필드)
+      return new Date(data.recruitEndAt) <= new Date(data.startAt);
     },
     {
       message: '모집 종료 시간은 시작 시간보다 이전이어야 합니다',
@@ -103,23 +93,6 @@ export const CreateMClassDtoSchema = z
       message:
         '대기열을 허용하지 않는 경우 대기열 수용 인원을 설정할 수 없습니다',
       path: ['waitlistCapacity'],
-    }
-  )
-  .refine(
-    data => {
-      // REVIEW 선발 방식은 모집 기간 설정이 필요
-      if (
-        data.selectionType === 'REVIEW' &&
-        (!data.recruitStartAt || !data.recruitEndAt)
-      ) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message:
-        'REVIEW 선발 방식은 모집 시작 시간과 종료 시간 설정이 필요합니다',
-      path: ['selectionType'],
     }
   );
 

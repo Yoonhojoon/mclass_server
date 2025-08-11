@@ -38,8 +38,8 @@ model MClass {
   title            String
   description      String?
   // 모집/행사
-  recruitStartAt   DateTime?     // 모집 시작
-  recruitEndAt     DateTime?     // 모집 마감
+  recruitStartAt   DateTime      // 모집 시작
+  recruitEndAt     DateTime      // 모집 마감
   startAt          DateTime      // 행사 시작
   endAt            DateTime      // 행사 종료
   // 선발 관련
