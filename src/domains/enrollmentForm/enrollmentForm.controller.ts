@@ -2,8 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { EnrollmentFormService } from './enrollmentForm.service.js';
 import { EnrollmentFormSuccess } from '../../common/exception/enrollment-form/EnrollmentFormSuccess.js';
 import { EnrollmentFormError } from '../../common/exception/enrollment-form/EnrollmentFormError.js';
-import { CreateEnrollmentFormDtoSchema } from './dto/CreateEnrollmentFormDto.js';
-import { UpdateEnrollmentFormDtoSchema } from './dto/UpdateEnrollmentFormDto.js';
+import {
+  CreateEnrollmentFormDtoSchema,
+  UpdateEnrollmentFormDtoSchema,
+} from './enrollmentForm.schemas.js';
 import { ZodError } from 'zod';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import logger from '../../config/logger.config.js';
@@ -50,7 +52,7 @@ export class EnrollmentFormController {
     next: NextFunction
   ) {
     const { id: mclassId } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     logger.info(
       `[EnrollmentFormController] 지원서 양식 생성 요청: MClass ID ${mclassId}, 사용자 ID ${userId}`
     );
@@ -103,7 +105,7 @@ export class EnrollmentFormController {
     next: NextFunction
   ) {
     const { id: mclassId } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     logger.info(
       `[EnrollmentFormController] 지원서 양식 수정 요청: MClass ID ${mclassId}, 사용자 ID ${userId}`
     );
@@ -159,7 +161,7 @@ export class EnrollmentFormController {
     next: NextFunction
   ) {
     const { id: mclassId } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     logger.info(
       `[EnrollmentFormController] 지원서 양식 삭제 요청: MClass ID ${mclassId}, 사용자 ID ${userId}`
     );
