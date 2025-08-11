@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { jwtConfig } from '../../config/jwt.config.js';
 import { TokenError } from '../../common/exception/token/TokenError.js';
 import { redis } from '../../config/redis.config.js';
+import logger from '../../config/logger.config.js';
 
 // JWT 관련 타입 정의
 interface JWTDecodedPayload {
@@ -32,6 +33,9 @@ export class TokenService {
    * 액세스 토큰 생성
    */
   static generateAccessToken(payload: TokenPayload): string {
+    logger.debug(
+      `[TokenService] 액세스 토큰 생성: 사용자 ID ${payload.userId}`
+    );
     return jwt.sign(payload, jwtConfig.secret, {
       expiresIn: jwtConfig.expiresIn as any,
       issuer: jwtConfig.issuer,
@@ -43,6 +47,9 @@ export class TokenService {
    * 리프레시 토큰 생성
    */
   static generateRefreshToken(payload: TokenPayload): string {
+    logger.debug(
+      `[TokenService] 리프레시 토큰 생성: 사용자 ID ${payload.userId}`
+    );
     return jwt.sign(payload, jwtConfig.secret, {
       expiresIn: jwtConfig.refreshExpiresIn as any,
       issuer: jwtConfig.issuer,
@@ -55,16 +62,26 @@ export class TokenService {
    */
   static verifyAccessToken(token: string): TokenPayload {
     try {
-      return jwt.verify(token, jwtConfig.secret, {
+      const payload = jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       }) as TokenPayload;
+
+      logger.debug(
+        `[TokenService] 액세스 토큰 검증 성공: 사용자 ID ${payload.userId}`
+      );
+      return payload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
+        logger.warn(`[TokenService] 액세스 토큰 만료`);
         throw TokenError.expiredToken('액세스 토큰이 만료되었습니다');
       } else if (error instanceof jwt.JsonWebTokenError) {
+        logger.warn(`[TokenService] 유효하지 않은 액세스 토큰`);
         throw TokenError.invalidToken('유효하지 않은 액세스 토큰입니다');
       } else {
+        logger.error(`[TokenService] 토큰 검증 실패`, {
+          error: error instanceof Error ? error.message : error,
+        });
         throw TokenError.tokenVerificationFailed('토큰 검증에 실패했습니다');
       }
     }
@@ -75,16 +92,26 @@ export class TokenService {
    */
   static verifyRefreshToken(token: string): TokenPayload {
     try {
-      return jwt.verify(token, jwtConfig.secret, {
+      const payload = jwt.verify(token, jwtConfig.secret, {
         issuer: jwtConfig.issuer,
         audience: jwtConfig.audience,
       }) as TokenPayload;
+
+      logger.debug(
+        `[TokenService] 리프레시 토큰 검증 성공: 사용자 ID ${payload.userId}`
+      );
+      return payload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
+        logger.warn(`[TokenService] 리프레시 토큰 만료`);
         throw TokenError.expiredToken('리프레시 토큰이 만료되었습니다');
       } else if (error instanceof jwt.JsonWebTokenError) {
+        logger.warn(`[TokenService] 유효하지 않은 리프레시 토큰`);
         throw TokenError.invalidToken('유효하지 않은 리프레시 토큰입니다');
       } else {
+        logger.error(`[TokenService] 리프레시 토큰 검증 실패`, {
+          error: error instanceof Error ? error.message : error,
+        });
         throw TokenError.tokenVerificationFailed('토큰 검증에 실패했습니다');
       }
     }
@@ -178,11 +205,15 @@ export class TokenService {
       const newAccessToken = this.generateAccessToken(newTokenPayload);
       const newRefreshToken = this.generateRefreshToken(newTokenPayload);
 
+      logger.info(`[TokenService] 토큰 갱신 성공: 사용자 ID ${payload.userId}`);
       return {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       };
-    } catch {
+    } catch (error) {
+      logger.error(`[TokenService] 토큰 갱신 실패`, {
+        error: error instanceof Error ? error.message : error,
+      });
       throw TokenError.expiredToken('리프레시 토큰이 만료되었습니다');
     }
   }
@@ -198,10 +229,15 @@ export class TokenService {
         const expirationTime = decoded.exp - Math.floor(Date.now() / 1000);
         if (expirationTime > 0) {
           await redis.setex(`blacklist:${token}`, expirationTime, '1');
+          logger.info(
+            `[TokenService] 토큰 블랙리스트 추가: 만료 시간 ${expirationTime}초`
+          );
         }
       }
     } catch (error) {
-      console.error('Failed to invalidate token:', error);
+      logger.error(`[TokenService] 토큰 블랙리스트 추가 실패`, {
+        error: error instanceof Error ? error.message : error,
+      });
     }
   }
 
@@ -213,7 +249,9 @@ export class TokenService {
       const result = await redis.get(`blacklist:${token}`);
       return result === '1';
     } catch (error) {
-      console.error('Failed to check token blacklist:', error);
+      logger.error(`[TokenService] 토큰 블랙리스트 확인 실패`, {
+        error: error instanceof Error ? error.message : error,
+      });
       return false;
     }
   }
@@ -227,6 +265,7 @@ export class TokenService {
     // 먼저 블랙리스트 확인
     const isBlacklisted = await this.isTokenBlacklisted(token);
     if (isBlacklisted) {
+      logger.warn(`[TokenService] 블랙리스트된 토큰 사용 시도`);
       throw TokenError.invalidToken('토큰이 무효화되었습니다');
     }
 

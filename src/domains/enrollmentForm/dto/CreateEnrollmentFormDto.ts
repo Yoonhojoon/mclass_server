@@ -11,11 +11,12 @@ export const QuestionSchema = z.object({
       'date',
       'radio',
       'checkbox',
+      'agreeTerms', // 약관 동의용 체크박스
       'textarea',
       'select',
     ],
     {
-      errorMap: () => ({ message: '지원하지 않는 질문 타입입니다' }),
+      message: '지원하지 않는 질문 타입입니다',
     }
   ),
   label: z.string().min(1, '질문 라벨은 필수입니다'),

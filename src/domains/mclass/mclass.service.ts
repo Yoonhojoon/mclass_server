@@ -4,6 +4,7 @@ import { UpdateMClassDto } from './dto/UpdateMClassDto.js';
 import { ListQueryDto } from './dto/ListQueryDto.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
 import { MClassResponse } from './dto/MClassResponse.js';
+import logger from '../../config/logger.config.js';
 
 export type MClassPhase = 'UPCOMING' | 'RECRUITING' | 'IN_PROGRESS' | 'ENDED';
 
@@ -75,38 +76,70 @@ export class MClassService {
    * MClass 목록 조회
    */
   async list(query: ListQueryDto, isAdmin: boolean = false) {
-    const result = await this.repository.findWithFilters(query, isAdmin);
-
-    // 각 MClass에 phase 추가
-    const itemsWithPhase = result.items.map(mclass =>
-      this.addPhaseToMClass(mclass)
+    logger.info(
+      `[MClassService] MClass 목록 조회 시작: ${JSON.stringify(query)}, 관리자: ${isAdmin}`
     );
 
-    // phase 필터링 (서비스 레벨에서 처리)
-    let filteredItems = itemsWithPhase;
-    if (query.phase) {
-      filteredItems = itemsWithPhase.filter(item => item.phase === query.phase);
-    }
+    try {
+      const result = await this.repository.findWithFilters(query, isAdmin);
 
-    return {
-      items: filteredItems,
-      total: result.total,
-      page: result.page,
-      size: result.size,
-      totalPages: result.totalPages,
-    };
+      // 각 MClass에 phase 추가
+      const itemsWithPhase = result.items.map(mclass =>
+        this.addPhaseToMClass(mclass)
+      );
+
+      // phase 필터링 (서비스 레벨에서 처리)
+      let filteredItems = itemsWithPhase;
+      if (query.phase) {
+        filteredItems = itemsWithPhase.filter(
+          item => item.phase === query.phase
+        );
+      }
+
+      const response = {
+        items: filteredItems,
+        total: result.total,
+        page: result.page,
+        size: result.size,
+        totalPages: result.totalPages,
+      };
+
+      logger.info(
+        `[MClassService] MClass 목록 조회 성공: 총 ${result.total}개, 페이지 ${result.page}/${result.totalPages}`
+      );
+      return response;
+    } catch (error) {
+      logger.error(`[MClassService] MClass 목록 조회 실패`, {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw error;
+    }
   }
 
   /**
    * MClass 단일 조회
    */
   async getById(id: string): Promise<MClassWithPhase> {
-    const mclass = await this.repository.findById(id);
-    if (!mclass) {
-      throw MClassError.notFound(id);
-    }
+    logger.info(`[MClassService] MClass 단일 조회 시작: ${id}`);
 
-    return this.addPhaseToMClass(mclass);
+    try {
+      const mclass = await this.repository.findById(id);
+      if (!mclass) {
+        logger.warn(`[MClassService] MClass를 찾을 수 없음: ${id}`);
+        throw MClassError.notFound(id);
+      }
+
+      const result = this.addPhaseToMClass(mclass);
+      logger.info(
+        `[MClassService] MClass 단일 조회 성공: ${id}, Phase: ${result.phase}`
+      );
+      return result;
+    } catch (error) {
+      logger.error(`[MClassService] MClass 단일 조회 실패: ${id}`, {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw error;
+    }
   }
 
   /**
@@ -116,89 +149,182 @@ export class MClassService {
     adminId: string,
     data: CreateMClassDto
   ): Promise<MClassWithPhase> {
-    // 제목 중복 체크
-    const existingMClass = await this.repository.findByTitle(data.title);
-    if (existingMClass) {
-      throw MClassError.duplicateTitle(data.title);
-    }
+    logger.info(
+      `[MClassService] MClass 생성 시작: 제목 "${data.title}", 관리자 ID ${adminId}`
+    );
 
-    const mclass = await this.repository.create(data, adminId);
-    return this.addPhaseToMClass(mclass);
+    try {
+      // 제목 중복 체크
+      const existingMClass = await this.repository.findByTitle(data.title);
+      if (existingMClass) {
+        logger.warn(
+          `[MClassService] 중복된 제목으로 MClass 생성 시도: "${data.title}", 관리자 ID ${adminId}`
+        );
+        throw MClassError.duplicateTitle(data.title);
+      }
+
+      const mclass = await this.repository.create(data, adminId);
+      const result = this.addPhaseToMClass(mclass);
+      logger.info(
+        `[MClassService] MClass 생성 성공: ID ${result.id}, 제목 "${data.title}", 관리자 ID ${adminId}`
+      );
+      return result;
+    } catch (error) {
+      logger.error(
+        `[MClassService] MClass 생성 실패: 제목 "${data.title}", 관리자 ID ${adminId}`,
+        { error: error instanceof Error ? error.message : error }
+      );
+      throw error;
+    }
   }
 
   /**
    * MClass 수정
    */
   async update(id: string, data: UpdateMClassDto): Promise<MClassWithPhase> {
-    // MClass 존재 확인
-    const existingMClass = await this.repository.findById(id);
-    if (!existingMClass) {
-      throw MClassError.notFound(id);
-    }
+    logger.info(`[MClassService] MClass 수정 시작: ${id}`);
 
-    // 제목 변경 시 중복 체크
-    if (data.title && data.title !== existingMClass.title) {
-      const duplicateMClass = await this.repository.findByTitle(data.title);
-      if (duplicateMClass) {
-        throw MClassError.duplicateTitle(data.title);
+    try {
+      // MClass 존재 확인
+      const existingMClass = await this.repository.findById(id);
+      if (!existingMClass) {
+        logger.warn(`[MClassService] 수정할 MClass를 찾을 수 없음: ${id}`);
+        throw MClassError.notFound(id);
       }
-    }
 
-    // 모집 중인 클래스 수정 제한 체크
-    const currentPhase = this.calculatePhase(existingMClass);
-    if (currentPhase === 'RECRUITING') {
-      throw MClassError.cannotModifyRecruiting(id);
-    }
+      // 제목 변경 시 중복 체크
+      if (data.title && data.title !== existingMClass.title) {
+        const duplicateMClass = await this.repository.findByTitle(data.title);
+        if (duplicateMClass) {
+          logger.warn(
+            `[MClassService] 중복된 제목으로 MClass 수정 시도: "${data.title}", MClass ID ${id}`
+          );
+          throw MClassError.duplicateTitle(data.title);
+        }
+      }
 
-    const mclass = await this.repository.update(id, data);
-    return this.addPhaseToMClass(mclass);
+      // 모집 중인 클래스 수정 제한 체크
+      const currentPhase = this.calculatePhase(existingMClass);
+      if (currentPhase === 'RECRUITING') {
+        logger.warn(
+          `[MClassService] 모집 중인 MClass 수정 시도: ${id}, Phase: ${currentPhase}`
+        );
+        throw MClassError.cannotModifyRecruiting(id);
+      }
+
+      const mclass = await this.repository.update(id, data);
+      const result = this.addPhaseToMClass(mclass);
+      logger.info(
+        `[MClassService] MClass 수정 성공: ${id}, Phase: ${result.phase}`
+      );
+      return result;
+    } catch (error) {
+      logger.error(`[MClassService] MClass 수정 실패: ${id}`, {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw error;
+    }
   }
 
   /**
    * MClass 삭제
    */
   async delete(id: string): Promise<void> {
-    // MClass 존재 확인
-    const existingMClass = await this.repository.findById(id);
-    if (!existingMClass) {
-      throw MClassError.notFound(id);
-    }
+    logger.info(`[MClassService] MClass 삭제 시작: ${id}`);
 
-    // 진행 중인 클래스 삭제 제한 체크
-    const currentPhase = this.calculatePhase(existingMClass);
-    if (currentPhase === 'IN_PROGRESS') {
-      throw MClassError.cannotDeleteInProgress(id);
-    }
+    try {
+      // MClass 존재 확인
+      const existingMClass = await this.repository.findById(id);
+      if (!existingMClass) {
+        logger.warn(`[MClassService] 삭제할 MClass를 찾을 수 없음: ${id}`);
+        throw MClassError.notFound(id);
+      }
 
-    await this.repository.delete(id);
+      // 진행 중인 클래스 삭제 제한 체크
+      const currentPhase = this.calculatePhase(existingMClass);
+      if (currentPhase === 'IN_PROGRESS') {
+        logger.warn(
+          `[MClassService] 진행 중인 MClass 삭제 시도: ${id}, Phase: ${currentPhase}`
+        );
+        throw MClassError.cannotDeleteInProgress(id);
+      }
+
+      await this.repository.delete(id);
+      logger.info(`[MClassService] MClass 삭제 성공: ${id}`);
+    } catch (error) {
+      logger.error(`[MClassService] MClass 삭제 실패: ${id}`, {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw error;
+    }
   }
 
   /**
    * 승인된 인원 수 조회 (실시간)
    */
   async getApprovedCount(mclassId: string): Promise<number> {
-    return this.repository.getApprovedCount(mclassId);
+    logger.debug(`[MClassService] 승인된 인원 수 조회: ${mclassId}`);
+
+    try {
+      const count = await this.repository.getApprovedCount(mclassId);
+      logger.debug(
+        `[MClassService] 승인된 인원 수 조회 성공: ${mclassId}, 인원 수: ${count}`
+      );
+      return count;
+    } catch (error) {
+      logger.error(`[MClassService] 승인된 인원 수 조회 실패: ${mclassId}`, {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw error;
+    }
   }
 
   /**
    * 대기열 인원 수 조회
    */
   async getWaitlistedCount(mclassId: string): Promise<number> {
-    return this.repository.getWaitlistedCount(mclassId);
+    logger.debug(`[MClassService] 대기열 인원 수 조회: ${mclassId}`);
+
+    try {
+      const count = await this.repository.getWaitlistedCount(mclassId);
+      logger.debug(
+        `[MClassService] 대기열 인원 수 조회 성공: ${mclassId}, 인원 수: ${count}`
+      );
+      return count;
+    } catch (error) {
+      logger.error(`[MClassService] 대기열 인원 수 조회 실패: ${mclassId}`, {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw error;
+    }
   }
 
   /**
    * MClass 통계 정보 조회
    */
   async getStatistics(mclassId: string) {
-    const [approvedCount, waitlistedCount] = await Promise.all([
-      this.getApprovedCount(mclassId),
-      this.getWaitlistedCount(mclassId),
-    ]);
+    logger.info(`[MClassService] MClass 통계 정보 조회 시작: ${mclassId}`);
 
-    return {
-      approvedCount,
-      waitlistedCount,
-    };
+    try {
+      const [approvedCount, waitlistedCount] = await Promise.all([
+        this.getApprovedCount(mclassId),
+        this.getWaitlistedCount(mclassId),
+      ]);
+
+      const result = {
+        approvedCount,
+        waitlistedCount,
+      };
+
+      logger.info(
+        `[MClassService] MClass 통계 정보 조회 성공: ${mclassId}, 승인: ${approvedCount}, 대기: ${waitlistedCount}`
+      );
+      return result;
+    } catch (error) {
+      logger.error(`[MClassService] MClass 통계 정보 조회 실패: ${mclassId}`, {
+        error: error instanceof Error ? error.message : error,
+      });
+      throw error;
+    }
   }
 }

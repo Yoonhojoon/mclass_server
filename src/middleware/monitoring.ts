@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import promClient from 'prom-client';
+import logger from '../config/logger.config.js';
 
 // 메트릭 정의
 const httpRequestDurationMicroseconds = new promClient.Histogram({
@@ -63,6 +64,19 @@ export const prometheusMiddleware = (
         .labels(req.method, route, res.statusCode.toString())
         .observe(responseSize);
     }
+
+    // 로그 기록 (느린 요청이나 에러만)
+    if (duration > 1000) {
+      logger.warn(
+        `[Monitoring] 느린 요청 감지: ${req.method} ${route} - ${duration}ms`
+      );
+    }
+
+    if (res.statusCode >= 400) {
+      logger.warn(
+        `[Monitoring] 에러 응답: ${req.method} ${route} - ${res.statusCode}`
+      );
+    }
   });
 
   next();
@@ -74,10 +88,14 @@ export const metricsEndpoint = async (
   res: Response
 ): Promise<void> => {
   try {
+    logger.debug(`[Monitoring] 메트릭 엔드포인트 요청: ${req.ip}`);
     res.set('Content-Type', promClient.register.contentType);
     res.end(await promClient.register.metrics());
+    logger.debug(`[Monitoring] 메트릭 엔드포인트 응답 완료`);
   } catch (error) {
-    console.error('메트릭 수집 오류:', error);
+    logger.error(`[Monitoring] 메트릭 수집 오류`, {
+      error: error instanceof Error ? error.message : error,
+    });
     res.status(500).json({ error: '메트릭 수집 실패' });
   }
 };
