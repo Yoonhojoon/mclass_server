@@ -826,6 +826,11 @@ const options = {
               type: 'string',
               description: '성공 메시지',
             },
+            code: {
+              type: 'string',
+              description: '성공 코드',
+              example: 'SUCCESS',
+            },
           },
           required: ['success', 'data'],
         },

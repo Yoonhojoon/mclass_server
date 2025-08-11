@@ -265,6 +265,16 @@ router.patch(
  *                 success:
  *                   type: boolean
  *                   example: true
+ *                 data:
+ *                   type: 'null'
+ *                   nullable: true
+ *                   example: null
+ *                 message:
+ *                   type: string
+ *                   example: '지원서 양식이 성공적으로 삭제되었습니다'
+ *                 code:
+ *                   type: string
+ *                   example: 'SUCCESS'
  *                 meta:
  *                   type: object
  *                   properties:
