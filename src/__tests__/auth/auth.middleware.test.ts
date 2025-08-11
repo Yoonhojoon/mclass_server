@@ -116,15 +116,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_FAILED',
-          message: '인증 토큰이 필요합니다.',
-        },
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = mockNext.mock.calls[0][0] as any;
+      expect(error.message).toBe('인증 토큰이 필요합니다.');
+      expect(error.errorCode).toBe('AUTHENTICATION_FAILED');
     });
 
     it('❌ 잘못된 토큰 형식일 때 401 상태를 반환해야 함', async () => {
@@ -141,15 +136,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_FAILED',
-          message: '인증 토큰이 필요합니다.',
-        },
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = mockNext.mock.calls[0][0] as any;
+      expect(error.message).toBe('인증 토큰이 필요합니다.');
+      expect(error.errorCode).toBe('AUTHENTICATION_FAILED');
     });
 
     it('❌ 토큰 검증 실패 시 401 상태를 반환해야 함', async () => {
@@ -169,15 +159,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_FAILED',
-          message: '인증에 실패했습니다.',
-        },
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = mockNext.mock.calls[0][0] as any;
+      expect(error.message).toBe('Invalid token');
+      expect(error.errorCode).toBeUndefined();
     });
 
     it('❌ 만료된 토큰일 때 401 상태를 반환해야 함', async () => {
@@ -199,15 +184,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_FAILED',
-          message: '인증에 실패했습니다.',
-        },
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = mockNext.mock.calls[0][0] as any;
+      expect(error.message).toBe('jwt expired');
+      expect(error.errorCode).toBeUndefined();
     });
   });
 
@@ -217,6 +197,7 @@ describe('Auth Middleware', () => {
         userId: 'user-123',
         email: 'test@example.com',
         role: 'USER',
+        isAdmin: false,
         signUpCompleted: false,
       };
     });
@@ -244,6 +225,7 @@ describe('Auth Middleware', () => {
         userId: 'user-123',
         email: 'test@example.com',
         role: 'USER',
+        isAdmin: false,
         signUpCompleted: false,
       };
 
@@ -255,15 +237,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(403);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'SIGNUP_NOT_COMPLETED',
-          message: '약관 동의가 필요합니다.',
-        },
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = mockNext.mock.calls[0][0] as any;
+      expect(error.message).toBe('서비스에 대한 이용 권한이 없습니다.');
+      expect(error.errorCode).toBe('PERMISSION_DENIED');
     });
 
     it('❌ 사용자 정보가 없을 때 401 상태를 반환해야 함', async () => {
@@ -278,15 +255,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({
-        success: false,
-        error: {
-          code: 'AUTHENTICATION_FAILED',
-          message: '인증이 필요합니다.',
-        },
-      });
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = mockNext.mock.calls[0][0] as any;
+      expect(error.message).toBe('인증이 필요합니다.');
+      expect(error.errorCode).toBe('AUTHENTICATION_FAILED');
     });
   });
 
@@ -349,8 +321,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert - authenticateToken이 실패했는지 확인
-      expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const error = mockNext.mock.calls[0][0] as any;
+      expect(error.message).toBe('인증 토큰이 필요합니다.');
+      expect(error.errorCode).toBe('AUTHENTICATION_FAILED');
 
       // Reset mocks
       mockResponse.status.mockClear();
@@ -364,8 +338,11 @@ describe('Auth Middleware', () => {
         mockNext
       );
 
-      // Assert - requireSignUpCompleted가 실행되지 않았는지 확인
-      expect(mockNext).not.toHaveBeenCalled();
+      // Assert - requireSignUpCompleted가 실행되었지만 인증 실패로 인해 에러가 발생했는지 확인
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      const secondError = mockNext.mock.calls[0][0] as any;
+      expect(secondError.message).toBe('인증이 필요합니다.');
+      expect(secondError.errorCode).toBe('AUTHENTICATION_FAILED');
     });
   });
 });

@@ -72,6 +72,18 @@ export class MClassError extends BaseError {
   }
 
   /**
+   * 권한 없음 (상세 메시지)
+   */
+  static permissionDenied(action: string, resource: string): MClassError {
+    return new MClassError(
+      `${action}에 대한 ${resource} 권한이 없습니다`,
+      403,
+      'MCLASS_PERMISSION_DENIED',
+      { action, resource }
+    );
+  }
+
+  /**
    * 검증 오류
    */
   static validation(details?: unknown): MClassError {

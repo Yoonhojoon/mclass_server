@@ -74,8 +74,8 @@ describe('MClassController', () => {
           id: '2',
           title: 'Test Class 2',
           description: null,
-          recruitStartAt: null,
-          recruitEndAt: null,
+          recruitStartAt: new Date('2025-12-15'),
+          recruitEndAt: new Date('2025-12-19'),
           startAt: new Date('2025-12-20'),
           endAt: new Date('2025-12-25'),
           selectionType: 'FIRST_COME' as const,
@@ -228,6 +228,8 @@ describe('MClassController', () => {
       mockRequest = {
         body: {
           title: 'New Class',
+          recruitStartAt: '2025-12-19T10:00:00Z',
+          recruitEndAt: '2025-12-19T12:00:00Z',
           startAt: '2025-12-20T10:00:00Z',
           endAt: '2025-12-20T12:00:00Z',
           selectionType: 'FIRST_COME',
@@ -248,8 +250,8 @@ describe('MClassController', () => {
         id: '1',
         title: 'New Class',
         description: null,
-        recruitStartAt: null,
-        recruitEndAt: null,
+        recruitStartAt: new Date('2025-12-19'),
+        recruitEndAt: new Date('2025-12-19'),
         startAt: new Date('2025-12-20'),
         endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
@@ -278,6 +280,8 @@ describe('MClassController', () => {
 
       expect(mockService.create).toHaveBeenCalledWith('admin-1', {
         title: 'New Class',
+        recruitStartAt: '2025-12-19T10:00:00Z',
+        recruitEndAt: '2025-12-19T12:00:00Z',
         startAt: '2025-12-20T10:00:00Z',
         endAt: '2025-12-20T12:00:00Z',
         selectionType: 'FIRST_COME',
@@ -317,6 +321,19 @@ describe('MClassController', () => {
     });
 
     it('should handle service errors', async () => {
+      // 유효한 데이터로 설정
+      mockRequest.body = {
+        title: 'New Class',
+        recruitStartAt: '2025-12-19T10:00:00Z',
+        recruitEndAt: '2025-12-19T12:00:00Z',
+        startAt: '2025-12-20T10:00:00Z',
+        endAt: '2025-12-20T12:00:00Z',
+        selectionType: 'FIRST_COME',
+        allowWaitlist: false,
+        visibility: 'PUBLIC',
+        isOnline: true,
+      };
+
       mockService.create.mockRejectedValue(
         MClassError.duplicateTitle('New Class')
       );
@@ -354,8 +371,8 @@ describe('MClassController', () => {
         id: '1',
         title: 'Updated Class',
         description: 'Updated description',
-        recruitStartAt: null,
-        recruitEndAt: null,
+        recruitStartAt: new Date('2025-12-15'),
+        recruitEndAt: new Date('2025-12-19'),
         startAt: new Date('2025-12-20'),
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,

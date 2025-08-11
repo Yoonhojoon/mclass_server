@@ -91,7 +91,7 @@ export class UserRepository {
                 },
               },
             },
-            form: true,
+            enrollmentForm: true,
           },
         },
       },

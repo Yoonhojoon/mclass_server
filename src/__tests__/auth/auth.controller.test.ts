@@ -356,6 +356,7 @@ describe('AuthController', () => {
           userId: 'user-123',
           email: 'test@example.com',
           role: 'USER',
+          isAdmin: false,
           signUpCompleted: true,
         },
       };
@@ -626,6 +627,7 @@ describe('AuthController', () => {
           userId: 'user-123',
           email: 'test@example.com',
           role: 'USER',
+          isAdmin: false,
           signUpCompleted: true,
         },
       };

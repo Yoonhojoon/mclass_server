@@ -135,11 +135,19 @@ export class MClassController {
     logger.info(`[MClassController] MClass 생성 요청: 사용자 ID ${userId}`);
 
     try {
+      // 관리자 권한 확인
+      if (!req.user?.isAdmin) {
+        logger.warn(
+          `[MClassController] 관리자 권한 없는 사용자 MClass 생성 시도: 사용자 ID ${userId}`
+        );
+        throw MClassError.permissionDenied('MClass 생성', '접근');
+      }
+
       // 요청 데이터 파싱 및 검증
       const data = CreateMClassDtoSchema.parse(req.body);
 
-      // 서비스 호출 (미들웨어에서 권한 확인됨)
-      const mclass = await this.service.create(req.user!.userId, data);
+      // 서비스 호출
+      const mclass = await this.service.create(req.user.userId, data);
 
       // 응답 전송
       const response = MClassSuccess.created(mclass.id, mclass);
@@ -180,6 +188,14 @@ export class MClassController {
     );
 
     try {
+      // 관리자 권한 확인
+      if (!req.user?.isAdmin) {
+        logger.warn(
+          `[MClassController] 관리자 권한 없는 사용자 MClass 수정 시도: ${id}, 사용자 ID ${userId}`
+        );
+        throw MClassError.permissionDenied('MClass 수정', '접근');
+      }
+
       // 요청 데이터 파싱 및 검증
       const data = UpdateMClassDtoSchema.parse(req.body);
 
@@ -225,6 +241,14 @@ export class MClassController {
     );
 
     try {
+      // 관리자 권한 확인
+      if (!req.user?.isAdmin) {
+        logger.warn(
+          `[MClassController] 관리자 권한 없는 사용자 MClass 삭제 시도: ${id}, 사용자 ID ${userId}`
+        );
+        throw MClassError.permissionDenied('MClass 삭제', '접근');
+      }
+
       // 서비스 호출
       await this.service.delete(id);
 

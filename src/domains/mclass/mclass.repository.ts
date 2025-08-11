@@ -100,10 +100,8 @@ export class MClassRepository {
       allowWaitlist: data.allowWaitlist,
       waitlistCapacity: data.waitlistCapacity,
       visibility: data.visibility,
-      recruitStartAt: data.recruitStartAt
-        ? new Date(data.recruitStartAt)
-        : null,
-      recruitEndAt: data.recruitEndAt ? new Date(data.recruitEndAt) : null,
+      recruitStartAt: new Date(data.recruitStartAt),
+      recruitEndAt: new Date(data.recruitEndAt),
       startAt: new Date(data.startAt),
       endAt: new Date(data.endAt),
       isOnline: data.isOnline,
@@ -147,13 +145,9 @@ export class MClassRepository {
       updateData.waitlistCapacity = data.waitlistCapacity;
     if (data.visibility !== undefined) updateData.visibility = data.visibility;
     if (data.recruitStartAt !== undefined)
-      updateData.recruitStartAt = data.recruitStartAt
-        ? new Date(data.recruitStartAt)
-        : null;
+      updateData.recruitStartAt = new Date(data.recruitStartAt);
     if (data.recruitEndAt !== undefined)
-      updateData.recruitEndAt = data.recruitEndAt
-        ? new Date(data.recruitEndAt)
-        : null;
+      updateData.recruitEndAt = new Date(data.recruitEndAt);
     if (data.startAt !== undefined) updateData.startAt = new Date(data.startAt);
     if (data.endAt !== undefined) updateData.endAt = new Date(data.endAt);
     if (data.isOnline !== undefined) updateData.isOnline = data.isOnline;

@@ -28,14 +28,12 @@ export const UpdateMClassDtoSchema = z
       .datetime(
         '모집 시작 시간은 ISO 8601 형식이어야 합니다 (예: 2025-01-15T10:00:00.000Z)'
       )
-      .nullable()
       .optional(),
     recruitEndAt: z
       .string()
       .datetime(
         '모집 종료 시간은 ISO 8601 형식이어야 합니다 (예: 2025-01-15T18:00:00.000Z)'
       )
-      .nullable()
       .optional(),
     startAt: z
       .string()
