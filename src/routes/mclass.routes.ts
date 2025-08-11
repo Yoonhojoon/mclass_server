@@ -185,11 +185,14 @@ router.get(
  *               value:
  *                 title: "JavaScript 기초 강의"
  *                 description: "JavaScript의 기본 문법을 배우는 클래스입니다."
+ *                 recruitStartAt: "2025-01-15T10:00:00.000Z"
+ *                 recruitEndAt: "2025-01-15T12:00:00.000Z"
  *                 startAt: "2025-01-15T10:00:00.000Z"
  *                 endAt: "2025-01-15T12:00:00.000Z"
  *                 selectionType: "FIRST_COME"
  *                 capacity: 20
  *                 isOnline: true
+ *                 visibility: "PUBLIC"
  *             모집_기간_있는_클래스:
  *               summary: 모집 기간이 있는 클래스
  *               value:

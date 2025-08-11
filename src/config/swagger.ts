@@ -550,22 +550,70 @@ const options = {
             id: {
               type: 'string',
               format: 'uuid',
-              description: '수강신청 ID',
+              description: '신청 ID',
             },
-            user_id: {
+            userId: {
               type: 'string',
               format: 'uuid',
               description: '사용자 ID',
             },
-            mclass_id: {
+            mclassId: {
               type: 'string',
               format: 'uuid',
-              description: '클래스 ID',
+              description: 'MClass ID',
             },
-            applied_at: {
+            enrollmentFormId: {
+              type: 'string',
+              format: 'uuid',
+              description: '지원서 양식 ID',
+            },
+            answers: {
+              type: 'object',
+              description: '질문에 대한 답변 (JSON)',
+            },
+            status: {
+              type: 'string',
+              enum: [
+                'APPLIED',
+                'APPROVED',
+                'REJECTED',
+                'WAITLISTED',
+                'CANCELED',
+              ],
+              default: 'APPLIED',
+              description: '신청 상태',
+            },
+            appliedAt: {
               type: 'string',
               format: 'date-time',
               description: '신청일시',
+            },
+            decidedAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '승인/거절 결정일시',
+            },
+            canceledAt: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+              description: '취소일시',
+            },
+            reason: {
+              type: 'string',
+              nullable: true,
+              description: '거절/취소 사유',
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '생성일시',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: '수정일시',
             },
           },
         },
@@ -575,64 +623,165 @@ const options = {
             id: {
               type: 'string',
               format: 'uuid',
-              description: '신청서 ID',
+              description: '지원서 양식 ID',
             },
-            phone: {
+            mclassId: {
               type: 'string',
-              description: '전화번호',
+              format: 'uuid',
+              description: 'MClass ID',
             },
-            birth_date: {
+            title: {
               type: 'string',
-              format: 'date',
-              description: '생년월일',
+              description: '지원서 제목',
             },
-            gender: {
+            description: {
               type: 'string',
-              enum: ['M', 'F'],
-              description: '성별',
+              nullable: true,
+              description: '지원서 설명',
             },
-            is_student: {
+            questions: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/Question',
+              },
+              description: '질문 목록',
+            },
+            isActive: {
               type: 'boolean',
-              description: '학생 여부',
+              description: '활성화 여부',
             },
-            school_name: {
+            createdAt: {
               type: 'string',
-              description: '학교명',
+              format: 'date-time',
+              description: '생성일시',
             },
-            major: {
+            updatedAt: {
               type: 'string',
-              description: '전공',
+              format: 'date-time',
+              description: '수정일시',
             },
-            address: {
+          },
+        },
+        Question: {
+          type: 'object',
+          properties: {
+            id: {
               type: 'string',
-              description: '주소',
+              description: '질문 ID',
             },
-            available_time: {
+            type: {
+              type: 'string',
+              enum: [
+                'text',
+                'email',
+                'phone',
+                'date',
+                'radio',
+                'checkbox',
+                'textarea',
+                'select',
+              ],
+              description: '질문 타입',
+            },
+            label: {
+              type: 'string',
+              description: '질문 라벨',
+            },
+            required: {
+              type: 'boolean',
+              description: '필수 여부',
+            },
+            options: {
               type: 'array',
               items: {
                 type: 'string',
               },
-              description: '가능한 시간대',
+              description: '선택 옵션 (radio, checkbox, select 타입용)',
             },
-            support_reason: {
+            placeholder: {
               type: 'string',
-              description: '지원 이유',
+              description: '플레이스홀더',
             },
-            wanted_activity: {
+            validation: {
+              type: 'object',
+              properties: {
+                minLength: {
+                  type: 'integer',
+                  description: '최소 길이',
+                },
+                maxLength: {
+                  type: 'integer',
+                  description: '최대 길이',
+                },
+                pattern: {
+                  type: 'string',
+                  description: '정규식 패턴',
+                },
+              },
+              description: '검증 규칙',
+            },
+          },
+          required: ['id', 'type', 'label'],
+        },
+        CreateEnrollmentFormRequest: {
+          type: 'object',
+          properties: {
+            title: {
               type: 'string',
-              description: '희망 활동',
+              minLength: 1,
+              maxLength: 200,
+              description: '지원서 제목 (1-200자)',
             },
-            experience: {
+            description: {
               type: 'string',
-              description: '경험',
+              maxLength: 1000,
+              nullable: true,
+              description: '지원서 설명 (최대 1000자)',
             },
-            introduce: {
-              type: 'string',
-              description: '자기소개',
+            questions: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/Question',
+              },
+              minItems: 1,
+              maxItems: 50,
+              description: '질문 목록 (1-50개)',
             },
-            agree_terms: {
+            isActive: {
               type: 'boolean',
-              description: '약관 동의 여부',
+              default: true,
+              description: '활성화 여부',
+            },
+          },
+          required: ['title', 'questions'],
+        },
+        UpdateEnrollmentFormRequest: {
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 200,
+              description: '지원서 제목 (1-200자)',
+            },
+            description: {
+              type: 'string',
+              maxLength: 1000,
+              nullable: true,
+              description: '지원서 설명 (최대 1000자)',
+            },
+            questions: {
+              type: 'array',
+              items: {
+                $ref: '#/components/schemas/Question',
+              },
+              minItems: 1,
+              maxItems: 50,
+              description: '질문 목록 (1-50개)',
+            },
+            isActive: {
+              type: 'boolean',
+              description: '활성화 여부',
             },
           },
         },
@@ -1288,6 +1437,39 @@ const options = {
                 message: {
                   type: 'string',
                   example: '약관을 찾을 수 없습니다.',
+                },
+              },
+            },
+          },
+        },
+        EnrollmentFormError: {
+          type: 'object',
+          properties: {
+            success: {
+              type: 'boolean',
+              example: false,
+            },
+            error: {
+              type: 'object',
+              properties: {
+                code: {
+                  type: 'string',
+                  enum: [
+                    'ENROLLMENT_FORM_NOT_FOUND',
+                    'ENROLLMENT_FORM_ALREADY_EXISTS',
+                    'ENROLLMENT_FORM_FORBIDDEN',
+                    'ENROLLMENT_FORM_VALIDATION_ERROR',
+                    'ENROLLMENT_FORM_DUPLICATE_QUESTION_IDS',
+                    'ENROLLMENT_FORM_MISSING_OPTIONS',
+                  ],
+                  example: 'ENROLLMENT_FORM_NOT_FOUND',
+                },
+                message: {
+                  type: 'string',
+                  example: '지원서 양식을 찾을 수 없습니다.',
+                },
+                details: {
+                  description: '상세 에러 정보',
                 },
               },
             },

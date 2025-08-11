@@ -24,10 +24,8 @@ export class MClassController {
       // 쿼리 파라미터 파싱 및 검증
       const query = ListQueryDtoSchema.parse(req.query);
 
-      // 사용자 권한 확인 (UNLISTED 조회 권한)
+      // 서비스 호출 (인증된 사용자의 관리자 권한 확인)
       const isAdmin = req.user?.isAdmin || false;
-
-      // 서비스 호출
       const result = await this.service.list(query, isAdmin);
 
       // 응답 전송
@@ -110,16 +108,11 @@ export class MClassController {
     next: NextFunction
   ) {
     try {
-      // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.isAdmin) {
-        throw MClassError.forbidden();
-      }
-
       // 요청 데이터 파싱 및 검증
       const data = CreateMClassDtoSchema.parse(req.body);
 
-      // 서비스 호출
-      const mclass = await this.service.create(req.user.userId, data);
+      // 서비스 호출 (미들웨어에서 권한 확인됨)
+      const mclass = await this.service.create(req.user!.userId, data);
 
       // 응답 전송
       const response = MClassSuccess.created(mclass.id, mclass);
@@ -144,11 +137,6 @@ export class MClassController {
   ) {
     try {
       const { id } = req.params;
-
-      // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.isAdmin) {
-        throw MClassError.forbidden();
-      }
 
       // 요청 데이터 파싱 및 검증
       const data = UpdateMClassDtoSchema.parse(req.body);
@@ -179,11 +167,6 @@ export class MClassController {
   ) {
     try {
       const { id } = req.params;
-
-      // RBAC 확인: ADMIN 권한 필요
-      if (!req.user?.isAdmin) {
-        throw MClassError.forbidden();
-      }
 
       // 서비스 호출
       await this.service.delete(id);

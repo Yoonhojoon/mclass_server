@@ -61,6 +61,7 @@ model MClass {
   // Relations
   creator          User          @relation(fields: [createdBy], references: [id], onDelete: Restrict)
   enrollments      Enrollment[]
+  enrollmentForm   EnrollmentForm?
 
   @@index([visibility, recruitStartAt, recruitEndAt])
   @@index([startAt])
@@ -100,6 +101,8 @@ model Enrollment {
   id         String            @id @default(uuid())
   userId     String
   mclassId   String
+  enrollmentFormId String
+  answers    Json              // 질문에 대한 답변
   status     EnrollmentStatus  @default(APPLIED) // APPLIED/APPROVED/REJECTED/WAITLISTED/CANCELED
   appliedAt  DateTime          @default(now())
   decidedAt  DateTime?
@@ -111,7 +114,7 @@ model Enrollment {
   // Relations
   user       User   @relation(fields: [userId], references: [id], onDelete: Restrict)
   mclass     MClass @relation(fields: [mclassId], references: [id], onDelete: Cascade)
-  form       EnrollmentForm?
+  enrollmentForm EnrollmentForm @relation(fields: [enrollmentFormId], references: [id], onDelete: Cascade)
 
   @@unique([userId, mclassId])
   @@index([mclassId, status])
@@ -121,25 +124,17 @@ model Enrollment {
 
 model EnrollmentForm {
   id             String     @id @default(uuid())
-  enrollmentId   String     @unique
-  phone          String?
-  birthDate      DateTime?
-  gender         Gender?
-  isStudent      Boolean    @default(false)
-  schoolName     String?
-  major          String?
-  address        String?
-  availableTime  String[]   // text[]
-  supportReason  String?
-  wantedActivity String?
-  experience     String?
-  introduce      String?
-  agreeTerms     Boolean    @default(false)
+  mclassId       String     @unique
+  title          String     // 지원서 제목 (예: "M클래스 참가신청")
+  description    String?    // 지원서 설명
+  questions      Json       // 질문 목록 (관리자가 설정)
+  isActive       Boolean    @default(true)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
   // Relations
-  enrollment     Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  mclass         MClass     @relation(fields: [mclassId], references: [id], onDelete: Cascade)
+  enrollments    Enrollment[]
 
   @@map("enrollment_forms")
 }
