@@ -20,7 +20,7 @@ export const authenticateToken = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
@@ -34,16 +34,7 @@ export const authenticateToken = async (
 
     next();
   } catch (error) {
-    if (error instanceof AuthError) {
-      return res.status(error.statusCode).json(error.toResponse());
-    }
-    return res.status(401).json({
-      success: false,
-      error: {
-        code: 'AUTHENTICATION_FAILED',
-        message: '인증에 실패했습니다.',
-      },
-    });
+    next(error);
   }
 };
 
@@ -54,34 +45,19 @@ export const requireSignUpCompleted = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
+): Promise<void> => {
   try {
     if (!(req as AuthenticatedRequest).user) {
       throw AuthError.authenticationFailed('인증이 필요합니다.');
     }
 
     if (!(req as AuthenticatedRequest).user?.signUpCompleted) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'SIGNUP_NOT_COMPLETED',
-          message: '약관 동의가 필요합니다.',
-        },
-      });
+      throw AuthError.permissionDenied('서비스', '이용');
     }
 
     next();
   } catch (error) {
-    if (error instanceof AuthError) {
-      return res.status(error.statusCode).json(error.toResponse());
-    }
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: '서버 오류가 발생했습니다.',
-      },
-    });
+    next(error);
   }
 };
 
@@ -92,33 +68,18 @@ export const requireAdmin = async (
   req: Request,
   res: Response,
   next: NextFunction
-): Promise<Response | void> => {
+): Promise<void> => {
   try {
     if (!(req as AuthenticatedRequest).user) {
       throw AuthError.authenticationFailed('인증이 필요합니다.');
     }
 
     if (!(req as AuthenticatedRequest).user?.isAdmin) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'INSUFFICIENT_PERMISSIONS',
-          message: '관리자 권한이 필요합니다.',
-        },
-      });
+      throw AuthError.permissionDenied('관리자 기능', '접근');
     }
 
     next();
   } catch (error) {
-    if (error instanceof AuthError) {
-      return res.status(error.statusCode).json(error.toResponse());
-    }
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: '서버 오류가 발생했습니다.',
-      },
-    });
+    next(error);
   }
 };
