@@ -88,3 +88,4 @@ dev-debug.log
 .env.prod
 .env.test
 
+.docs/

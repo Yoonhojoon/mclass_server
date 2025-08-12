@@ -2,7 +2,7 @@ import { EnrollmentFormRepository } from './enrollmentForm.repository.js';
 import { CreateEnrollmentFormDto } from './dto/CreateEnrollmentFormDto.js';
 import { UpdateEnrollmentFormDto } from './dto/UpdateEnrollmentFormDto.js';
 import { EnrollmentFormResponse } from './dto/EnrollmentFormResponse.js';
-import { EnrollmentFormError } from '../../common/exception/enrollment-form/EnrollmentFormError.js';
+import { EnrollmentFormError } from '../../common/exception/enrollmentForm/EnrollmentFormError.js';
 import logger from '../../config/logger.config.js';
 
 export class EnrollmentFormService {

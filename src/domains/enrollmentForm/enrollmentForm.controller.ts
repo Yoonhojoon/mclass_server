@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { EnrollmentFormService } from './enrollmentForm.service.js';
-import { EnrollmentFormSuccess } from '../../common/exception/enrollment-form/EnrollmentFormSuccess.js';
-import { EnrollmentFormError } from '../../common/exception/enrollment-form/EnrollmentFormError.js';
+import { EnrollmentFormSuccess } from '../../common/exception/enrollmentForm/EnrollmentFormSuccess.js';
+import { EnrollmentFormError } from '../../common/exception/enrollmentForm/EnrollmentFormError.js';
 import {
   CreateEnrollmentFormDtoSchema,
   UpdateEnrollmentFormDtoSchema,

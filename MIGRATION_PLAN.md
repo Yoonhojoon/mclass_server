@@ -20,16 +20,16 @@
 - [x] @Expose/@Transform 로직을 Zod transform()으로 대체
 - [x] 서비스→컨트롤러 직렬화 로직 업데이트
 
-### Phase 4: OpenAPI 통합
-- [ ] zod-to-openapi 설정
-- [ ] 기존 swagger-jsdoc 정의를 Zod 기반으로 재생성
-- [ ] API 문서 자동 생성 테스트
+### Phase 4: OpenAPI 통합 (완료)
+- [x] zod-to-openapi 설정
+- [x] 기존 swagger-jsdoc 정의를 Zod 기반으로 재생성
+- [x] API 문서 자동 생성 테스트
 
-### Phase 5: 정리 및 최적화
-- [ ] 기존 DTO 파일 제거
-- [ ] validateDto 미들웨어 제거
-- [ ] class-validator/transformer 의존성 제거
-- [ ] tsconfig.json 정리 (experimentalDecorators, emitDecoratorMetadata)
+### Phase 5: 정리 및 최적화 (완료)
+- [x] 기존 DTO 파일 제거
+- [x] validateDto 미들웨어 제거
+- [x] class-validator/transformer 의존성 제거
+- [x] tsconfig.json 정리 (experimentalDecorators, emitDecoratorMetadata)
 
 ## 리스크 관리
 
