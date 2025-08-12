@@ -37,7 +37,13 @@ describe('MClassController', () => {
           sort: 'startAt',
           order: 'asc',
         },
-        user: { userId: 'user-1', isAdmin: false },
+        user: {
+          userId: 'user-1',
+          email: 'user@example.com',
+          role: 'USER',
+          isAdmin: false,
+          signUpCompleted: true,
+        },
       };
       mockResponse = {
         status: jest.fn().mockReturnThis(),
@@ -48,13 +54,13 @@ describe('MClassController', () => {
     it('should return MClass list successfully', async () => {
       const mockMClasses = [
         {
-          id: '1',
+          id: '550e8400-e29b-41d4-a716-446655440001',
           title: 'Test Class 1',
           description: null,
-          recruitStartAt: new Date('2024-01-01'),
-          recruitEndAt: new Date('2025-12-31'),
-          startAt: new Date('2026-01-20'),
-          endAt: new Date('2026-01-25'),
+          recruitStartAt: '2024-01-01T00:00:00.000Z',
+          recruitEndAt: '2025-12-31T23:59:59.000Z',
+          startAt: '2026-01-20T10:00:00.000Z',
+          endAt: '2026-01-25T12:00:00.000Z',
           selectionType: 'FIRST_COME' as const,
           capacity: 10,
           approvedCount: 5,
@@ -64,20 +70,24 @@ describe('MClassController', () => {
           isOnline: true,
           location: null,
           fee: null,
-          createdBy: 'admin-1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdBy: '550e8400-e29b-41d4-a716-446655440002',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
           phase: 'RECRUITING' as const,
-          creator: { id: 'admin-1', name: 'Admin', email: 'admin@test.com' },
+          creator: {
+            id: '550e8400-e29b-41d4-a716-446655440002',
+            name: 'Admin',
+            email: 'admin@test.com',
+          },
         },
         {
-          id: '2',
+          id: '550e8400-e29b-41d4-a716-446655440003',
           title: 'Test Class 2',
           description: null,
-          recruitStartAt: new Date('2025-12-15'),
-          recruitEndAt: new Date('2025-12-19'),
-          startAt: new Date('2025-12-20'),
-          endAt: new Date('2025-12-25'),
+          recruitStartAt: '2025-12-15T00:00:00.000Z',
+          recruitEndAt: '2025-12-19T23:59:59.000Z',
+          startAt: '2025-12-20T10:00:00.000Z',
+          endAt: '2025-12-25T12:00:00.000Z',
           selectionType: 'FIRST_COME' as const,
           capacity: 10,
           approvedCount: 5,
@@ -87,11 +97,15 @@ describe('MClassController', () => {
           isOnline: true,
           location: null,
           fee: null,
-          createdBy: 'admin-1',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdBy: '550e8400-e29b-41d4-a716-446655440002',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
           phase: 'UPCOMING' as const,
-          creator: { id: 'admin-1', name: 'Admin', email: 'admin@test.com' },
+          creator: {
+            id: '550e8400-e29b-41d4-a716-446655440002',
+            name: 'Admin',
+            email: 'admin@test.com',
+          },
         },
       ];
 
@@ -103,7 +117,7 @@ describe('MClassController', () => {
         totalPages: 1,
       };
 
-      mockService.list.mockResolvedValue(mockResult);
+      mockService.list.mockResolvedValue(mockResult as any);
 
       await controller.getMClasses(
         mockRequest as any,
@@ -140,7 +154,13 @@ describe('MClassController', () => {
     });
 
     it('should pass admin flag when user is admin', async () => {
-      mockRequest.user = { userId: 'admin-1', isAdmin: true };
+      mockRequest.user = {
+        userId: 'admin-1',
+        email: 'admin@example.com',
+        role: 'ADMIN',
+        isAdmin: true,
+        signUpCompleted: true,
+      };
 
       const mockResult = {
         items: [],
@@ -175,13 +195,13 @@ describe('MClassController', () => {
 
     it('should return single MClass successfully', async () => {
       const mockMClass = {
-        id: '1',
+        id: '550e8400-e29b-41d4-a716-446655440001',
         title: 'Test Class',
         description: null,
-        recruitStartAt: new Date('2024-01-01'),
-        recruitEndAt: new Date('2025-12-31'),
-        startAt: new Date('2026-01-20'),
-        endAt: new Date('2026-01-25'),
+        recruitStartAt: '2024-01-01T00:00:00.000Z',
+        recruitEndAt: '2025-12-31T23:59:59.000Z',
+        startAt: '2026-01-20T10:00:00.000Z',
+        endAt: '2026-01-25T12:00:00.000Z',
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
         approvedCount: 5,
@@ -191,14 +211,18 @@ describe('MClassController', () => {
         isOnline: true,
         location: null,
         fee: null,
-        createdBy: 'admin-1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdBy: '550e8400-e29b-41d4-a716-446655440002',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
         phase: 'RECRUITING' as const,
-        creator: { id: 'admin-1', name: 'Admin', email: 'admin@test.com' },
+        creator: {
+          id: '550e8400-e29b-41d4-a716-446655440002',
+          name: 'Admin',
+          email: 'admin@test.com',
+        },
       };
 
-      mockService.getById.mockResolvedValue(mockMClass);
+      mockService.getById.mockResolvedValue(mockMClass as any);
 
       await controller.getMClass(
         mockRequest as Request,
@@ -237,7 +261,13 @@ describe('MClassController', () => {
           visibility: 'PUBLIC',
           isOnline: true,
         },
-        user: { userId: 'admin-1', isAdmin: true },
+        user: {
+          userId: 'admin-1',
+          email: 'admin@example.com',
+          role: 'ADMIN',
+          isAdmin: true,
+          signUpCompleted: true,
+        },
       };
       mockResponse = {
         status: jest.fn().mockReturnThis(),
@@ -247,13 +277,13 @@ describe('MClassController', () => {
 
     it('should create MClass successfully', async () => {
       const mockCreatedMClass = {
-        id: '1',
+        id: '550e8400-e29b-41d4-a716-446655440001',
         title: 'New Class',
         description: null,
-        recruitStartAt: new Date('2025-12-19'),
-        recruitEndAt: new Date('2025-12-19'),
-        startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-20'),
+        recruitStartAt: '2025-12-19T10:00:00.000Z',
+        recruitEndAt: '2025-12-19T12:00:00.000Z',
+        startAt: '2025-12-20T10:00:00.000Z',
+        endAt: '2025-12-20T12:00:00.000Z',
         selectionType: 'FIRST_COME' as const,
         capacity: null,
         approvedCount: 0,
@@ -263,14 +293,18 @@ describe('MClassController', () => {
         isOnline: true,
         location: null,
         fee: null,
-        createdBy: 'admin-1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdBy: '550e8400-e29b-41d4-a716-446655440002',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
         phase: 'UPCOMING' as const,
-        creator: { id: 'admin-1', name: 'Admin', email: 'admin@test.com' },
+        creator: {
+          id: '550e8400-e29b-41d4-a716-446655440002',
+          name: 'Admin',
+          email: 'admin@test.com',
+        },
       };
 
-      mockService.create.mockResolvedValue(mockCreatedMClass);
+      mockService.create.mockResolvedValue(mockCreatedMClass as any);
 
       await controller.createMClass(
         mockRequest as any,
@@ -293,7 +327,14 @@ describe('MClassController', () => {
     });
 
     it('should reject non-admin users', async () => {
-      mockRequest.user = { userId: 'user-1', isAdmin: false };
+      mockRequest.user = {
+        userId: 'user-1',
+        email: 'user@test.com',
+        role: 'USER',
+        isAdmin: false,
+        signUpCompleted: true,
+        provider: 'LOCAL',
+      };
 
       await controller.createMClass(
         mockRequest as any,
@@ -358,7 +399,14 @@ describe('MClassController', () => {
           title: 'Updated Class',
           description: 'Updated description',
         },
-        user: { userId: 'admin-1', isAdmin: true },
+        user: {
+          userId: 'admin-1',
+          email: 'admin@test.com',
+          role: 'ADMIN',
+          isAdmin: true,
+          signUpCompleted: true,
+          provider: 'LOCAL',
+        },
       };
       mockResponse = {
         status: jest.fn().mockReturnThis(),
@@ -368,13 +416,13 @@ describe('MClassController', () => {
 
     it('should update MClass successfully', async () => {
       const mockUpdatedMClass = {
-        id: '1',
+        id: '550e8400-e29b-41d4-a716-446655440001',
         title: 'Updated Class',
         description: 'Updated description',
-        recruitStartAt: new Date('2025-12-15'),
-        recruitEndAt: new Date('2025-12-19'),
-        startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-25'),
+        recruitStartAt: '2025-12-15T00:00:00.000Z',
+        recruitEndAt: '2025-12-19T23:59:59.000Z',
+        startAt: '2025-12-20T10:00:00.000Z',
+        endAt: '2025-12-25T12:00:00.000Z',
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
         approvedCount: 5,
@@ -384,14 +432,18 @@ describe('MClassController', () => {
         isOnline: true,
         location: null,
         fee: null,
-        createdBy: 'admin-1',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdBy: '550e8400-e29b-41d4-a716-446655440002',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
         phase: 'UPCOMING' as const,
-        creator: { id: 'admin-1', name: 'Admin', email: 'admin@test.com' },
+        creator: {
+          id: '550e8400-e29b-41d4-a716-446655440002',
+          name: 'Admin',
+          email: 'admin@test.com',
+        },
       };
 
-      mockService.update.mockResolvedValue(mockUpdatedMClass);
+      mockService.update.mockResolvedValue(mockUpdatedMClass as any);
 
       await controller.updateMClass(
         mockRequest as any,
@@ -407,7 +459,14 @@ describe('MClassController', () => {
     });
 
     it('should reject non-admin users', async () => {
-      mockRequest.user = { userId: 'user-1', isAdmin: false };
+      mockRequest.user = {
+        userId: 'user-1',
+        email: 'user@test.com',
+        role: 'USER',
+        isAdmin: false,
+        signUpCompleted: true,
+        provider: 'LOCAL',
+      };
 
       await controller.updateMClass(
         mockRequest as any,
@@ -450,7 +509,14 @@ describe('MClassController', () => {
     beforeEach(() => {
       mockRequest = {
         params: { id: '1' },
-        user: { userId: 'admin-1', isAdmin: true },
+        user: {
+          userId: 'admin-1',
+          email: 'admin@test.com',
+          role: 'ADMIN',
+          isAdmin: true,
+          signUpCompleted: true,
+          provider: 'LOCAL',
+        },
       };
       mockResponse = {
         status: jest.fn().mockReturnThis(),
@@ -472,7 +538,14 @@ describe('MClassController', () => {
     });
 
     it('should reject non-admin users', async () => {
-      mockRequest.user = { userId: 'user-1', isAdmin: false };
+      mockRequest.user = {
+        userId: 'user-1',
+        email: 'user@test.com',
+        role: 'USER',
+        isAdmin: false,
+        signUpCompleted: true,
+        provider: 'LOCAL',
+      };
 
       await controller.deleteMClass(
         mockRequest as any,

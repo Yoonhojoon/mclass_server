@@ -1,5 +1,5 @@
 import { PrismaClient, MClass, Prisma } from '@prisma/client';
-import { CreateMClassDto } from './dto/CreateMClassDto.js';
+import { CreateMClassRequest } from '../../schemas/mclass/index.js';
 import { UpdateMClassDto } from './dto/UpdateMClassDto.js';
 import { ListQueryDto } from './dto/ListQueryDto.js';
 
@@ -91,7 +91,7 @@ export class MClassRepository {
   /**
    * MClass 생성
    */
-  async create(data: CreateMClassDto, adminId: string): Promise<MClass> {
+  async create(data: CreateMClassRequest, adminId: string): Promise<MClass> {
     const mclassData: Prisma.MClassCreateInput = {
       title: data.title,
       description: data.description,

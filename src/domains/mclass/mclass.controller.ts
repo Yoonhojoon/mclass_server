@@ -2,11 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import { MClassService } from './mclass.service.js';
 import { MClassSuccess } from '../../common/exception/mclass/MClassSuccess.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
-import { CreateMClassDtoSchema } from './dto/CreateMClassDto.js';
-import { UpdateMClassDtoSchema } from './dto/UpdateMClassDto.js';
-import { ListQueryDtoSchema } from './dto/ListQueryDto.js';
+import {
+  CreateMClassRequest,
+  UpdateMClassRequest,
+} from '../../schemas/mclass/index.js';
+import { mClassListQuerySchema } from '../../schemas/mclass/query.schema.js';
+import { mClassResponseSchema } from '../../schemas/mclass/response.schema.js';
 import { ZodError } from 'zod';
-import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import logger from '../../config/logger.config.js';
 
 export class MClassController {
@@ -16,11 +18,7 @@ export class MClassController {
    * MClass 목록 조회
    * GET /api/mclass
    */
-  async getMClasses(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  async getMClasses(req: Request, res: Response, next: NextFunction) {
     const userId = req.user?.userId;
     const isAdmin = req.user?.isAdmin || false;
     logger.info(
@@ -29,13 +27,18 @@ export class MClassController {
 
     try {
       // 쿼리 파라미터 파싱 및 검증
-      const query = ListQueryDtoSchema.parse(req.query);
+      const query = mClassListQuerySchema.parse(req.query);
 
       // 서비스 호출 (인증된 사용자의 관리자 권한 확인)
       const result = await this.service.list(query, isAdmin);
 
+      // 응답 스키마로 변환
+      const mclassResponses = result.items.map(item =>
+        mClassResponseSchema.parse(item)
+      );
+
       // 응답 전송
-      const response = MClassSuccess.list(result.items, {
+      const response = MClassSuccess.list(mclassResponses, {
         page: result.page,
         size: result.size,
         total: result.total,
@@ -108,8 +111,11 @@ export class MClassController {
       // 서비스 호출
       const mclass = await this.service.getById(id);
 
+      // 응답 스키마로 변환
+      const mclassResponse = mClassResponseSchema.parse(mclass);
+
       // 응답 전송
-      const response = MClassSuccess.retrieved(mclass);
+      const response = MClassSuccess.retrieved(mclassResponse);
       logger.info(
         `[MClassController] MClass 단일 조회 성공: ${id}, Phase: ${mclass.phase}`
       );
@@ -126,11 +132,7 @@ export class MClassController {
    * MClass 생성
    * POST /api/mclass
    */
-  async createMClass(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  async createMClass(req: Request, res: Response, next: NextFunction) {
     const userId = req.user?.userId;
     logger.info(`[MClassController] MClass 생성 요청: 사용자 ID ${userId}`);
 
@@ -143,14 +145,17 @@ export class MClassController {
         throw MClassError.permissionDenied('MClass 생성', '접근');
       }
 
-      // 요청 데이터 파싱 및 검증
-      const data = CreateMClassDtoSchema.parse(req.body);
+      // 요청 데이터는 이미 검증되어 있음
+      const data: CreateMClassRequest = req.body;
 
       // 서비스 호출
       const mclass = await this.service.create(req.user.userId, data);
 
+      // 응답 스키마로 변환
+      const mclassResponse = mClassResponseSchema.parse(mclass);
+
       // 응답 전송
-      const response = MClassSuccess.created(mclass.id, mclass);
+      const response = MClassSuccess.created(mclass.id, mclassResponse);
       logger.info(
         `[MClassController] MClass 생성 성공: ID ${mclass.id}, 제목 "${data.title}", 사용자 ID ${userId}`
       );
@@ -176,11 +181,7 @@ export class MClassController {
    * MClass 수정
    * PATCH /api/mclass/:id
    */
-  async updateMClass(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  async updateMClass(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params;
     const userId = req.user?.userId;
     logger.info(
@@ -196,14 +197,17 @@ export class MClassController {
         throw MClassError.permissionDenied('MClass 수정', '접근');
       }
 
-      // 요청 데이터 파싱 및 검증
-      const data = UpdateMClassDtoSchema.parse(req.body);
+      // 요청 데이터는 이미 검증되어 있음
+      const data: UpdateMClassRequest = req.body;
 
       // 서비스 호출
       const mclass = await this.service.update(id, data);
 
+      // 응답 스키마로 변환
+      const mclassResponse = mClassResponseSchema.parse(mclass);
+
       // 응답 전송
-      const response = MClassSuccess.updated(id, mclass);
+      const response = MClassSuccess.updated(id, mclassResponse);
       logger.info(
         `[MClassController] MClass 수정 성공: ${id}, Phase: ${mclass.phase}, 사용자 ID ${userId}`
       );
@@ -229,11 +233,7 @@ export class MClassController {
    * MClass 삭제
    * DELETE /api/mclass/:id
    */
-  async deleteMClass(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  async deleteMClass(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params;
     const userId = req.user?.userId;
     logger.info(

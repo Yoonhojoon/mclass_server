@@ -1,6 +1,6 @@
 import { PrismaClient, MClass, Prisma } from '@prisma/client';
 import { MClassRepository } from '../../domains/mclass/mclass.repository.js';
-import { CreateMClassDto } from '../../domains/mclass/dto/CreateMClassDto.js';
+import { CreateMClassRequest } from '../../schemas/mclass/index.js';
 import { UpdateMClassDto } from '../../domains/mclass/dto/UpdateMClassDto.js';
 import { ListQueryDto } from '../../domains/mclass/dto/ListQueryDto.js';
 
@@ -325,7 +325,7 @@ describe('MClassRepository', () => {
 
   describe('create', () => {
     it('should create MClass successfully', async () => {
-      const createData: CreateMClassDto = {
+      const createData: CreateMClassRequest = {
         title: 'New Class',
         description: 'New class description',
         startAt: '2025-12-20T10:00:00Z',
@@ -407,7 +407,7 @@ describe('MClassRepository', () => {
     });
 
     it('should handle null optional fields', async () => {
-      const createData: CreateMClassDto = {
+      const createData: CreateMClassRequest = {
         title: 'Simple Class',
         recruitStartAt: '2025-12-19T10:00:00Z',
         recruitEndAt: '2025-12-19T12:00:00Z',

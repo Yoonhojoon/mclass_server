@@ -6,7 +6,7 @@ import logger from '../../config/logger.config.js';
 import { PrismaClient, User } from '@prisma/client';
 import { AuthRepository } from './auth.repository.js';
 import { LoginDto, RegisterDto, SocialLoginDto } from './auth.schemas.js';
-import { UserResponse } from './dto/index.js';
+import { UserResponseDto } from './dto/index.js';
 
 export class AuthService {
   private userService: UserService;
@@ -21,7 +21,7 @@ export class AuthService {
    * 사용자 로그인
    */
   async login(loginData: LoginDto): Promise<{
-    user: UserResponse;
+    user: UserResponseDto;
     accessToken: string;
     refreshToken: string;
   }> {
@@ -67,6 +67,7 @@ export class AuthService {
           role: user.role,
           isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,
@@ -86,7 +87,7 @@ export class AuthService {
    * 사용자 회원가입
    */
   async register(registerData: RegisterDto): Promise<{
-    user: UserResponse;
+    user: UserResponseDto;
     accessToken: string;
     refreshToken: string;
   }> {
@@ -128,6 +129,7 @@ export class AuthService {
           role: user.role,
           isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,
@@ -261,7 +263,7 @@ export class AuthService {
    * 소셜 로그인 처리
    */
   async handleSocialLogin(profile: SocialLoginDto): Promise<{
-    user: UserResponse;
+    user: UserResponseDto;
     accessToken: string;
     refreshToken: string;
   }> {
@@ -353,7 +355,7 @@ export class AuthService {
     userId: string,
     termIds: string[]
   ): Promise<{
-    user: UserResponse;
+    user: UserResponseDto;
     accessToken: string;
     refreshToken: string;
   }> {

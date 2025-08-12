@@ -9,9 +9,9 @@ import {
 } from '../middleware/validate.middleware.js';
 import {
   updateUserSchema,
-  getUserByIdSchema,
+  userIdParamSchema,
   getUserByEmailSchema,
-} from '../domains/user/user.schemas.js';
+} from '../schemas/user/index.js';
 
 export const createUserRoutes = (prisma: PrismaClient): express.Router => {
   const router = express.Router();
@@ -70,7 +70,7 @@ export const createUserRoutes = (prisma: PrismaClient): express.Router => {
    */
   router.get(
     '/:id',
-    validateParams(getUserByIdSchema),
+    validateParams(userIdParamSchema),
     userController.getUserById.bind(userController)
   );
 

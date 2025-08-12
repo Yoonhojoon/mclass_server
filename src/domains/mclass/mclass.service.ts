@@ -1,5 +1,5 @@
 import { MClassRepository } from './mclass.repository.js';
-import { CreateMClassDto } from './dto/CreateMClassDto.js';
+import { CreateMClassRequest } from '../../schemas/mclass/index.js';
 import { UpdateMClassDto } from './dto/UpdateMClassDto.js';
 import { ListQueryDto } from './dto/ListQueryDto.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
@@ -62,13 +62,19 @@ export class MClassService {
   }
 
   /**
-   * MClass 데이터에 phase 추가
+   * MClass 데이터에 phase 추가 및 Date를 문자열로 변환
    */
   private addPhaseToMClass(mclass: any): MClassWithPhase {
     const phase = this.calculatePhase(mclass);
     return {
       ...mclass,
       phase,
+      recruitStartAt: mclass.recruitStartAt?.toISOString() || null,
+      recruitEndAt: mclass.recruitEndAt?.toISOString() || null,
+      startAt: mclass.startAt.toISOString(),
+      endAt: mclass.endAt.toISOString(),
+      createdAt: mclass.createdAt.toISOString(),
+      updatedAt: mclass.updatedAt.toISOString(),
     };
   }
 
@@ -147,7 +153,7 @@ export class MClassService {
    */
   async create(
     adminId: string,
-    data: CreateMClassDto
+    data: CreateMClassRequest
   ): Promise<MClassWithPhase> {
     logger.info(
       `[MClassService] MClass 생성 시작: 제목 "${data.title}", 관리자 ID ${adminId}`

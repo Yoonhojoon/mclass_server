@@ -4,6 +4,15 @@ import { MClassService } from '../domains/mclass/mclass.service.js';
 import { MClassRepository } from '../domains/mclass/mclass.repository.js';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import {
+  validateBody,
+  validateParams,
+} from '../middleware/validate.middleware.js';
+import {
+  createMClassSchema,
+  updateMClassSchema,
+  mClassIdParamSchema,
+} from '../schemas/mclass/index.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -256,6 +265,7 @@ router.get(
 router.post(
   '/mclass',
   authenticateToken,
+  validateBody(createMClassSchema),
   controller.createMClass.bind(controller)
 );
 
@@ -335,6 +345,8 @@ router.post(
 router.patch(
   '/mclass/:id',
   authenticateToken,
+  validateParams(mClassIdParamSchema),
+  validateBody(updateMClassSchema),
   controller.updateMClass.bind(controller)
 );
 

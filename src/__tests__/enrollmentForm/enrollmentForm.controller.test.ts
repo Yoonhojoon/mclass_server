@@ -112,7 +112,10 @@ describe('EnrollmentFormController', () => {
         },
         user: {
           userId: 'user-1',
+          email: 'admin@example.com',
+          role: 'ADMIN',
           isAdmin: true,
+          signUpCompleted: true,
         },
       };
       mockResponse = {
@@ -162,7 +165,13 @@ describe('EnrollmentFormController', () => {
     });
 
     it('관리자가 아닌 사용자는 Forbidden 에러를 받는다', async () => {
-      mockRequest.user = { userId: 'user-1', isAdmin: false };
+      mockRequest.user = {
+        userId: 'user-1',
+        email: 'user@example.com',
+        role: 'USER',
+        isAdmin: false,
+        signUpCompleted: true,
+      };
 
       await controller.createEnrollmentForm(
         mockRequest as any,
@@ -201,7 +210,10 @@ describe('EnrollmentFormController', () => {
         },
         user: {
           userId: 'user-1',
+          email: 'admin@example.com',
+          role: 'ADMIN',
           isAdmin: true,
+          signUpCompleted: true,
         },
       };
       mockResponse = {
@@ -252,7 +264,13 @@ describe('EnrollmentFormController', () => {
     });
 
     it('관리자가 아닌 사용자는 Forbidden 에러를 받는다', async () => {
-      mockRequest.user = { userId: 'user-1', isAdmin: false };
+      mockRequest.user = {
+        userId: 'user-1',
+        email: 'user@example.com',
+        role: 'USER',
+        isAdmin: false,
+        signUpCompleted: true,
+      };
 
       await controller.updateEnrollmentForm(
         mockRequest as any,
@@ -287,7 +305,10 @@ describe('EnrollmentFormController', () => {
         params: { id: 'mclass-1' },
         user: {
           userId: 'user-1',
+          email: 'admin@example.com',
+          role: 'ADMIN',
           isAdmin: true,
+          signUpCompleted: true,
         },
       };
       mockResponse = {
@@ -329,7 +350,13 @@ describe('EnrollmentFormController', () => {
     });
 
     it('관리자가 아닌 사용자는 Forbidden 에러를 받는다', async () => {
-      mockRequest.user = { userId: 'user-1', isAdmin: false };
+      mockRequest.user = {
+        userId: 'user-1',
+        email: 'user@example.com',
+        role: 'USER',
+        isAdmin: false,
+        signUpCompleted: true,
+      };
 
       await controller.deleteEnrollmentForm(
         mockRequest as any,

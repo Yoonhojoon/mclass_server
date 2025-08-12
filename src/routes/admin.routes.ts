@@ -5,14 +5,14 @@ import { PrismaClient } from '@prisma/client';
 import {
   authenticateToken,
   requireAdmin,
-  AuthenticatedRequest,
 } from '../middleware/auth.middleware.js';
+import { AuthenticatedRequest } from '../types/express.js';
 
 /**
  * 관리자 라우트 팩토리 함수
  * 의존성 주입을 통해 테스트 가능하고 유연한 구조 제공
  */
-export const createAdminRoutes = (prisma: PrismaClient) => {
+export const createAdminRoutes = (prisma: PrismaClient): Router => {
   const router = Router();
   const adminService = new AdminService(prisma);
   const adminController = new AdminController(adminService);
@@ -57,7 +57,7 @@ export const createAdminRoutes = (prisma: PrismaClient) => {
     '/users/:id/role',
     authenticateToken,
     requireAdmin,
-    (req: Request, res: Response) =>
+    async (req: Request, res: Response): Promise<void> =>
       adminController.getUserRole(req as AuthenticatedRequest, res)
   );
 
@@ -112,7 +112,7 @@ export const createAdminRoutes = (prisma: PrismaClient) => {
     authenticateToken,
     requireAdmin,
     (req: Request, res: Response) =>
-      adminController.updateUserRole(req as AuthenticatedRequest, res)
+      adminController.updateUserRole(req as any, res)
   );
 
   /**
@@ -150,7 +150,7 @@ export const createAdminRoutes = (prisma: PrismaClient) => {
     authenticateToken,
     requireAdmin,
     (req: Request, res: Response) =>
-      adminController.getAllUsers(req as AuthenticatedRequest, res)
+      adminController.getAllUsers(req as any, res)
   );
 
   /**
@@ -188,7 +188,7 @@ export const createAdminRoutes = (prisma: PrismaClient) => {
     authenticateToken,
     requireAdmin,
     (req: Request, res: Response) =>
-      adminController.getAdminCount(req as AuthenticatedRequest, res)
+      adminController.getAdminCount(req as any, res)
   );
 
   return router;

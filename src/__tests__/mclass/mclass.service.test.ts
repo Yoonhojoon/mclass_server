@@ -1,6 +1,10 @@
 import { MClassService } from '../../domains/mclass/mclass.service.js';
 import { MClassRepository } from '../../domains/mclass/mclass.repository.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
+import {
+  SelectionType,
+  Visibility,
+} from '../../domains/mclass/dto/CreateMClassDto.js';
 
 // Mock repository
 const mockRepository = {
@@ -179,9 +183,9 @@ describe('MClassService', () => {
         recruitEndAt: '2025-12-19T12:00:00Z',
         startAt: '2025-12-20T10:00:00Z',
         endAt: '2025-12-20T12:00:00Z',
-        selectionType: 'FIRST_COME' as const,
+        selectionType: SelectionType.FIRST_COME,
         allowWaitlist: false,
-        visibility: 'PUBLIC' as const,
+        visibility: Visibility.PUBLIC,
         isOnline: true,
       };
 
@@ -226,9 +230,9 @@ describe('MClassService', () => {
         recruitEndAt: '2025-12-19T12:00:00Z',
         startAt: '2025-12-20T10:00:00Z',
         endAt: '2025-12-20T12:00:00Z',
-        selectionType: 'FIRST_COME' as const,
+        selectionType: SelectionType.FIRST_COME,
         allowWaitlist: false,
-        visibility: 'PUBLIC' as const,
+        visibility: Visibility.PUBLIC,
         isOnline: true,
       };
 

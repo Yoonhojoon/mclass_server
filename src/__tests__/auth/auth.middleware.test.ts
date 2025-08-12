@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken';
 import {
   authenticateToken,
   requireSignUpCompleted,
-  AuthenticatedRequest,
 } from '../../middleware/auth.middleware';
+import { AuthenticatedRequest } from '../../types/express';
 
 // Mock dependencies
 jest.mock('../../config/logger.config', () => ({

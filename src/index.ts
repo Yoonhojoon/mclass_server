@@ -1,12 +1,13 @@
 import 'dotenv/config';
+import 'reflect-metadata';
 import express, { Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import cors from 'cors';
 import session from 'express-session';
 import { RedisStore } from 'connect-redis';
-import { specs } from './config/swagger.js';
+import { generateOpenApiDocument } from './config/openapi-generator.js';
 import { createUserRoutes } from './routes/user.route.js';
-import { createAuthRoutes } from './routes/auth.routes.js';
+import { createAuthOpenApiRoutes } from './routes/auth.openapi.routes.js';
 import { createTermRoutes } from './routes/term.routes.js';
 import { createAdminRoutes } from './routes/admin.routes.js';
 import mclassRoutes from './routes/mclass.routes.js';
@@ -107,12 +108,15 @@ app.use(passport.session());
 // Prometheus 메트릭 수집 미들웨어
 app.use(prometheusMiddleware);
 
+// OpenAPI 문서 생성
+const openApiSpec = generateOpenApiDocument();
+
 // Swagger UI 설정
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 // 라우트 설정
 app.use('/api/users', createUserRoutes(prisma));
-app.use('/api/auth', createAuthRoutes(prisma));
+app.use('/api/auth', createAuthOpenApiRoutes(prisma));
 app.use('/api', createTermRoutes(prisma));
 app.use('/api/admin', createAdminRoutes(prisma));
 app.use('/api', mclassRoutes);

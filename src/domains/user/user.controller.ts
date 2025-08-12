@@ -4,7 +4,6 @@ import { UserError } from '../../common/exception/user/UserError.js';
 import { UserSuccess } from '../../common/exception/user/UserSuccess.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import logger from '../../config/logger.config.js';
-import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import { PrismaClient } from '@prisma/client';
 import { UpdateUserDto, GetUserByEmailDto } from './user.schemas.js';
 
@@ -20,7 +19,7 @@ export class UserController {
    */
   async getUserProfile(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as AuthenticatedRequest).user?.userId;
+      const userId = req.user?.userId;
 
       if (!userId) {
         const error = ValidationError.unauthorized();
@@ -111,7 +110,7 @@ export class UserController {
    */
   async updateUser(req: Request, res: Response): Promise<void> {
     try {
-      const userId = (req as AuthenticatedRequest).user?.userId;
+      const userId = req.user?.userId;
       const updateData: UpdateUserDto = req.body;
 
       if (!userId) {

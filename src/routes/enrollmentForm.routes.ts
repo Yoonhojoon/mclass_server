@@ -4,6 +4,15 @@ import { EnrollmentFormService } from '../domains/enrollmentForm/enrollmentForm.
 import { EnrollmentFormRepository } from '../domains/enrollmentForm/enrollmentForm.repository.js';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import {
+  validateBody,
+  validateParams,
+} from '../middleware/validate.middleware.js';
+import {
+  CreateEnrollmentFormSchema,
+  UpdateEnrollmentFormSchema,
+  mClassIdForEnrollmentFormParamSchema,
+} from '../schemas/enrollmentForm/index.js';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -161,6 +170,8 @@ router.get(
 router.post(
   '/mclasses/:id/enrollment-form',
   authenticateToken,
+  validateParams(mClassIdForEnrollmentFormParamSchema),
+  validateBody(CreateEnrollmentFormSchema),
   controller.createEnrollmentForm.bind(controller)
 );
 
@@ -234,6 +245,8 @@ router.post(
 router.patch(
   '/mclasses/:id/enrollment-form',
   authenticateToken,
+  validateParams(mClassIdForEnrollmentFormParamSchema),
+  validateBody(UpdateEnrollmentFormSchema),
   controller.updateEnrollmentForm.bind(controller)
 );
 

@@ -7,7 +7,6 @@ import {
   UpdateEnrollmentFormDtoSchema,
 } from './enrollmentForm.schemas.js';
 import { ZodError } from 'zod';
-import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import logger from '../../config/logger.config.js';
 
 export class EnrollmentFormController {
@@ -46,11 +45,7 @@ export class EnrollmentFormController {
    * 지원서 양식 생성
    * POST /api/mclasses/:id/enrollment-form
    */
-  async createEnrollmentForm(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  async createEnrollmentForm(req: Request, res: Response, next: NextFunction) {
     const { id: mclassId } = req.params;
     const userId = req.user?.userId;
     logger.info(
@@ -99,11 +94,7 @@ export class EnrollmentFormController {
    * 지원서 양식 수정
    * PATCH /api/mclasses/:id/enrollment-form
    */
-  async updateEnrollmentForm(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  async updateEnrollmentForm(req: Request, res: Response, next: NextFunction) {
     const { id: mclassId } = req.params;
     const userId = req.user?.userId;
     logger.info(
@@ -155,11 +146,7 @@ export class EnrollmentFormController {
    * 지원서 양식 삭제
    * DELETE /api/mclasses/:id/enrollment-form
    */
-  async deleteEnrollmentForm(
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction
-  ) {
+  async deleteEnrollmentForm(req: Request, res: Response, next: NextFunction) {
     const { id: mclassId } = req.params;
     const userId = req.user?.userId;
     logger.info(

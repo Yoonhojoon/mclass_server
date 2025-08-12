@@ -44,12 +44,12 @@ export class ErrorHandler {
       message,
       statusCode,
       timestamp: new Date().toISOString(),
+      path: req.path,
       method: req.method,
     };
 
     // 개발 환경에서만 스택 트레이스 포함 (보안상 프로덕션에서는 제외)
     if (process.env.NODE_ENV === 'development') {
-      errorResponse.path = error.path;
       errorResponse.stack = error.stack;
     }
 

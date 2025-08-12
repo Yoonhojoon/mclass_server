@@ -15,7 +15,7 @@ import {
   updateTermSchema,
   agreeToTermSchema,
   termIdParamSchema,
-} from '../domains/term/term.schemas.js';
+} from '../schemas/term/index.js';
 
 /**
  * @swagger
@@ -28,7 +28,7 @@ import {
  * 약관 라우트 팩토리 함수
  * 의존성 주입을 통해 테스트 가능하고 유연한 구조 제공
  */
-export const createTermRoutes = (prisma: PrismaClient) => {
+export const createTermRoutes = (prisma: PrismaClient): Router => {
   const router = Router();
   const termService = new TermService(prisma);
   const termController = new TermController(termService);

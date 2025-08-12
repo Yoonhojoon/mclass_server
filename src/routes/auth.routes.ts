@@ -3,8 +3,8 @@ import { AuthController } from '../domains/auth/auth.controller.js';
 import {
   authenticateToken,
   requireSignUpCompleted,
-  AuthenticatedRequest,
 } from '../middleware/auth.middleware.js';
+
 import { validateBody } from '../middleware/validate.middleware.js';
 import {
   loginSchema,
@@ -13,7 +13,7 @@ import {
   completeSignUpSchema,
   refreshTokenSchema,
   changePasswordSchema,
-} from '../domains/auth/auth.schemas.js';
+} from '../schemas/auth/index.js';
 import passport from '../config/passport.config.js';
 import { PrismaClient } from '@prisma/client';
 
@@ -21,7 +21,7 @@ import { PrismaClient } from '@prisma/client';
  * 인증 라우트 팩토리 함수
  * 의존성 주입을 통해 테스트 가능하고 유연한 구조 제공
  */
-export const createAuthRoutes = (prisma: PrismaClient) => {
+export const createAuthRoutes = (prisma: PrismaClient): Router => {
   const router = Router();
   const authController = new AuthController(prisma);
 
@@ -284,11 +284,7 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
     '/complete-signup',
     authenticateToken,
     validateBody(completeSignUpSchema),
-    (req, res) =>
-      authController.completeSignUp(
-        req as AuthenticatedRequest & { body: any },
-        res
-      )
+    (req, res) => authController.completeSignUp(req as any, res)
   );
 
   /**
@@ -440,11 +436,7 @@ export const createAuthRoutes = (prisma: PrismaClient) => {
     authenticateToken,
     requireSignUpCompleted,
     validateBody(changePasswordSchema),
-    (req, res) =>
-      authController.changePassword(
-        req as AuthenticatedRequest & { body: any },
-        res
-      )
+    (req, res) => authController.changePassword(req as any, res)
   );
 
   /**

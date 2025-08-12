@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthController } from '../../domains/auth/auth.controller';
 import { AuthService } from '../../domains/auth/auth.service';
 import { AuthError } from '../../common/exception/auth/AuthError';
-import { AuthenticatedRequest } from '../../middleware/auth.middleware';
+import { AuthenticatedRequest } from '../../types/express';
 
 // Mock dependencies
 jest.mock('../../domains/auth/auth.service');
@@ -82,12 +82,14 @@ describe('AuthController', () => {
 
     const mockLoginResult = {
       user: {
-        id: 'user-123',
+        id: '550e8400-e29b-41d4-a716-446655440001',
         email: 'test@example.com',
         name: 'Test User',
         role: 'USER',
         isAdmin: false,
-        isSignUpCompleted: false,
+        provider: 'LOCAL',
+        social_id: null,
+        created_at: '2024-01-01T00:00:00.000Z',
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -101,7 +103,7 @@ describe('AuthController', () => {
 
     it('✅ 로그인 성공 시 200 상태와 결과를 반환해야 함', async () => {
       // Arrange
-      mockAuthService.login.mockResolvedValue(mockLoginResult);
+      mockAuthService.login.mockResolvedValue(mockLoginResult as any);
 
       // Act
       await authController.login(
@@ -114,7 +116,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockLoginResult,
-        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-123, 역할: USER)`,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: 550e8400-e29b-41d4-a716-446655440001, 역할: USER)`,
         code: 'LOGIN_SUCCESS',
       });
       expect(mockStatus).toHaveBeenCalledWith(200);
@@ -181,12 +183,14 @@ describe('AuthController', () => {
 
     const mockRegisterResult = {
       user: {
-        id: 'user-456',
+        id: '550e8400-e29b-41d4-a716-446655440002',
         email: 'newuser@example.com',
         name: 'New User',
         role: 'USER',
         isAdmin: false,
-        isSignUpCompleted: false,
+        provider: 'LOCAL',
+        social_id: null,
+        created_at: '2024-01-01T00:00:00.000Z',
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -200,7 +204,7 @@ describe('AuthController', () => {
 
     it('✅ 회원가입 성공 시 200 상태와 결과를 반환해야 함', async () => {
       // Arrange
-      mockAuthService.register.mockResolvedValue(mockRegisterResult);
+      mockAuthService.register.mockResolvedValue(mockRegisterResult as any);
 
       // Act
       await authController.register(
@@ -213,7 +217,7 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockRegisterResult,
-        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-456, 역할: USER)`,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: 550e8400-e29b-41d4-a716-446655440002, 역할: USER)`,
         code: 'LOGIN_SUCCESS',
       });
       expect(mockStatus).toHaveBeenCalledWith(200);

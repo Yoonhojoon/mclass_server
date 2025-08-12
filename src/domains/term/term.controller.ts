@@ -8,18 +8,15 @@ import {
   CreateTermDto,
   UpdateTermDto,
   AgreeToTermDto,
-} from './term.schemas.js';
+  TermResponseDto,
+  UserTermAgreementResponseDto,
+} from './dto/index.js';
+import {
+  transformToDto,
+  transformArrayToDto,
+} from '../../middleware/validateDto.middleware.js';
 
-// 사용자 타입 정의
-interface AuthenticatedUser {
-  id: string;
-  role?: string;
-  isAdmin?: boolean;
-}
-
-interface TermAuthenticatedRequest extends Request {
-  user?: AuthenticatedUser;
-}
+// 사용자 타입 정의 - 전역 타입으로 대체됨
 
 export class TermController {
   constructor(private readonly termService: TermService) {}
@@ -30,8 +27,9 @@ export class TermController {
   async getAllTerms(req: Request, res: Response): Promise<void> {
     try {
       const terms = await this.termService.getAllTerms();
+      const termDtos = transformArrayToDto(terms, TermResponseDto);
       logger.info('✅ 모든 약관 목록 응답 성공', { count: terms.length });
-      return TermSuccess.termsRetrieved(terms, { count: terms.length }).send(
+      return TermSuccess.termsRetrieved(termDtos, { count: terms.length }).send(
         res
       );
     } catch (error) {
@@ -48,12 +46,13 @@ export class TermController {
     try {
       const { id } = req.params;
       const term = await this.termService.getTermById(id);
+      const termDto = transformToDto(term, TermResponseDto);
       logger.info('✅ 특정 약관 조회 성공', {
         termId: id,
         type: term.type,
         version: term.version,
       });
-      return TermSuccess.termRetrieved(term).send(res);
+      return TermSuccess.termRetrieved(termDto).send(res);
     } catch (error) {
       logger.error('약관 조회 중 오류 발생:', error);
       const termError = TermError.notFound(req.params.id);
@@ -64,13 +63,10 @@ export class TermController {
   /**
    * 약관 생성 (관리자 전용)
    */
-  async createTerm(
-    req: TermAuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  async createTerm(req: Request, res: Response): Promise<void> {
     try {
       const createData: CreateTermDto = req.body;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       // 관리자 권한 확인
       if (!req.user?.isAdmin) {
@@ -87,13 +83,14 @@ export class TermController {
         version: createData.version,
       });
 
+      const termDto = transformToDto(term, TermResponseDto);
       logger.info('✅ 약관 생성 성공', {
         termId: term.id,
         adminId,
         type: createData.type,
         version: createData.version,
       });
-      return TermSuccess.termCreated(term).send(res);
+      return TermSuccess.termCreated(termDto).send(res);
     } catch (error) {
       logger.error('약관 생성 중 오류 발생:', error);
       const termError = TermError.creationFailed('약관 생성에 실패했습니다.');
@@ -104,14 +101,11 @@ export class TermController {
   /**
    * 약관 수정 (관리자 전용)
    */
-  async updateTerm(
-    req: TermAuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  async updateTerm(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const updateData: UpdateTermDto = req.body;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       // 관리자 권한 확인
       if (!req.user?.isAdmin) {
@@ -127,12 +121,13 @@ export class TermController {
         version: updateData.version,
       });
 
+      const termDto = transformToDto(term, TermResponseDto);
       logger.info('✅ 약관 수정 성공', {
         termId: id,
         adminId,
         version: term.version,
       });
-      return TermSuccess.termUpdated(term).send(res);
+      return TermSuccess.termUpdated(termDto).send(res);
     } catch (error) {
       logger.error('약관 수정 중 오류 발생:', error);
       const termError = TermError.updateFailed('약관 수정에 실패했습니다.');
@@ -143,13 +138,10 @@ export class TermController {
   /**
    * 약관 삭제 (관리자 전용)
    */
-  async deleteTerm(
-    req: TermAuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  async deleteTerm(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       // 관리자 권한 확인
       if (!req.user?.isAdmin) {
@@ -171,13 +163,10 @@ export class TermController {
   /**
    * 사용자 약관 동의
    */
-  async agreeToTerm(
-    req: TermAuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  async agreeToTerm(req: Request, res: Response): Promise<void> {
     try {
       const agreeData: AgreeToTermDto = req.body;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         const error = ValidationError.unauthorized();
@@ -189,12 +178,16 @@ export class TermController {
         userId,
         agreeData.termId
       );
+      const agreementDto = transformToDto(
+        agreement,
+        UserTermAgreementResponseDto
+      );
       logger.info('✅ 사용자 약관 동의 성공', {
         userId,
         termId: agreeData.termId,
         agreedAt: agreement.agreedAt,
       });
-      return TermSuccess.termAgreed(agreement).send(res);
+      return TermSuccess.termAgreed(agreementDto).send(res);
     } catch (error) {
       logger.error('약관 동의 중 오류 발생:', error);
       const termError = TermError.agreementFailed('약관 동의에 실패했습니다.');
@@ -205,12 +198,9 @@ export class TermController {
   /**
    * 사용자 동의한 약관 목록 조회
    */
-  async getUserAgreements(
-    req: TermAuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  async getUserAgreements(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         const error = ValidationError.unauthorized();
@@ -219,11 +209,15 @@ export class TermController {
       }
 
       const agreements = await this.termService.getUserAgreements(userId);
+      const agreementDtos = transformArrayToDto(
+        agreements,
+        UserTermAgreementResponseDto
+      );
       logger.info('✅ 사용자 약관 동의 목록 응답 성공', {
         userId,
         count: agreements.length,
       });
-      return TermSuccess.userAgreementsRetrieved(agreements, {
+      return TermSuccess.userAgreementsRetrieved(agreementDtos, {
         count: agreements.length,
       }).send(res);
     } catch (error) {
