@@ -80,7 +80,7 @@ export const PaginationMetaSchema = z.object({
 // 페이지네이션 응답 스키마
 export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(
   dataSchema: T
-) =>
+): z.ZodObject<any> =>
   z.object({
     success: z.boolean().openapi({ example: true }),
     data: z.array(dataSchema),

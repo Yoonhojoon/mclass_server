@@ -1,7 +1,9 @@
 import { PrismaClient, MClass, Prisma } from '@prisma/client';
 import { CreateMClassRequest } from '../../schemas/mclass/index.js';
-import { UpdateMClassDto } from './dto/UpdateMClassDto.js';
-import { ListQueryDto } from './dto/ListQueryDto.js';
+import {
+  UpdateMClassRequest,
+  MClassListQuery,
+} from '../../schemas/mclass/index.js';
 
 export class MClassRepository {
   constructor(private prisma: PrismaClient) {}
@@ -9,7 +11,16 @@ export class MClassRepository {
   /**
    * 필터링된 MClass 목록 조회
    */
-  async findWithFilters(query: ListQueryDto, isAdmin: boolean = false) {
+  async findWithFilters(
+    query: MClassListQuery,
+    isAdmin: boolean = false
+  ): Promise<{
+    items: MClass[];
+    total: number;
+    page: number;
+    size: number;
+    totalPages: number;
+  }> {
     const { page, size, sort, order, visibility, selectionType } = query;
     const skip = (page - 1) * size;
 
@@ -129,7 +140,7 @@ export class MClassRepository {
   /**
    * MClass 수정
    */
-  async update(id: string, data: UpdateMClassDto): Promise<MClass> {
+  async update(id: string, data: UpdateMClassRequest): Promise<MClass> {
     const updateData: Prisma.MClassUpdateInput = {};
 
     // 각 필드별로 업데이트 데이터 구성

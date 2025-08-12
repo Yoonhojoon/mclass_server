@@ -2,8 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import { MClassController } from '../../domains/mclass/mclass.controller.js';
 import { MClassService } from '../../domains/mclass/mclass.service.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
-import { MClassSuccess } from '../../common/exception/mclass/MClassSuccess.js';
-import { ZodError } from 'zod';
 
 // Mock service
 const mockService = {

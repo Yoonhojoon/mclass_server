@@ -5,16 +5,9 @@ import { ValidationError } from '../../common/exception/ValidationError.js';
 import { TermSuccess } from '../../common/exception/term/TermSuccess.js';
 import logger from '../../config/logger.config.js';
 import {
-  CreateTermDto,
-  UpdateTermDto,
-  AgreeToTermDto,
-  TermResponseDto,
-  UserTermAgreementResponseDto,
-} from './dto/index.js';
-import {
-  transformToDto,
-  transformArrayToDto,
-} from '../../middleware/validateDto.middleware.js';
+  termResponseSchema,
+  userTermAgreementResponseSchema,
+} from '../../schemas/term/index.js';
 
 // 사용자 타입 정의 - 전역 타입으로 대체됨
 
@@ -27,7 +20,7 @@ export class TermController {
   async getAllTerms(req: Request, res: Response): Promise<void> {
     try {
       const terms = await this.termService.getAllTerms();
-      const termDtos = transformArrayToDto(terms, TermResponseDto);
+      const termDtos = terms.map(term => termResponseSchema.parse(term));
       logger.info('✅ 모든 약관 목록 응답 성공', { count: terms.length });
       return TermSuccess.termsRetrieved(termDtos, { count: terms.length }).send(
         res
@@ -46,7 +39,7 @@ export class TermController {
     try {
       const { id } = req.params;
       const term = await this.termService.getTermById(id);
-      const termDto = transformToDto(term, TermResponseDto);
+      const termDto = termResponseSchema.parse(term);
       logger.info('✅ 특정 약관 조회 성공', {
         termId: id,
         type: term.type,
@@ -65,7 +58,7 @@ export class TermController {
    */
   async createTerm(req: Request, res: Response): Promise<void> {
     try {
-      const createData: CreateTermDto = req.body;
+      const createData = req.body;
       const adminId = req.user?.userId;
 
       // 관리자 권한 확인
@@ -83,7 +76,7 @@ export class TermController {
         version: createData.version,
       });
 
-      const termDto = transformToDto(term, TermResponseDto);
+      const termDto = termResponseSchema.parse(term);
       logger.info('✅ 약관 생성 성공', {
         termId: term.id,
         adminId,
@@ -104,7 +97,7 @@ export class TermController {
   async updateTerm(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const updateData: UpdateTermDto = req.body;
+      const updateData = req.body;
       const adminId = req.user?.userId;
 
       // 관리자 권한 확인
@@ -121,7 +114,7 @@ export class TermController {
         version: updateData.version,
       });
 
-      const termDto = transformToDto(term, TermResponseDto);
+      const termDto = termResponseSchema.parse(term);
       logger.info('✅ 약관 수정 성공', {
         termId: id,
         adminId,
@@ -165,7 +158,7 @@ export class TermController {
    */
   async agreeToTerm(req: Request, res: Response): Promise<void> {
     try {
-      const agreeData: AgreeToTermDto = req.body;
+      const agreeData = req.body;
       const userId = req.user?.userId;
 
       if (!userId) {
@@ -178,10 +171,7 @@ export class TermController {
         userId,
         agreeData.termId
       );
-      const agreementDto = transformToDto(
-        agreement,
-        UserTermAgreementResponseDto
-      );
+      const agreementDto = userTermAgreementResponseSchema.parse(agreement);
       logger.info('✅ 사용자 약관 동의 성공', {
         userId,
         termId: agreeData.termId,
@@ -209,9 +199,8 @@ export class TermController {
       }
 
       const agreements = await this.termService.getUserAgreements(userId);
-      const agreementDtos = transformArrayToDto(
-        agreements,
-        UserTermAgreementResponseDto
+      const agreementDtos = agreements.map(agreement =>
+        userTermAgreementResponseSchema.parse(agreement)
       );
       logger.info('✅ 사용자 약관 동의 목록 응답 성공', {
         userId,

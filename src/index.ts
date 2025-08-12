@@ -56,7 +56,7 @@ const allowedPatterns = [
   /^https?:\/\/([a-z0-9-]+\.)*example\.com(:\d+)?$/i, // 예시: *.example.com[:port]
 ];
 
-const isAllowed = (origin?: string | null) => {
+const isAllowed = (origin?: string | null): boolean => {
   if (!origin) return true; // 서버-서버/모바일 클라이언트 허용 (정책에 맞게 조정)
   if (allowedOrigins.has(origin)) return true;
   return allowedPatterns.some(re => re.test(origin));
@@ -108,12 +108,6 @@ app.use(passport.session());
 // Prometheus 메트릭 수집 미들웨어
 app.use(prometheusMiddleware);
 
-// OpenAPI 문서 생성
-const openApiSpec = generateOpenApiDocument();
-
-// Swagger UI 설정
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
-
 // 라우트 설정
 app.use('/api/users', createUserRoutes(prisma));
 app.use('/api/auth', createAuthOpenApiRoutes(prisma));
@@ -121,6 +115,12 @@ app.use('/api', createTermRoutes(prisma));
 app.use('/api/admin', createAdminRoutes(prisma));
 app.use('/api', mclassRoutes);
 app.use('/api', enrollmentFormRoutes);
+
+// OpenAPI 문서 생성 (모든 라우트 등록 후 생성해야 경로가 반영됩니다)
+const openApiSpec = generateOpenApiDocument();
+
+// Swagger UI 설정
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 // Prometheus 메트릭 엔드포인트
 app.get('/metrics', metricsEndpoint);
@@ -315,7 +315,7 @@ const startServer = async (): Promise<void> => {
     await createInitialAdmin();
 
     logger.info('🌐 HTTP 서버 시작 중...');
-    app.listen(PORT, () => {
+    app.listen(PORT, (): void => {
       logger.info(`✅ 서버가 포트 ${PORT}에서 실행 중입니다.`);
       logger.info(`http://localhost:${PORT}`);
       logger.info(`API 문서: http://localhost:${PORT}/api-docs`);
@@ -335,7 +335,7 @@ const startServer = async (): Promise<void> => {
 };
 
 // Graceful shutdown
-process.on('SIGINT', async (): Promise<void> => {
+process.on('SIGINT', async () => {
   logger.info('서버를 종료합니다...');
   await prisma.$disconnect();
   process.exit(0);

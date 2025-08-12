@@ -23,8 +23,6 @@
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "moduleDetection": "force",
     "typeRoots": [
       "./node_modules/@types",

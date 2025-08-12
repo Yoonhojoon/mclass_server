@@ -33,7 +33,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
   // OpenAPI 라우트 등록
   registry.registerPath({
     method: 'post',
-    path: '/auth/login',
+    path: '/api/auth/login',
     tags: ['인증'],
     summary: '사용자 로그인',
     description: '이메일과 비밀번호를 사용하여 로그인합니다.',
@@ -78,7 +78,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
 
   registry.registerPath({
     method: 'post',
-    path: '/auth/social/login',
+    path: '/api/auth/social/login',
     tags: ['인증'],
     summary: '소셜 로그인',
     description: '소셜 로그인 제공자의 액세스 토큰을 사용하여 로그인합니다.',
@@ -123,7 +123,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
 
   registry.registerPath({
     method: 'post',
-    path: '/auth/complete-signup',
+    path: '/api/auth/complete-signup',
     tags: ['인증'],
     summary: '회원가입 완료',
     description: '소셜 로그인 후 추가 정보를 입력하여 회원가입을 완료합니다.',
@@ -169,7 +169,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
 
   registry.registerPath({
     method: 'post',
-    path: '/auth/refresh',
+    path: '/api/auth/refresh',
     tags: ['인증'],
     summary: '토큰 갱신',
     description: '리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.',
@@ -214,7 +214,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
 
   registry.registerPath({
     method: 'post',
-    path: '/auth/logout',
+    path: '/api/auth/logout',
     tags: ['인증'],
     summary: '로그아웃',
     description: '사용자 로그아웃을 수행합니다.',
@@ -243,7 +243,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
 
   registry.registerPath({
     method: 'post',
-    path: '/auth/change-password',
+    path: '/api/auth/change-password',
     tags: ['인증'],
     summary: '비밀번호 변경',
     description: '현재 비밀번호를 확인하고 새 비밀번호로 변경합니다.',

@@ -5,7 +5,10 @@ export class EnrollmentFormSuccess extends BaseSuccess<EnrollmentFormResponse> {
   /**
    * 지원서 양식 생성 성공
    */
-  static created(id: string, data: EnrollmentFormResponse) {
+  static created(
+    id: string,
+    data: EnrollmentFormResponse
+  ): EnrollmentFormSuccess {
     return new EnrollmentFormSuccess(
       '지원서 양식이 성공적으로 생성되었습니다',
       201,
@@ -18,7 +21,10 @@ export class EnrollmentFormSuccess extends BaseSuccess<EnrollmentFormResponse> {
   /**
    * 지원서 양식 수정 성공
    */
-  static updated(id: string, data: EnrollmentFormResponse) {
+  static updated(
+    id: string,
+    data: EnrollmentFormResponse
+  ): EnrollmentFormSuccess {
     return new EnrollmentFormSuccess(
       '지원서 양식이 성공적으로 수정되었습니다',
       200,
@@ -31,12 +37,12 @@ export class EnrollmentFormSuccess extends BaseSuccess<EnrollmentFormResponse> {
   /**
    * 지원서 양식 삭제 성공
    */
-  static deleted(id: string) {
+  static deleted(id: string): EnrollmentFormSuccess {
     return new EnrollmentFormSuccess(
       '지원서 양식이 성공적으로 삭제되었습니다',
       200,
       'SUCCESS',
-      null as any,
+      null as EnrollmentFormResponse | null,
       { id }
     );
   }
@@ -44,7 +50,7 @@ export class EnrollmentFormSuccess extends BaseSuccess<EnrollmentFormResponse> {
   /**
    * 지원서 양식 조회 성공
    */
-  static retrieved(data: EnrollmentFormResponse) {
+  static retrieved(data: EnrollmentFormResponse): EnrollmentFormSuccess {
     return new EnrollmentFormSuccess(
       '지원서 양식 조회가 완료되었습니다',
       200,

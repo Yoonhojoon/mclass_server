@@ -1,8 +1,9 @@
-import { PrismaClient, MClass, Prisma } from '@prisma/client';
 import { MClassRepository } from '../../domains/mclass/mclass.repository.js';
 import { CreateMClassRequest } from '../../schemas/mclass/index.js';
-import { UpdateMClassDto } from '../../domains/mclass/dto/UpdateMClassDto.js';
-import { ListQueryDto } from '../../domains/mclass/dto/ListQueryDto.js';
+import {
+  MClassListQuery,
+  UpdateMClassRequest,
+} from '../../schemas/mclass/index.js';
 
 // Mock Prisma client
 const mockPrisma = {
@@ -85,7 +86,7 @@ describe('MClassRepository', () => {
     ];
 
     it('should find MClasses with basic filters', async () => {
-      const query: ListQueryDto = {
+      const query: MClassListQuery = {
         page: 1,
         size: 10,
         visibility: 'PUBLIC',
@@ -122,7 +123,7 @@ describe('MClassRepository', () => {
     });
 
     it('should apply admin visibility filter', async () => {
-      const query: ListQueryDto = {
+      const query: MClassListQuery = {
         page: 1,
         size: 10,
         visibility: 'UNLISTED',
@@ -153,7 +154,7 @@ describe('MClassRepository', () => {
     });
 
     it('should apply selectionType filter', async () => {
-      const query: ListQueryDto = {
+      const query: MClassListQuery = {
         page: 1,
         size: 10,
         visibility: 'PUBLIC',
@@ -188,7 +189,7 @@ describe('MClassRepository', () => {
     });
 
     it('should handle pagination correctly', async () => {
-      const query: ListQueryDto = {
+      const query: MClassListQuery = {
         page: 2,
         size: 5,
         visibility: 'PUBLIC',
@@ -485,7 +486,7 @@ describe('MClassRepository', () => {
 
   describe('update', () => {
     it('should update MClass successfully', async () => {
-      const updateData: UpdateMClassDto = {
+      const updateData: UpdateMClassRequest = {
         title: 'Updated Class',
         description: 'Updated description',
         capacity: 20,
@@ -545,7 +546,7 @@ describe('MClassRepository', () => {
     });
 
     it('should handle date string conversion', async () => {
-      const updateData: UpdateMClassDto = {
+      const updateData: UpdateMClassRequest = {
         recruitStartAt: '2025-11-01T00:00:00Z',
         recruitEndAt: '2025-12-15T23:59:59Z',
         startAt: '2025-12-20T10:00:00Z',

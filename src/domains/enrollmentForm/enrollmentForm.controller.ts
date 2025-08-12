@@ -16,7 +16,11 @@ export class EnrollmentFormController {
    * MClass별 지원서 양식 조회
    * GET /api/mclasses/:id/enrollment-form
    */
-  async getEnrollmentForm(req: Request, res: Response, next: NextFunction) {
+  async getEnrollmentForm(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id: mclassId } = req.params;
     logger.info(
       `[EnrollmentFormController] MClass별 지원서 양식 조회 요청: ${mclassId}`
@@ -45,7 +49,11 @@ export class EnrollmentFormController {
    * 지원서 양식 생성
    * POST /api/mclasses/:id/enrollment-form
    */
-  async createEnrollmentForm(req: Request, res: Response, next: NextFunction) {
+  async createEnrollmentForm(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id: mclassId } = req.params;
     const userId = req.user?.userId;
     logger.info(
@@ -94,7 +102,11 @@ export class EnrollmentFormController {
    * 지원서 양식 수정
    * PATCH /api/mclasses/:id/enrollment-form
    */
-  async updateEnrollmentForm(req: Request, res: Response, next: NextFunction) {
+  async updateEnrollmentForm(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id: mclassId } = req.params;
     const userId = req.user?.userId;
     logger.info(
@@ -146,7 +158,11 @@ export class EnrollmentFormController {
    * 지원서 양식 삭제
    * DELETE /api/mclasses/:id/enrollment-form
    */
-  async deleteEnrollmentForm(req: Request, res: Response, next: NextFunction) {
+  async deleteEnrollmentForm(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id: mclassId } = req.params;
     const userId = req.user?.userId;
     logger.info(

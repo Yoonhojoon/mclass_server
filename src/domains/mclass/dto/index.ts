@@ -1,8 +1,2 @@
-export {
-  CreateMClassDto,
-  SelectionType,
-  Visibility,
-} from './CreateMClassDto.js';
-export { UpdateMClassDto } from './UpdateMClassDto.js';
-export { ListQueryDto } from './ListQueryDto.js';
-export { MClassResponseDto } from './MClassResponseDto.js';
+// 모든 DTO 파일이 Zod 스키마로 마이그레이션되어 제거됨
+// 스키마는 src/schemas/mclass/ 에서 import하세요

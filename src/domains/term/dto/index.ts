@@ -1,5 +1,2 @@
-export { CreateTermDto, TermType } from './CreateTermDto.js';
-export { UpdateTermDto } from './UpdateTermDto.js';
-export { AgreeToTermDto } from './AgreeToTermDto.js';
-export { TermResponseDto } from './TermResponseDto.js';
-export { UserTermAgreementResponseDto } from './UserTermAgreementResponseDto.js';
+// 모든 DTO 파일이 Zod 스키마로 마이그레이션되어 제거됨
+// 스키마는 src/schemas/term/ 에서 import하세요

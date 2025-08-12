@@ -1,14 +1,38 @@
 import { MClassRepository } from './mclass.repository.js';
 import { CreateMClassRequest } from '../../schemas/mclass/index.js';
-import { UpdateMClassDto } from './dto/UpdateMClassDto.js';
-import { ListQueryDto } from './dto/ListQueryDto.js';
+import {
+  UpdateMClassRequest,
+  MClassListQuery,
+} from '../../schemas/mclass/index.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
-import { MClassResponse } from './dto/MClassResponse.js';
 import logger from '../../config/logger.config.js';
 
 export type MClassPhase = 'UPCOMING' | 'RECRUITING' | 'IN_PROGRESS' | 'ENDED';
 
-export interface MClassWithPhase extends MClassResponse {
+export interface MClassWithPhase {
+  id: string;
+  title: string;
+  description: string;
+  selectionType: string;
+  capacity: number | null;
+  allowWaitlist: boolean;
+  waitlistCapacity: number | null;
+  visibility: string;
+  recruitStartAt: string | null;
+  recruitEndAt: string | null;
+  startAt: string;
+  endAt: string;
+  isOnline: boolean;
+  location: string | null;
+  fee: number | null;
+  creatorId: string;
+  createdAt: string;
+  updatedAt: string;
+  creator?: {
+    id: string;
+    name: string;
+    email: string;
+  };
   phase: MClassPhase;
 }
 
@@ -81,7 +105,16 @@ export class MClassService {
   /**
    * MClass 목록 조회
    */
-  async list(query: ListQueryDto, isAdmin: boolean = false) {
+  async list(
+    query: MClassListQuery,
+    isAdmin: boolean = false
+  ): Promise<{
+    items: MClassWithPhase[];
+    total: number;
+    page: number;
+    size: number;
+    totalPages: number;
+  }> {
     logger.info(
       `[MClassService] MClass 목록 조회 시작: ${JSON.stringify(query)}, 관리자: ${isAdmin}`
     );
@@ -187,7 +220,10 @@ export class MClassService {
   /**
    * MClass 수정
    */
-  async update(id: string, data: UpdateMClassDto): Promise<MClassWithPhase> {
+  async update(
+    id: string,
+    data: UpdateMClassRequest
+  ): Promise<MClassWithPhase> {
     logger.info(`[MClassService] MClass 수정 시작: ${id}`);
 
     try {
@@ -308,7 +344,10 @@ export class MClassService {
   /**
    * MClass 통계 정보 조회
    */
-  async getStatistics(mclassId: string) {
+  async getStatistics(mclassId: string): Promise<{
+    approvedCount: number;
+    waitlistedCount: number;
+  }> {
     logger.info(`[MClassService] MClass 통계 정보 조회 시작: ${mclassId}`);
 
     try {

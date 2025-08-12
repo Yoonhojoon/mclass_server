@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Request, Response, NextFunction } from 'express';
 import { EnrollmentFormController } from '../../domains/enrollmentForm/enrollmentForm.controller.js';
-import { EnrollmentFormService } from '../../domains/enrollmentForm/enrollmentForm.service.js';
-import { EnrollmentFormError } from '../../common/exception/enrollment-form/EnrollmentFormError.js';
 
 // Service 모킹
 const mockService = {

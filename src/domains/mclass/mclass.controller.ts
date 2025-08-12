@@ -18,7 +18,11 @@ export class MClassController {
    * MClass 목록 조회
    * GET /api/mclass
    */
-  async getMClasses(req: Request, res: Response, next: NextFunction) {
+  async getMClasses(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const userId = req.user?.userId;
     const isAdmin = req.user?.isAdmin || false;
     logger.info(
@@ -103,7 +107,11 @@ export class MClassController {
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    */
-  async getMClass(req: Request, res: Response, next: NextFunction) {
+  async getMClass(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id } = req.params;
     logger.info(`[MClassController] MClass 단일 조회 요청: ${id}`);
 
@@ -132,7 +140,11 @@ export class MClassController {
    * MClass 생성
    * POST /api/mclass
    */
-  async createMClass(req: Request, res: Response, next: NextFunction) {
+  async createMClass(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const userId = req.user?.userId;
     logger.info(`[MClassController] MClass 생성 요청: 사용자 ID ${userId}`);
 
@@ -155,9 +167,9 @@ export class MClassController {
       const mclassResponse = mClassResponseSchema.parse(mclass);
 
       // 응답 전송
-      const response = MClassSuccess.created(mclass.id, mclassResponse);
+      const response = MClassSuccess.created(mclassResponse.id, mclassResponse);
       logger.info(
-        `[MClassController] MClass 생성 성공: ID ${mclass.id}, 제목 "${data.title}", 사용자 ID ${userId}`
+        `[MClassController] MClass 생성 성공: ID ${mclassResponse.id}, 제목 "${data.title}", 사용자 ID ${userId}`
       );
       response.send(res);
     } catch (error) {
@@ -181,7 +193,11 @@ export class MClassController {
    * MClass 수정
    * PATCH /api/mclass/:id
    */
-  async updateMClass(req: Request, res: Response, next: NextFunction) {
+  async updateMClass(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id } = req.params;
     const userId = req.user?.userId;
     logger.info(
@@ -233,7 +249,11 @@ export class MClassController {
    * MClass 삭제
    * DELETE /api/mclass/:id
    */
-  async deleteMClass(req: Request, res: Response, next: NextFunction) {
+  async deleteMClass(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id } = req.params;
     const userId = req.user?.userId;
     logger.info(
@@ -271,7 +291,11 @@ export class MClassController {
    * MClass 통계 조회
    * GET /api/mclass/:id/statistics
    */
-  async getMClassStatistics(req: Request, res: Response, next: NextFunction) {
+  async getMClassStatistics(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     const { id } = req.params;
     logger.info(`[MClassController] MClass 통계 조회 요청: ${id}`);
 

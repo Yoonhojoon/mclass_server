@@ -18,14 +18,16 @@ src/__tests__/
 ## 테스트 유형
 
 ### 1. 단위 테스트 (Unit Tests)
+
 - **위치**: `auth.service.test.ts`, `auth.controller.test.ts`
 - **목적**: 개별 함수나 메서드의 로직을 독립적으로 테스트
-- **특징**: 
+- **특징**:
   - Mock을 사용하여 의존성을 격리
   - 빠른 실행 속도
   - 세밀한 테스트 케이스
 
 ### 2. 통합 테스트 (Integration Tests)
+
 - **위치**: `auth.integration.test.ts`
 - **목적**: API 엔드포인트의 전체 흐름을 테스트
 - **특징**:
@@ -34,6 +36,7 @@ src/__tests__/
   - 미들웨어 동작 검증
 
 ### 3. E2E 테스트 (End-to-End Tests)
+
 - **위치**: `auth.e2e.test.ts`
 - **목적**: 전체 애플리케이션의 실제 동작을 테스트
 - **특징**:
@@ -44,21 +47,25 @@ src/__tests__/
 ## 테스트 실행
 
 ### 모든 테스트 실행
+
 ```bash
 npm test
 ```
 
 ### 특정 테스트 파일 실행
+
 ```bash
 npm test auth.service.test.ts
 ```
 
 ### 테스트 커버리지 확인
+
 ```bash
 npm run test:coverage
 ```
 
 ### 테스트 감시 모드
+
 ```bash
 npm run test:watch
 ```
@@ -66,14 +73,18 @@ npm run test:watch
 ## 테스트 환경 설정
 
 ### 환경 변수
+
 테스트 실행 시 다음 환경 변수가 자동으로 설정됩니다:
+
 - `NODE_ENV=test`
 - `DATABASE_URL`: 테스트 데이터베이스 URL
 - `JWT_SECRET`: 테스트용 JWT 시크릿
 - `LOG_LEVEL=error`: 로그 레벨 최소화
 
 ### 데이터베이스 설정
+
 E2E 테스트를 위해서는 별도의 테스트 데이터베이스가 필요합니다:
+
 ```bash
 # 테스트 데이터베이스 생성
 createdb mclass_test
@@ -85,6 +96,7 @@ npx prisma migrate deploy --schema=./prisma/schema.prisma
 ## 테스트 작성 가이드
 
 ### 1. 테스트 구조
+
 ```typescript
 describe('기능명', () => {
   beforeEach(() => {
@@ -108,6 +120,7 @@ describe('기능명', () => {
 ```
 
 ### 2. Mock 사용법
+
 ```typescript
 // 의존성 Mock
 jest.mock('../../domains/user/user.service.js');
@@ -123,6 +136,7 @@ mockUserService.authenticateUser.mockResolvedValue(mockUser);
 ```
 
 ### 3. HTTP 요청 테스트
+
 ```typescript
 // GET 요청
 const response = await request(app)
@@ -140,6 +154,7 @@ const response = await request(app)
 ## 테스트 커버리지
 
 현재 테스트 커버리지 목표:
+
 - **Statements**: 80% 이상
 - **Branches**: 80% 이상
 - **Functions**: 80% 이상
@@ -148,6 +163,7 @@ const response = await request(app)
 ## 테스트 데이터 관리
 
 ### Fixture 사용
+
 ```typescript
 const mockUser = {
   id: 'user-123',
@@ -159,6 +175,7 @@ const mockUser = {
 ```
 
 ### 데이터베이스 정리
+
 ```typescript
 beforeEach(async () => {
   await prisma.user.deleteMany();
@@ -198,4 +215,4 @@ beforeEach(async () => {
 
 - [Jest 공식 문서](https://jestjs.io/docs/getting-started)
 - [Supertest 공식 문서](https://github.com/visionmedia/supertest)
-- [Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices) 
+- [Testing Best Practices](https://github.com/goldbergyoni/javascript-testing-best-practices)

@@ -1,154 +1,158 @@
-import express from 'express';
+import { Router } from 'express';
 import { UserController } from '../domains/user/user.controller.js';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { validateBody } from '../middleware/validate.middleware.js';
+import { updateUserSchema } from '../schemas/user/index.js';
+import { registry } from '../config/swagger-zod.js';
 import {
-  validateBody,
-  validateParams,
-  validateQuery,
-} from '../middleware/validate.middleware.js';
-import {
-  updateUserSchema,
-  userIdParamSchema,
-  getUserByEmailSchema,
-} from '../schemas/user/index.js';
+  SuccessResponseSchema,
+  ErrorResponseSchema,
+} from '../config/swagger-zod.js';
 
-export const createUserRoutes = (prisma: PrismaClient): express.Router => {
-  const router = express.Router();
-  const userController = new UserController(prisma);
+/**
+ * 사용자 라우트 팩토리 함수
+ * 의존성 주입을 통해 테스트 가능하고 유연한 구조 제공
+ */
+export const createUserRoutes = (prisma: PrismaClient): Router => {
+  const router = Router();
+  const controller = new UserController(prisma);
 
-  /**
-   * @swagger
-   * /api/users/profile:
-   *   get:
-   *     summary: 내 프로필 조회
-   *     description: 현재 로그인한 사용자의 프로필 정보를 조회합니다.
-   *     tags: [Users]
-   *     security:
-   *       - bearerAuth: []
-   *     responses:
-   *       200:
-   *         description: 성공적으로 프로필 정보를 반환
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/User'
-   *       401:
-   *         description: 인증되지 않은 요청
-   *       404:
-   *         description: 사용자를 찾을 수 없음
-   */
+  // OpenAPI 경로 등록
+  registry.registerPath({
+    method: 'get',
+    path: '/api/users/profile',
+    tags: ['Users'],
+    summary: '사용자 프로필 조회',
+    description: '현재 로그인한 사용자의 프로필 정보를 조회합니다.',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: '프로필 조회 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      404: {
+        description: '사용자를 찾을 수 없음',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'put',
+    path: '/api/users/profile',
+    tags: ['Users'],
+    summary: '사용자 프로필 수정',
+    description: '현재 로그인한 사용자의 프로필 정보를 수정합니다.',
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: updateUserSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: '프로필 수정 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      400: {
+        description: '잘못된 요청',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      404: {
+        description: '사용자를 찾을 수 없음',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'delete',
+    path: '/api/users/profile',
+    tags: ['Users'],
+    summary: '사용자 계정 삭제',
+    description: '현재 로그인한 사용자의 계정을 삭제합니다.',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: '계정 삭제 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      404: {
+        description: '사용자를 찾을 수 없음',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  // 실제 라우트 정의
   router.get(
     '/profile',
     authenticateToken,
-    userController.getUserProfile.bind(userController)
+    controller.getUserProfile.bind(controller)
   );
-
-  /**
-   * @swagger
-   * /api/users/{id}:
-   *   get:
-   *     summary: 특정 사용자 조회
-   *     description: ID로 특정 사용자 정보를 조회합니다.
-   *     tags: [Users]
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: 사용자 ID
-   *     responses:
-   *       200:
-   *         description: 성공적으로 사용자 정보를 반환
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/User'
-   *       404:
-   *         description: 사용자를 찾을 수 없음
-   */
-  router.get(
-    '/:id',
-    validateParams(userIdParamSchema),
-    userController.getUserById.bind(userController)
-  );
-
-  /**
-   * @swagger
-   * /api/users/searchByEmail:
-   *   get:
-   *     summary: 이메일로 사용자 조회
-   *     description: 이메일로 사용자 정보를 조회합니다.
-   *     tags: [Users]
-   *     parameters:
-   *       - in: query
-   *         name: email
-   *         required: true
-   *         schema:
-   *           type: string
-   *           format: email
-   *         description: 사용자 이메일
-   *     responses:
-   *       200:
-   *         description: 성공적으로 사용자 정보를 반환
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/User'
-   *       404:
-   *         description: 사용자를 찾을 수 없음
-   */
-  router.get(
-    '/searchByEmail',
-    validateQuery(getUserByEmailSchema),
-    userController.getUserByEmail.bind(userController)
-  );
-
-  /**
-   * @swagger
-   * /api/users/profile:
-   *   put:
-   *     summary: 사용자 정보 수정
-   *     description: 현재 로그인한 사용자의 정보를 수정합니다.
-   *     tags: [Users]
-   *     security:
-   *       - bearerAuth: []
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               name:
-   *                 type: string
-   *                 description: 사용자 이름
-   *               role:
-   *                 type: string
-   *                 enum: [USER, ADMIN]
-   *                 description: 사용자 역할
-   *     responses:
-   *       200:
-   *         description: 성공적으로 사용자 정보가 수정됨
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/User'
-   *       401:
-   *         description: 인증되지 않은 요청
-   *       404:
-   *         description: 사용자를 찾을 수 없음
-   */
   router.put(
     '/profile',
     authenticateToken,
     validateBody(updateUserSchema),
-    userController.updateUser.bind(userController)
+    controller.updateUser.bind(controller)
   );
 
   return router;
 };
-
-// 기본 export는 기존 호환성을 위해 유지
-export default createUserRoutes;
