@@ -71,6 +71,7 @@ EXPOSE 3000
 # 환경 변수 설정
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV TZ=Asia/Seoul
 
 # 애플리케이션 시작 (마이그레이션 후 서버 시작)
 CMD ["/app/start.sh"] 

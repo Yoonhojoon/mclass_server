@@ -10,6 +10,52 @@ extendZodWithOpenApi(z);
 // OpenAPI 레지스트리 생성
 export const registry = new OpenAPIRegistry();
 
+// 환경별 서버 URL 설정
+const getServerUrls = (): Array<{ url: string; description: string }> => {
+  const servers = [];
+
+  // 로컬 개발 환경
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'staging'
+  ) {
+    servers.push({
+      url: process.env.LOCAL_URL || 'http://localhost:3000',
+      description: '로컬 개발 서버',
+    });
+  }
+
+  // 스테이징 환경
+  if (process.env.NODE_ENV === 'staging' || process.env.STAGING_URL) {
+    servers.push({
+      url:
+        process.env.STAGING_URL ||
+        'https://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+      description: '스테이징 서버',
+    });
+  }
+
+  // 프로덕션 환경
+  if (process.env.NODE_ENV === 'production' || process.env.PROD_URL) {
+    servers.push({
+      url:
+        process.env.PROD_URL ||
+        'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+      description: '프로덕션 서버',
+    });
+  }
+
+  // 기본값 (모든 환경에서 사용)
+  if (servers.length === 0) {
+    servers.push({
+      url: 'http://localhost:3000',
+      description: '로컬 개발 서버',
+    });
+  }
+
+  return servers;
+};
+
 // 기본 OpenAPI 문서 설정
 export const openApiConfig = {
   openapi: '3.0.0',
@@ -22,16 +68,7 @@ export const openApiConfig = {
       email: 'support@mclass.com',
     },
   },
-  servers: [
-    {
-      url: 'http://localhost:3000',
-      description: '로컬 개발 서버',
-    },
-    {
-      url: 'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
-      description: '프로덕션 서버',
-    },
-  ],
+  servers: getServerUrls(),
   components: {
     securitySchemes: {
       bearerAuth: {
