@@ -1,21 +1,21 @@
 version: '3.8'
 
 services:
-  # PostgreSQL 데이터베이스
-  postgres:
-    image: postgres:15
-    container_name: mclass_postgres_prod
-    environment:
-      POSTGRES_DB: mclass_prod
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - mclass-network
-    restart: unless-stopped
+  # PostgreSQL 데이터베이스 (AWS RDS 사용으로 주석 처리)
+  # postgres:
+  #   image: postgres:15
+  #   container_name: mclass_postgres_prod
+  #   environment:
+  #     POSTGRES_DB: mclass_prod
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - mclass-network
+  #   restart: unless-stopped
 
   # Redis (토큰 블랙리스트, 캐싱)
   redis:
@@ -38,14 +38,13 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
-      DATABASE_URL: "postgresql://postgres:password@postgres:5432/mclass_prod"
+      DATABASE_URL: "postgresql://postgres:password@mclass-postgresql.cvucaoqowhp2.ap-northeast-2.rds.amazonaws.com:5432/mclass_prod"
       REDIS_URL: "redis://redis:6379"
       TZ: "Asia/Seoul"
     volumes:
       - ./src:/app/src
       - ./dist:/app/dist
     depends_on:
-      - postgres
       - redis
       - prometheus
     networks:
