@@ -13,9 +13,6 @@ RUN npm ci
 # 소스 코드 복사
 COPY . .
 
-# Prisma 클라이언트 생성
-RUN npx prisma generate
-
 # TypeScript 빌드
 RUN npm run build
 
@@ -41,18 +38,22 @@ RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 # 빌드된 파일들을 복사
 COPY --from=builder /app/dist ./dist
 
-# Prisma 클라이언트 복사
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
 # Prisma 스키마 파일과 마이그레이션 파일들 복사 (마이그레이션용)
 COPY --from=builder /app/prisma ./prisma
 
 # 시작 스크립트 생성
 RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo 'echo "🔍 환경 변수 확인..."' >> /app/start.sh && \
+    echo 'echo "DATABASE_URL: $DATABASE_URL"' >> /app/start.sh && \
+    echo 'echo "NODE_ENV: $NODE_ENV"' >> /app/start.sh && \
     echo 'echo "🔄 데이터베이스 마이그레이션 시작..."' >> /app/start.sh && \
     echo 'npx prisma migrate deploy' >> /app/start.sh && \
     echo 'if [ $? -eq 0 ]; then' >> /app/start.sh && \
     echo '  echo "✅ 마이그레이션 완료"' >> /app/start.sh && \
+    echo '  echo "🔄 Prisma 클라이언트 재생성..."' >> /app/start.sh && \
+    echo '  npx prisma generate' >> /app/start.sh && \
+    echo '  echo "✅ 클라이언트 재생성 완료"' >> /app/start.sh && \
     echo '  echo "🚀 애플리케이션 시작..."' >> /app/start.sh && \
     echo '  exec node dist/index.js' >> /app/start.sh && \
     echo 'else' >> /app/start.sh && \
