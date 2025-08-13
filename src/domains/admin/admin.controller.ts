@@ -1,8 +1,13 @@
-import { Response } from 'express';
-import { AdminService, UpdateRoleDto } from './admin.service.js';
+import { Request, Response } from 'express';
+import { AdminService } from './admin.service.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import logger from '../../config/logger.config.js';
-import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
+// UpdateRoleDto 타입 정의
+type UpdateRoleDto = {
+  role: 'USER' | 'ADMIN';
+  isAdmin: boolean;
+  reason?: string;
+};
 
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -10,7 +15,7 @@ export class AdminController {
   /**
    * 사용자 권한 조회
    */
-  async getUserRole(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getUserRole(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const userRole = await this.adminService.getUserRole(id);
@@ -36,10 +41,7 @@ export class AdminController {
   /**
    * 사용자 권한 변경
    */
-  async updateUserRole(
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  async updateUserRole(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const adminId = req.user?.userId;
@@ -98,7 +100,7 @@ export class AdminController {
   /**
    * 모든 사용자 목록 조회 (관리자용)
    */
-  async getAllUsers(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
       const users = await this.adminService.getAllUsers();
 
@@ -121,7 +123,7 @@ export class AdminController {
   /**
    * 관리자 수 조회
    */
-  async getAdminCount(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getAdminCount(req: Request, res: Response): Promise<void> {
     try {
       const adminCount = await this.adminService.getAdminCount();
 

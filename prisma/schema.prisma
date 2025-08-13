@@ -11,42 +11,59 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  password   String?
-  name       String?
-  role       UserRole @default(USER)
-  isAdmin    Boolean  @default(false)
-  provider   Provider @default(LOCAL)
-  socialId   String?
-  isSignUpCompleted Boolean @default(false) // 회원가입 완료 여부
-  createdAt  DateTime @default(now())
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  password           String?
+  name               String?
+  role               UserRole  @default(USER)
+  isAdmin            Boolean   @default(false)
+  provider           Provider  @default(LOCAL)
+  socialId           String?
+  isSignUpCompleted  Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  // Add compound unique constraint
   @@unique([provider, socialId])
 
   // Relations
-  mclasses              MClass[]
-  enrollments           Enrollment[]
-  userTermAgreements    UserTermAgreement[]
+  mclasses           MClass[]
+  enrollments        Enrollment[]
+  userTermAgreements UserTermAgreement[]
 
   @@map("users")
 }
 
 model MClass {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  capacity    Int
-  startAt     DateTime
-  endAt       DateTime
-  createdBy   String
-  createdAt   DateTime @default(now())
+  id               String        @id @default(uuid())
+  title            String
+  description      String?
+  // 모집/행사
+  recruitStartAt   DateTime      // 모집 시작
+  recruitEndAt     DateTime      // 모집 마감
+  startAt          DateTime      // 행사 시작
+  endAt            DateTime      // 행사 종료
+  // 선발 관련
+  selectionType    SelectionType @default(FIRST_COME)
+  capacity         Int?          // null이면 무제한
+  allowWaitlist    Boolean       @default(false)
+  waitlistCapacity Int?
+  // 표시/장소/비용
+  visibility       Visibility    @default(PUBLIC)
+  isOnline         Boolean       @default(true)
+  location         String?
+  fee              Int?          // 무료면 0 또는 null
+
+  createdBy        String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   // Relations
-  creator     User         @relation(fields: [createdBy], references: [id])
-  enrollments Enrollment[]
+  creator          User          @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  enrollments      Enrollment[]
+  enrollmentForm   EnrollmentForm?
 
+  @@index([visibility, recruitStartAt, recruitEndAt])
+  @@index([startAt])
   @@map("mclasses")
 }
 
@@ -80,38 +97,43 @@ model UserTermAgreement {
 }
 
 model Enrollment {
-  id         String   @id @default(uuid())
+  id         String            @id @default(uuid())
   userId     String
   mclassId   String
-  appliedAt  DateTime @default(now())
+  enrollmentFormId String
+  answers    Json              // 질문에 대한 답변
+  status     EnrollmentStatus  @default(APPLIED) // APPLIED/APPROVED/REJECTED/WAITLISTED/CANCELED
+  appliedAt  DateTime          @default(now())
+  decidedAt  DateTime?
+  canceledAt DateTime?
+  reason     String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 
   // Relations
-  user       User         @relation(fields: [userId], references: [id])
-  mclass     MClass       @relation(fields: [mclassId], references: [id])
-  form       EnrollmentForm?
+  user       User   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  mclass     MClass @relation(fields: [mclassId], references: [id], onDelete: Cascade)
+  enrollmentForm EnrollmentForm @relation(fields: [enrollmentFormId], references: [id], onDelete: Cascade)
 
   @@unique([userId, mclassId])
+  @@index([mclassId, status])
+  @@index([userId])
   @@map("enrollments")
 }
 
 model EnrollmentForm {
-  id               String   @id @default(uuid())
-  phone            String?
-  birthDate        DateTime?
-  gender           Gender?
-  isStudent        Boolean  @default(false)
-  schoolName       String?
-  major            String?
-  address          String?
-  availableTime    String[] // Array of text
-  supportReason    String?
-  wantedActivity   String?
-  experience       String?
-  introduce        String?
-  agreeTerms       Boolean  @default(false)
+  id             String     @id @default(uuid())
+  mclassId       String     @unique
+  title          String     // 지원서 제목 (예: "M클래스 참가신청")
+  description    String?    // 지원서 설명
+  questions      Json       // 질문 목록 (관리자가 설정)
+  isActive       Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   // Relations
-  enrollment Enrollment @relation(fields: [id], references: [id])
+  mclass         MClass     @relation(fields: [mclassId], references: [id], onDelete: Cascade)
+  enrollments    Enrollment[]
 
   @@map("enrollment_forms")
 }
@@ -137,4 +159,22 @@ enum TermType {
 enum Gender {
   M
   F
+}
+
+enum SelectionType { 
+  FIRST_COME 
+  REVIEW 
+}
+
+enum Visibility { 
+  PUBLIC 
+  UNLISTED 
+}
+
+enum EnrollmentStatus { 
+  APPLIED 
+  APPROVED 
+  REJECTED 
+  WAITLISTED 
+  CANCELED 
 }

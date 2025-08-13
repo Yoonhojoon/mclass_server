@@ -4,17 +4,12 @@ import { TermError } from '../../common/exception/term/TermError.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import { TermSuccess } from '../../common/exception/term/TermSuccess.js';
 import logger from '../../config/logger.config.js';
+import {
+  termResponseSchema,
+  userTermAgreementResponseSchema,
+} from '../../schemas/term/index.js';
 
-// 사용자 타입 정의
-interface AuthenticatedUser {
-  id: string;
-  role?: string;
-  isAdmin?: boolean;
-}
-
-interface AuthenticatedRequest extends Request {
-  user?: AuthenticatedUser;
-}
+// 사용자 타입 정의 - 전역 타입으로 대체됨
 
 export class TermController {
   constructor(private readonly termService: TermService) {}
@@ -25,8 +20,11 @@ export class TermController {
   async getAllTerms(req: Request, res: Response): Promise<void> {
     try {
       const terms = await this.termService.getAllTerms();
+      const termDtos = terms.map(term => termResponseSchema.parse(term));
       logger.info('✅ 모든 약관 목록 응답 성공', { count: terms.length });
-      res.json(TermSuccess.termsRetrieved(terms).toResponse());
+      return TermSuccess.termsRetrieved(termDtos, { count: terms.length }).send(
+        res
+      );
     } catch (error) {
       logger.error('약관 목록 조회 중 오류 발생:', error);
       const termError = TermError.listRetrievalFailed('약관 목록 조회 실패');
@@ -41,12 +39,13 @@ export class TermController {
     try {
       const { id } = req.params;
       const term = await this.termService.getTermById(id);
+      const termDto = termResponseSchema.parse(term);
       logger.info('✅ 특정 약관 조회 성공', {
         termId: id,
         type: term.type,
         version: term.version,
       });
-      res.json(TermSuccess.termRetrieved(term).toResponse());
+      return TermSuccess.termRetrieved(termDto).send(res);
     } catch (error) {
       logger.error('약관 조회 중 오류 발생:', error);
       const termError = TermError.notFound(req.params.id);
@@ -57,10 +56,10 @@ export class TermController {
   /**
    * 약관 생성 (관리자 전용)
    */
-  async createTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async createTerm(req: Request, res: Response): Promise<void> {
     try {
-      const { type, title, content, isRequired, version } = req.body;
-      const adminId = req.user?.id;
+      const createData = req.body;
+      const adminId = req.user?.userId;
 
       // 관리자 권한 확인
       if (!req.user?.isAdmin) {
@@ -70,20 +69,21 @@ export class TermController {
       }
 
       const term = await this.termService.createTerm({
-        type,
-        title,
-        content,
-        isRequired: isRequired || false,
-        version,
+        type: createData.type,
+        title: createData.title,
+        content: createData.content,
+        isRequired: createData.isRequired || false,
+        version: createData.version,
       });
 
+      const termDto = termResponseSchema.parse(term);
       logger.info('✅ 약관 생성 성공', {
         termId: term.id,
         adminId,
-        type,
-        version,
+        type: createData.type,
+        version: createData.version,
       });
-      res.status(201).json(TermSuccess.termCreated(term).toResponse());
+      return TermSuccess.termCreated(termDto).send(res);
     } catch (error) {
       logger.error('약관 생성 중 오류 발생:', error);
       const termError = TermError.creationFailed('약관 생성에 실패했습니다.');
@@ -94,11 +94,11 @@ export class TermController {
   /**
    * 약관 수정 (관리자 전용)
    */
-  async updateTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async updateTerm(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const { title, content, isRequired, version } = req.body;
-      const adminId = req.user?.id;
+      const updateData = req.body;
+      const adminId = req.user?.userId;
 
       // 관리자 권한 확인
       if (!req.user?.isAdmin) {
@@ -108,18 +108,19 @@ export class TermController {
       }
 
       const term = await this.termService.updateTerm(id, {
-        title,
-        content,
-        isRequired,
-        version,
+        title: updateData.title,
+        content: updateData.content,
+        isRequired: updateData.isRequired,
+        version: updateData.version,
       });
 
+      const termDto = termResponseSchema.parse(term);
       logger.info('✅ 약관 수정 성공', {
         termId: id,
         adminId,
         version: term.version,
       });
-      res.json(TermSuccess.termUpdated(term).toResponse());
+      return TermSuccess.termUpdated(termDto).send(res);
     } catch (error) {
       logger.error('약관 수정 중 오류 발생:', error);
       const termError = TermError.updateFailed('약관 수정에 실패했습니다.');
@@ -130,10 +131,10 @@ export class TermController {
   /**
    * 약관 삭제 (관리자 전용)
    */
-  async deleteTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async deleteTerm(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       // 관리자 권한 확인
       if (!req.user?.isAdmin) {
@@ -144,7 +145,7 @@ export class TermController {
 
       await this.termService.deleteTerm(id);
       logger.info('✅ 약관 삭제 성공', { termId: id, adminId });
-      res.json(TermSuccess.termDeleted().toResponse());
+      return TermSuccess.termDeleted().send(res);
     } catch (error) {
       logger.error('약관 삭제 중 오류 발생:', error);
       const termError = TermError.deletionFailed('약관 삭제에 실패했습니다.');
@@ -155,10 +156,10 @@ export class TermController {
   /**
    * 사용자 약관 동의
    */
-  async agreeToTerm(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async agreeToTerm(req: Request, res: Response): Promise<void> {
     try {
-      const { termId } = req.body;
-      const userId = req.user?.id;
+      const agreeData = req.body;
+      const userId = req.user?.userId;
 
       if (!userId) {
         const error = ValidationError.unauthorized();
@@ -166,13 +167,17 @@ export class TermController {
         return;
       }
 
-      const agreement = await this.termService.agreeToTerm(userId, termId);
+      const agreement = await this.termService.agreeToTerm(
+        userId,
+        agreeData.termId
+      );
+      const agreementDto = userTermAgreementResponseSchema.parse(agreement);
       logger.info('✅ 사용자 약관 동의 성공', {
         userId,
-        termId,
+        termId: agreeData.termId,
         agreedAt: agreement.agreedAt,
       });
-      res.status(201).json(TermSuccess.termAgreed(agreement).toResponse());
+      return TermSuccess.termAgreed(agreementDto).send(res);
     } catch (error) {
       logger.error('약관 동의 중 오류 발생:', error);
       const termError = TermError.agreementFailed('약관 동의에 실패했습니다.');
@@ -183,12 +188,9 @@ export class TermController {
   /**
    * 사용자 동의한 약관 목록 조회
    */
-  async getUserAgreements(
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  async getUserAgreements(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         const error = ValidationError.unauthorized();
@@ -197,11 +199,16 @@ export class TermController {
       }
 
       const agreements = await this.termService.getUserAgreements(userId);
+      const agreementDtos = agreements.map(agreement =>
+        userTermAgreementResponseSchema.parse(agreement)
+      );
       logger.info('✅ 사용자 약관 동의 목록 응답 성공', {
         userId,
         count: agreements.length,
       });
-      res.json(TermSuccess.userAgreementsRetrieved(agreements).toResponse());
+      return TermSuccess.userAgreementsRetrieved(agreementDtos, {
+        count: agreements.length,
+      }).send(res);
     } catch (error) {
       logger.error('사용자 약관 동의 목록 조회 중 오류 발생:', error);
       const termError = TermError.userAgreementsRetrievalFailed(

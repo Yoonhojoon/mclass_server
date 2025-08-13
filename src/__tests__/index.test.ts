@@ -1,7 +1,7 @@
 import request from 'supertest';
 import express from 'express';
 import { prisma } from '../config/prisma.config.js';
-import { createUserRoutes } from '../routes/users.js';
+import { createUserRoutes } from '../routes/user.route.js';
 import { createAuthRoutes } from '../routes/auth.routes.js';
 import { createTermRoutes } from '../routes/term.routes.js';
 import { createAdminRoutes } from '../routes/admin.routes.js';

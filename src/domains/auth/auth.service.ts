@@ -1,61 +1,41 @@
 import { UserService } from '../user/user.service.js';
 import { TokenService, TokenPayload } from '../token/token.service.js';
 import { AuthError } from '../../common/exception/auth/AuthError.js';
+import { UserError } from '../../common/exception/user/UserError.js';
 import logger from '../../config/logger.config.js';
-import { PrismaClient } from '@prisma/client';
-
-export interface LoginDto {
-  email: string;
-  password: string;
-}
-
-export interface RegisterDto {
-  email: string;
-  password: string;
-  name?: string;
-  role?: 'USER';
-}
-
-export interface UserResponse {
-  id: string;
-  email: string;
-  name: string | null;
-  role: string;
-  isAdmin: boolean;
-  isSignUpCompleted: boolean;
-  provider?: string;
-}
-
-export interface OAuthProfile {
-  id: string;
-  displayName?: string;
-  username?: string;
-  emails?: Array<{ value: string; type?: string }>;
-  photos?: Array<{ value: string }>;
-  provider: string;
-  _json?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+import { PrismaClient, User } from '@prisma/client';
+import { AuthRepository } from './auth.repository.js';
+import { LoginDto, RegisterDto, SocialLoginDto } from './auth.schemas.js';
 
 export class AuthService {
   private userService: UserService;
+  private authRepository: AuthRepository;
 
   constructor(prisma: PrismaClient) {
     this.userService = new UserService(prisma);
+    this.authRepository = new AuthRepository(prisma);
   }
 
   /**
    * 사용자 로그인
    */
   async login(loginData: LoginDto): Promise<{
-    user: UserResponse;
+    user: {
+      userId: string;
+      email: string;
+      name: string | null;
+      role: string;
+      isAdmin: boolean;
+      isSignUpCompleted: boolean;
+      provider: string;
+    };
     accessToken: string;
     refreshToken: string;
   }> {
     try {
       logger.info('🔐 로그인 시도', { email: loginData.email });
 
-      const user = await this.userService.authenticateUser(
+      const user = await this.authenticateUser(
         loginData.email,
         loginData.password
       );
@@ -88,12 +68,13 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,
@@ -113,7 +94,15 @@ export class AuthService {
    * 사용자 회원가입
    */
   async register(registerData: RegisterDto): Promise<{
-    user: UserResponse;
+    user: {
+      userId: string;
+      email: string;
+      name: string | null;
+      role: string;
+      isAdmin: boolean;
+      isSignUpCompleted: boolean;
+      provider: string;
+    };
     accessToken: string;
     refreshToken: string;
   }> {
@@ -124,10 +113,10 @@ export class AuthService {
       });
 
       // 사용자 검증
-      await this.userService.validateUser(registerData);
+      await this.validateUser(registerData);
 
       // 사용자 생성
-      const user = await this.userService.createUser(registerData);
+      const user = await this.createUser(registerData);
 
       const tokenPayload: TokenPayload = {
         userId: user.id,
@@ -149,12 +138,13 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
           isAdmin: user.isAdmin,
           isSignUpCompleted: user.isSignUpCompleted || false,
+          provider: user.provider,
         },
         accessToken,
         refreshToken,
@@ -208,7 +198,7 @@ export class AuthService {
       }
 
       // 현재 비밀번호 확인
-      const isCurrentPasswordValid = await this.userService.authenticateUser(
+      const isCurrentPasswordValid = await this.authenticateUser(
         user.email,
         currentPassword
       );
@@ -219,7 +209,7 @@ export class AuthService {
       }
 
       // 새 비밀번호로 변경
-      await this.userService.changePassword(userId, newPassword);
+      await this.updatePassword(userId, newPassword);
 
       logger.info('✅ 비밀번호 변경 성공', { userId });
       return true;
@@ -287,8 +277,16 @@ export class AuthService {
   /**
    * 소셜 로그인 처리
    */
-  async handleSocialLogin(profile: OAuthProfile): Promise<{
-    user: UserResponse;
+  async handleSocialLogin(profile: SocialLoginDto): Promise<{
+    user: {
+      userId: string;
+      email: string;
+      name: string | null;
+      role: string;
+      isAdmin: boolean;
+      isSignUpCompleted: boolean;
+      provider: string;
+    };
     accessToken: string;
     refreshToken: string;
   }> {
@@ -296,13 +294,14 @@ export class AuthService {
       logger.info('🔗 소셜 로그인 처리', {
         provider: profile.provider,
         email: profile.email,
-        socialId: profile.id,
       });
 
       // 1. 기존 사용자 확인
-      let user = await this.userService.findBySocialId(
-        profile.id,
-        profile.provider
+      const socialId =
+        profile.provider === 'kakao' ? profile.kakaoId : profile.sub;
+      let user = await this.findBySocialId(
+        socialId,
+        profile.provider.toUpperCase()
       );
 
       if (!user) {
@@ -312,18 +311,14 @@ export class AuthService {
         });
 
         // 2. 새 사용자 생성 (준회원 상태)
-        const email =
-          profile.emails?.[0]?.value ||
-          String((profile as Record<string, unknown>).email || '');
-        const name =
-          profile.displayName ||
-          String((profile as Record<string, unknown>).name || '');
-
-        user = await this.userService.createSocialUser({
-          email,
-          name,
-          provider: 'GOOGLE',
-          socialId: profile.id,
+        user = await this.createSocialUser({
+          email: profile.email,
+          name: profile.name,
+          provider: profile.provider.toUpperCase() as
+            | 'KAKAO'
+            | 'GOOGLE'
+            | 'NAVER',
+          socialId,
           isSignUpCompleted: false,
         });
       } else {
@@ -353,7 +348,7 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -383,7 +378,15 @@ export class AuthService {
     userId: string,
     termIds: string[]
   ): Promise<{
-    user: UserResponse;
+    user: {
+      userId: string;
+      email: string;
+      name: string | null;
+      role: string;
+      isAdmin: boolean;
+      isSignUpCompleted: boolean;
+      provider: string;
+    };
     accessToken: string;
     refreshToken: string;
   }> {
@@ -392,7 +395,7 @@ export class AuthService {
 
       // 1. 약관 동의 처리
       // Validate termIds first
-      const validTerms = await this.userService.validateTermIds(termIds);
+      const validTerms = await this.validateTermIds(termIds);
       if (validTerms.length !== termIds.length) {
         throw AuthError.invalidRequest(
           '유효하지 않은 약관 ID가 포함되어 있습니다.'
@@ -402,13 +405,13 @@ export class AuthService {
       // Process agreements in parallel
       await Promise.all(
         termIds.map(async termId => {
-          await this.userService.agreeToTerm(userId, termId);
+          await this.agreeToTerm(userId, termId);
           logger.debug('✅ 약관 동의 완료', { userId, termId });
         })
       );
 
       // 2. 사용자 상태 업데이트
-      const user = await this.userService.updateSignUpStatus(userId, true);
+      const user = await this.updateSignUpStatus(userId, true);
 
       // 3. 새로운 토큰 발급 (회원가입 완료)
       const tokenPayload: TokenPayload = {
@@ -431,7 +434,7 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -454,5 +457,164 @@ export class AuthService {
         '회원가입 완료 처리 중 오류가 발생했습니다.'
       );
     }
+  }
+
+  /**
+   * 사용자 인증 (LOCAL 로그인)
+   */
+  private async authenticateUser(
+    email: string,
+    password: string
+  ): Promise<User | null> {
+    const user = await this.authRepository.findByEmail(email);
+
+    if (!user) {
+      throw UserError.notFound();
+    }
+
+    if (user.provider !== 'LOCAL') {
+      throw UserError.invalidProvider();
+    }
+
+    if (!user.password) {
+      throw UserError.invalidPassword();
+    }
+
+    const isPasswordValid = await this.authRepository.verifyPassword(
+      password,
+      user.password
+    );
+
+    if (!isPasswordValid) {
+      throw UserError.passwordMismatch();
+    }
+
+    return user;
+  }
+
+  /**
+   * 사용자 생성
+   */
+  private async createUser(userData: {
+    email: string;
+    password: string;
+    name?: string;
+    role?: 'USER' | 'ADMIN';
+  }): Promise<User> {
+    return await this.authRepository.createUser({
+      email: userData.email,
+      password: userData.password,
+      name: userData.name,
+      role: userData.role,
+      provider: 'LOCAL',
+      isSignUpCompleted: false,
+    });
+  }
+
+  /**
+   * 사용자 데이터 검증
+   */
+  private async validateUser(userData: {
+    email: string;
+    password: string;
+    name?: string;
+    role?: 'USER' | 'ADMIN';
+  }): Promise<void> {
+    if (!userData.email) {
+      throw UserError.invalidEmail();
+    }
+
+    // 이메일 형식 검증
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userData.email)) {
+      throw UserError.invalidEmail();
+    }
+
+    // 비밀번호 길이 검증
+    if (userData.password.length < 6) {
+      throw UserError.invalidPassword();
+    }
+  }
+
+  /**
+   * 비밀번호 변경 (내부용)
+   */
+  private async updatePassword(
+    id: string,
+    newPassword: string
+  ): Promise<boolean> {
+    const existingUser = await this.userService.findById(id);
+
+    if (!existingUser) {
+      throw UserError.notFound();
+    }
+
+    if (existingUser.provider !== 'LOCAL') {
+      throw UserError.invalidProvider();
+    }
+
+    const hashedPassword = await this.authRepository.hashPassword(newPassword);
+    await this.authRepository.updatePassword(id, hashedPassword);
+
+    return true;
+  }
+
+  /**
+   * 소셜 ID로 사용자 찾기
+   */
+  private async findBySocialId(
+    socialId: string,
+    provider: string
+  ): Promise<User | null> {
+    return await this.authRepository.findBySocialId(socialId, provider);
+  }
+
+  /**
+   * 소셜 로그인 사용자 생성
+   */
+  private async createSocialUser(socialData: {
+    email: string;
+    name?: string;
+    provider: 'KAKAO' | 'GOOGLE' | 'NAVER';
+    socialId: string;
+    isSignUpCompleted?: boolean;
+  }): Promise<User> {
+    return await this.authRepository.createSocialUser(socialData);
+  }
+
+  /**
+   * 회원가입 완료 상태 업데이트
+   */
+  private async updateSignUpStatus(
+    userId: string,
+    isSignUpCompleted: boolean
+  ): Promise<User> {
+    const existingUser = await this.userService.findById(userId);
+
+    if (!existingUser) {
+      throw UserError.notFound();
+    }
+
+    return await this.authRepository.updateSignUpStatus(
+      userId,
+      isSignUpCompleted
+    );
+  }
+
+  /**
+   * 약관 ID 목록 검증
+   */
+  private async validateTermIds(termIds: string[]): Promise<string[]> {
+    return await this.authRepository.validateTermIds(termIds);
+  }
+
+  /**
+   * 약관 동의 처리
+   */
+  private async agreeToTerm(userId: string, termId: string): Promise<void> {
+    // 약관 동의는 TermService에서 처리하므로 여기서는 UserService와 연결
+    const { TermService } = await import('../term/term.service.js');
+    const termService = new TermService(this.authRepository.getPrisma());
+    await termService.agreeToTerm(userId, termId);
   }
 }

@@ -1,14 +1,18 @@
 import 'dotenv/config';
+import 'reflect-metadata';
 import express, { Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import cors from 'cors';
+
 import session from 'express-session';
 import { RedisStore } from 'connect-redis';
-import { specs } from './config/swagger.js';
-import { createUserRoutes } from './routes/users.js';
-import { createAuthRoutes } from './routes/auth.routes.js';
+import { generateOpenApiDocument } from './config/openapi-generator.js';
+import { createUserRoutes } from './routes/user.route.js';
+import { createAuthOpenApiRoutes } from './routes/auth.openapi.routes.js';
 import { createTermRoutes } from './routes/term.routes.js';
 import { createAdminRoutes } from './routes/admin.routes.js';
+import mclassRoutes from './routes/mclass.routes.js';
+import enrollmentFormRoutes from './routes/enrollmentForm.routes.js';
+import healthRoutes from './routes/health.routes.js';
 import {
   prometheusMiddleware,
   metricsEndpoint,
@@ -22,10 +26,14 @@ import {
   authenticateToken as authenticate,
   requireAdmin as authorizeAdmin,
 } from './middleware/auth.middleware.js';
+import { corsMiddleware, corsPreflightMiddleware } from './middleware/cors.js';
 import bcrypt from 'bcrypt';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Trust proxy 설정 (ALB/NLB 뒤에서 실행 시 필수)
+app.set('trust proxy', 1);
 
 // Redis 스토어 설정
 const redisStore = new RedisStore({
@@ -33,42 +41,17 @@ const redisStore = new RedisStore({
   prefix: 'mclass:session:',
 });
 
-// 미들웨어 설정
-const allowedOrigins = [
-  'http://localhost:3000',
-  'https://localhost:3000',
-  'http://127.0.0.1:3000',
-  'https://127.0.0.1:3000',
-  'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
-  'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
-];
+// CORS 미들웨어 적용 (모든 라우트보다 먼저)
+app.use(corsMiddleware);
 
-// 환경 변수에서 추가 origin이 있다면 추가
-if (process.env.ALLOWED_ORIGINS) {
-  const additionalOrigins = process.env.ALLOWED_ORIGINS.split(',').map(origin =>
-    origin.trim()
-  );
-  allowedOrigins.push(...additionalOrigins);
-}
+// OPTIONS 프리플라이트 처리 (Express 5.x 호환성을 위해 미들웨어로 처리)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return corsPreflightMiddleware(req, res, next);
+  }
+  next();
+});
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // origin이 없는 경우 (같은 origin에서의 요청) 허용
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        logger.warn(`🚫 CORS 차단된 origin: ${origin}`);
-        callback(new Error('CORS 정책에 의해 차단되었습니다.'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  })
-);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -94,14 +77,43 @@ app.use(passport.session());
 // Prometheus 메트릭 수집 미들웨어
 app.use(prometheusMiddleware);
 
-// Swagger UI 설정
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
-
 // 라우트 설정
 app.use('/api/users', createUserRoutes(prisma));
-app.use('/api/auth', createAuthRoutes(prisma));
+app.use('/api/auth', createAuthOpenApiRoutes(prisma));
 app.use('/api', createTermRoutes(prisma));
 app.use('/api/admin', createAdminRoutes(prisma));
+app.use('/api', mclassRoutes);
+app.use('/api', enrollmentFormRoutes);
+
+// 헬스체크 라우트
+app.use('/', healthRoutes);
+
+// OpenAPI 문서 생성 (모든 라우트 등록 후 생성해야 경로가 반영됩니다)
+const openApiSpec = generateOpenApiDocument();
+
+// Swagger UI 설정
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(openApiSpec, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      docExpansion: 'list',
+      filter: true,
+      showExtensions: true,
+      showCommonExtensions: true,
+    },
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'MClass API Documentation',
+  })
+);
+
+// Swagger JSON 스키마 엔드포인트
+app.get('/api-docs.json', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json(openApiSpec);
+});
 
 // Prometheus 메트릭 엔드포인트
 app.get('/metrics', metricsEndpoint);
@@ -112,10 +124,12 @@ app.get('/', (req: Request, res: Response) => {
     message: 'TypeScript Express 서버가 실행 중입니다!',
     metrics: '/metrics',
     docs: '/api-docs',
+    health: '/healthz',
+    ready: '/readyz',
   });
 });
 
-// 헬스체크 엔드포인트
+// 기존 헬스체크 엔드포인트 (하위 호환성)
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
@@ -296,7 +310,7 @@ const startServer = async (): Promise<void> => {
     await createInitialAdmin();
 
     logger.info('🌐 HTTP 서버 시작 중...');
-    app.listen(PORT, () => {
+    app.listen(PORT, (): void => {
       logger.info(`✅ 서버가 포트 ${PORT}에서 실행 중입니다.`);
       logger.info(`http://localhost:${PORT}`);
       logger.info(`API 문서: http://localhost:${PORT}/api-docs`);
@@ -316,7 +330,7 @@ const startServer = async (): Promise<void> => {
 };
 
 // Graceful shutdown
-process.on('SIGINT', async (): Promise<void> => {
+process.on('SIGINT', async () => {
   logger.info('서버를 종료합니다...');
   await prisma.$disconnect();
   process.exit(0);

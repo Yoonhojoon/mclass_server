@@ -1,12 +1,17 @@
 import { PrismaClient, Term, UserTermAgreement } from '@prisma/client';
 import { TermError } from '../../common/exception/term/TermError.js';
 import logger from '../../config/logger.config.js';
+import {
+  TermRepository,
+  CreateTermData,
+  UpdateTermData,
+} from './term.repository.js';
 
 export class TermService {
-  private prisma: PrismaClient;
+  private repository: TermRepository;
 
   constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+    this.repository = new TermRepository(prisma);
   }
 
   /**
@@ -14,11 +19,7 @@ export class TermService {
    */
   async getAllTerms(): Promise<Term[]> {
     try {
-      const terms = await this.prisma.term.findMany({
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+      const terms = await this.repository.findAll();
 
       logger.info('✅ 모든 약관 목록 조회 성공', {
         count: terms.length,
@@ -35,9 +36,7 @@ export class TermService {
    */
   async getTermById(id: string): Promise<Term> {
     try {
-      const term = await this.prisma.term.findUnique({
-        where: { id },
-      });
+      const term = await this.repository.findById(id);
 
       if (!term) {
         throw TermError.notFound(id);
@@ -61,29 +60,19 @@ export class TermService {
   /**
    * 새 약관 생성
    */
-  async createTerm(termData: {
-    type: 'SERVICE' | 'PRIVACY' | 'ENROLLMENT';
-    title: string;
-    content: string;
-    isRequired?: boolean;
-    version: string;
-  }): Promise<Term> {
+  async createTerm(termData: CreateTermData): Promise<Term> {
     try {
       // 동일한 유형과 버전이 이미 존재하는지 확인
-      const existingTerm = await this.prisma.term.findFirst({
-        where: {
-          type: termData.type,
-          version: termData.version,
-        },
-      });
+      const existingTerm = await this.repository.findByTypeAndVersion(
+        termData.type,
+        termData.version
+      );
 
       if (existingTerm) {
         throw TermError.duplicateVersion(termData.version, termData.type);
       }
 
-      const term = await this.prisma.term.create({
-        data: termData,
-      });
+      const term = await this.repository.create(termData);
 
       logger.info('✅ 약관 생성 성공', {
         termId: term.id,
@@ -104,19 +93,9 @@ export class TermService {
   /**
    * 약관 수정
    */
-  async updateTerm(
-    id: string,
-    updateData: {
-      title?: string;
-      content?: string;
-      isRequired?: boolean;
-      version?: string;
-    }
-  ): Promise<Term> {
+  async updateTerm(id: string, updateData: UpdateTermData): Promise<Term> {
     try {
-      const existingTerm = await this.prisma.term.findUnique({
-        where: { id },
-      });
+      const existingTerm = await this.repository.findById(id);
 
       if (!existingTerm) {
         throw TermError.notFound(id);
@@ -124,13 +103,12 @@ export class TermService {
 
       // 버전이 변경되는 경우 중복 확인
       if (updateData.version && updateData.version !== existingTerm.version) {
-        const duplicateVersion = await this.prisma.term.findFirst({
-          where: {
-            type: existingTerm.type,
-            version: updateData.version,
-            id: { not: id },
-          },
-        });
+        const duplicateVersion =
+          await this.repository.findByTypeAndVersionExcludeId(
+            existingTerm.type,
+            updateData.version,
+            id
+          );
 
         if (duplicateVersion) {
           throw TermError.duplicateVersion(
@@ -140,10 +118,7 @@ export class TermService {
         }
       }
 
-      const updatedTerm = await this.prisma.term.update({
-        where: { id },
-        data: updateData,
-      });
+      const updatedTerm = await this.repository.update(id, updateData);
 
       logger.info('✅ 약관 수정 성공', {
         termId: id,
@@ -165,12 +140,7 @@ export class TermService {
    */
   async deleteTerm(id: string): Promise<void> {
     try {
-      const existingTerm = await this.prisma.term.findUnique({
-        where: { id },
-        include: {
-          userTermAgreements: true,
-        },
-      });
+      const existingTerm = await this.repository.findWithAgreements(id);
 
       if (!existingTerm) {
         throw TermError.notFound(id);
@@ -181,9 +151,7 @@ export class TermService {
         throw TermError.cannotDeleteWithAgreements();
       }
 
-      await this.prisma.term.delete({
-        where: { id },
-      });
+      await this.repository.delete(id);
 
       logger.info('✅ 약관 삭제 성공', {
         termId: id,
@@ -207,42 +175,26 @@ export class TermService {
   ): Promise<UserTermAgreement> {
     try {
       // 약관이 존재하는지 확인
-      const term = await this.prisma.term.findUnique({
-        where: { id: termId },
-      });
+      const term = await this.repository.findById(termId);
 
       if (!term) {
         throw TermError.notFound(termId);
       }
 
       // 이미 동의했는지 확인
-      const existingAgreement = await this.prisma.userTermAgreement.findFirst({
-        where: {
-          userId: userId,
-          termId: termId,
-        },
-      });
+      const existingAgreement = await this.repository.findUserAgreement(
+        userId,
+        termId
+      );
 
       if (existingAgreement) {
         throw TermError.alreadyAgreed(userId, termId);
       }
 
-      const agreement = await this.prisma.userTermAgreement.create({
-        data: {
-          userId: userId,
-          termId: termId,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          term: true,
-        },
-      });
+      const agreement = await this.repository.createUserAgreement(
+        userId,
+        termId
+      );
 
       logger.info('✅ 약관 동의 성공', {
         userId,
@@ -264,15 +216,7 @@ export class TermService {
    */
   async getUserAgreements(userId: string): Promise<UserTermAgreement[]> {
     try {
-      const agreements = await this.prisma.userTermAgreement.findMany({
-        where: { userId: userId },
-        include: {
-          term: true,
-        },
-        orderBy: {
-          agreedAt: 'desc',
-        },
-      });
+      const agreements = await this.repository.findUserAgreements(userId);
 
       logger.info('✅ 사용자 약관 동의 목록 조회 성공', {
         userId,
@@ -290,14 +234,7 @@ export class TermService {
    */
   async hasUserAgreed(userId: string, termId: string): Promise<boolean> {
     try {
-      const agreement = await this.prisma.userTermAgreement.findFirst({
-        where: {
-          userId: userId,
-          termId: termId,
-        },
-      });
-
-      return !!agreement;
+      return await this.repository.hasUserAgreed(userId, termId);
     } catch (error) {
       throw TermError.databaseError('약관 동의 확인', error);
     }
@@ -308,22 +245,14 @@ export class TermService {
    */
   async hasUserAgreedToAllRequired(userId: string): Promise<boolean> {
     try {
-      const requiredTerms = await this.prisma.term.findMany({
-        where: { isRequired: true },
-      });
+      const requiredTerms = await this.repository.findRequiredTerms();
 
       if (requiredTerms.length === 0) {
         return true;
       }
 
-      const userAgreements = await this.prisma.userTermAgreement.findMany({
-        where: {
-          userId: userId,
-          term: {
-            isRequired: true,
-          },
-        },
-      });
+      const userAgreements =
+        await this.repository.findUserRequiredAgreements(userId);
 
       return userAgreements.length === requiredTerms.length;
     } catch (error) {
