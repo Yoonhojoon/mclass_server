@@ -2,7 +2,10 @@ import { Router, Request, Response } from 'express';
 import { TermController } from '../domains/term/term.controller.js';
 import { TermService } from '../domains/term/term.service.js';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import {
+  authenticateToken,
+  requireAdmin,
+} from '../middleware/auth.middleware.js';
 import {
   validateBody,
   validateParams,
@@ -396,6 +399,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
   router.post(
     '/terms',
     authenticateToken,
+    requireAdmin,
     validateBody(createTermSchema),
     (req, res) => termController.createTerm(req, res)
   );
@@ -403,6 +407,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
   router.put(
     '/terms/:id',
     authenticateToken,
+    requireAdmin,
     validateParams(termIdParamSchema),
     validateBody(updateTermSchema),
     (req, res) => termController.updateTerm(req, res)
@@ -411,6 +416,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
   router.delete(
     '/terms/:id',
     authenticateToken,
+    requireAdmin,
     validateParams(termIdParamSchema),
     (req, res) => termController.deleteTerm(req, res)
   );

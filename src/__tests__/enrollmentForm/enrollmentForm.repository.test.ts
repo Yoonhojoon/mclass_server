@@ -157,21 +157,15 @@ describe('EnrollmentFormRepository', () => {
         description: '수정된 설명',
       };
 
-      const mockExistingForm = {
+      const mockUpdatedForm = {
         id: 'form-1',
         mclassId: 'mclass-1',
-        title: '기존 제목',
-        description: '기존 설명',
+        title: '수정된 제목',
+        description: '수정된 설명',
         questions: [],
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-      };
-
-      const mockUpdatedForm = {
-        ...mockExistingForm,
-        title: '수정된 제목',
-        description: '수정된 설명',
       };
 
       mockPrisma.$transaction.mockResolvedValue(mockUpdatedForm);

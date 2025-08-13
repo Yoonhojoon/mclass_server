@@ -92,7 +92,22 @@ app.use('/', healthRoutes);
 const openApiSpec = generateOpenApiDocument();
 
 // Swagger UI 설정
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(openApiSpec, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      docExpansion: 'list',
+      filter: true,
+      showExtensions: true,
+      showCommonExtensions: true,
+    },
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'MClass API Documentation',
+  })
+);
 
 // Swagger JSON 스키마 엔드포인트
 app.get('/api-docs.json', (req: Request, res: Response) => {

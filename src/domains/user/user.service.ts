@@ -90,4 +90,27 @@ export class UserService {
       throw error;
     }
   }
+
+  /**
+   * 사용자 역할 업데이트 (관리자 전용)
+   */
+  async updateUserRole(id: string, role: 'USER' | 'ADMIN'): Promise<User> {
+    logger.info(
+      `[UserService] 사용자 역할 업데이트 시작: ${id}, 새 역할: ${role}`
+    );
+
+    try {
+      const user = await this.userRepository.updateUserRole(id, role);
+      logger.info(
+        `[UserService] 사용자 역할 업데이트 성공: ${id}, 새 역할: ${role}`
+      );
+      return user;
+    } catch (error) {
+      logger.error(`[UserService] 사용자 역할 업데이트 실패: ${id}`, {
+        error: error instanceof Error ? error.message : error,
+        newRole: role,
+      });
+      throw error;
+    }
+  }
 }

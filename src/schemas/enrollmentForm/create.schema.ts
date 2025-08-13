@@ -1,36 +1,61 @@
 import { z } from 'zod';
 
 // 질문 타입 정의
-export const QuestionSchema = z.object({
-  id: z.string().min(1, '질문 ID는 필수입니다'),
-  type: z.enum(
-    [
-      'text',
-      'email',
-      'phone',
-      'date',
-      'radio',
-      'checkbox',
-      'agreeTerms', // 약관 동의용 체크박스
-      'textarea',
-      'select',
-    ],
+export const QuestionSchema = z
+  .object({
+    id: z.string().min(1, '질문 ID는 필수입니다'),
+    type: z.enum(
+      [
+        'text',
+        'email',
+        'phone',
+        'date',
+        'radio',
+        'checkbox',
+        'agreeTerms', // 약관 동의용 체크박스
+        'textarea',
+        'select',
+      ],
+      {
+        message: '지원하지 않는 질문 타입입니다',
+      }
+    ),
+    label: z.string().min(1, '질문 라벨은 필수입니다'),
+    required: z.boolean().default(false),
+    options: z.array(z.string()).optional(), // radio, checkbox, select용
+    placeholder: z.string().optional(),
+    validation: z
+      .object({
+        minLength: z.number().positive().optional(),
+        maxLength: z.number().positive().optional(),
+        pattern: z.string().optional(),
+      })
+      .optional()
+      .refine(
+        data =>
+          !data ||
+          !data.minLength ||
+          !data.maxLength ||
+          data.minLength <= data.maxLength,
+        {
+          message: '최소 길이는 최대 길이보다 작거나 같아야 합니다',
+          path: ['minLength'],
+        }
+      ),
+  })
+  .refine(
+    data => {
+      const optionRequiredTypes = ['radio', 'checkbox', 'select'];
+      if (optionRequiredTypes.includes(data.type)) {
+        return data.options && data.options.length > 0;
+      }
+      return true;
+    },
     {
-      message: '지원하지 않는 질문 타입입니다',
+      message: 'radio, checkbox, select 타입은 선택지가 필요합니다',
+      path: ['options'],
     }
-  ),
-  label: z.string().min(1, '질문 라벨은 필수입니다'),
-  required: z.boolean().default(false),
-  options: z.array(z.string()).optional(), // radio, checkbox, select용
-  placeholder: z.string().optional(),
-  validation: z
-    .object({
-      minLength: z.number().positive().optional(),
-      maxLength: z.number().positive().optional(),
-      pattern: z.string().optional(),
-    })
-    .optional(),
-});
+  );
 
 export const CreateEnrollmentFormSchema = z.object({
   title: z

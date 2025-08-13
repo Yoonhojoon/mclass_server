@@ -161,8 +161,8 @@ describe('Auth Middleware', () => {
       // Assert
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
       const error = mockNext.mock.calls[0][0] as any;
-      expect(error.message).toBe('Invalid token');
-      expect(error.errorCode).toBeUndefined();
+      expect(error.message).toBe('유효하지 않은 토큰입니다.');
+      expect(error.errorCode).toBe('AUTHENTICATION_FAILED');
     });
 
     it('❌ 만료된 토큰일 때 401 상태를 반환해야 함', async () => {
@@ -186,8 +186,8 @@ describe('Auth Middleware', () => {
       // Assert
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
       const error = mockNext.mock.calls[0][0] as any;
-      expect(error.message).toBe('jwt expired');
-      expect(error.errorCode).toBeUndefined();
+      expect(error.message).toBe('유효하지 않은 토큰입니다.');
+      expect(error.errorCode).toBe('AUTHENTICATION_FAILED');
     });
   });
 

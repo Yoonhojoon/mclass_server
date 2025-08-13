@@ -68,7 +68,8 @@ export const updateMClassSchema = z
   )
   .refine(
     data => {
-      if (data.allowWaitlist && !data.waitlistCapacity) {
+      // allowWaitlist를 true로 변경하면서 waitlistCapacity를 명시적으로 null로 설정하는 경우만 검증
+      if (data.allowWaitlist === true && data.waitlistCapacity === null) {
         return false;
       }
       return true;

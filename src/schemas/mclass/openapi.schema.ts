@@ -135,10 +135,18 @@ export const createMClassSchema = z
       if (data.recruitStartAt && data.recruitEndAt) {
         return new Date(data.recruitStartAt) < new Date(data.recruitEndAt);
       }
+      // 하나만 제공된 경우 경고
+      if (data.recruitStartAt && !data.recruitEndAt) {
+        return false;
+      }
+      if (!data.recruitStartAt && data.recruitEndAt) {
+        return false;
+      }
       return true;
     },
     {
-      message: '모집 시작 시간은 모집 종료 시간보다 이전이어야 합니다.',
+      message:
+        '모집 시작/종료 시간은 함께 설정해야 하며, 시작 시간이 종료 시간보다 이전이어야 합니다.',
       path: ['recruitEndAt'],
     }
   )
@@ -156,13 +164,17 @@ export const createMClassSchema = z
   )
   .refine(
     data => {
-      if (data.allowWaitlist && !data.waitlistCapacity) {
+      if (
+        data.allowWaitlist &&
+        (!data.waitlistCapacity || data.waitlistCapacity === 0)
+      ) {
         return false;
       }
       return true;
     },
     {
-      message: '대기열을 허용할 경우 대기열 수용 인원을 설정해야 합니다.',
+      message:
+        '대기열을 허용할 경우 대기열 수용 인원을 1명 이상 설정해야 합니다.',
       path: ['waitlistCapacity'],
     }
   )
@@ -232,6 +244,54 @@ export const updateMClassSchema = z
       .optional()
       .openapi({ description: '수강료 (0이면 무료)' }),
   })
+  .refine(
+    data => {
+      if (data.recruitStartAt && data.recruitEndAt) {
+        return new Date(data.recruitStartAt) < new Date(data.recruitEndAt);
+      }
+      // 하나만 제공된 경우 경고
+      if (data.recruitStartAt && !data.recruitEndAt) {
+        return false;
+      }
+      if (!data.recruitStartAt && data.recruitEndAt) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        '모집 시작/종료 시간은 함께 설정해야 하며, 시작 시간이 종료 시간보다 이전이어야 합니다.',
+      path: ['recruitEndAt'],
+    }
+  )
+  .refine(
+    data => {
+      if (data.startAt && data.endAt) {
+        return new Date(data.startAt) < new Date(data.endAt);
+      }
+      return true;
+    },
+    {
+      message: '시작 시간은 종료 시간보다 이전이어야 합니다.',
+      path: ['endAt'],
+    }
+  )
+  .refine(
+    data => {
+      if (
+        data.allowWaitlist &&
+        (!data.waitlistCapacity || data.waitlistCapacity === 0)
+      ) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        '대기열을 허용할 경우 대기열 수용 인원을 1명 이상 설정해야 합니다.',
+      path: ['waitlistCapacity'],
+    }
+  )
   .openapi({ description: 'MClass 수정 요청' });
 
 // MClass 목록 조회 스키마

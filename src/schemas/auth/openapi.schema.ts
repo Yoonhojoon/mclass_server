@@ -61,17 +61,10 @@ export const socialLoginSchema = z
 // 회원가입 완료 스키마
 export const completeSignUpSchema = z
   .object({
-    name: z
-      .string()
-      .min(1, '이름은 필수입니다.')
-      .max(50, '이름은 50자 이하여야 합니다.')
-      .trim()
-      .openapi({ description: '사용자 이름', example: '홍길동' }),
-    role: z
-      .enum(['USER', 'ADMIN'])
-      .optional()
-      .default('USER')
-      .openapi({ description: '사용자 역할' }),
+    termIds: z
+      .array(z.string().uuid('유효한 UUID 형식이어야 합니다.'))
+      .min(1, '최소 하나의 약관 ID가 필요합니다.')
+      .openapi({ description: '동의할 약관 ID 목록' }),
   })
   .strict()
   .openapi({ description: '회원가입 완료 요청' });

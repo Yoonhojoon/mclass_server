@@ -53,6 +53,16 @@ export class MClassService {
       capacity,
     } = mclass;
 
+    // 종료됨 (가장 우선 체크)
+    if (now >= endAt) {
+      return 'ENDED';
+    }
+
+    // 진행 중
+    if (now >= startAt && now < endAt) {
+      return 'IN_PROGRESS';
+    }
+
     // UPCOMING: 모집 시작 전
     if (recruitStartAt && now < recruitStartAt) {
       return 'UPCOMING';
@@ -72,14 +82,9 @@ export class MClassService {
       }
     }
 
-    // IN_PROGRESS: 진행 중
-    if (now >= startAt && now < endAt) {
-      return 'IN_PROGRESS';
-    }
-
-    // ENDED: 종료됨
-    if (now >= endAt) {
-      return 'ENDED';
+    // 모집 기간이 없거나 모집이 종료된 경우
+    if (!recruitStartAt || (recruitEndAt && now >= recruitEndAt)) {
+      return 'UPCOMING';
     }
 
     // 기본값: UPCOMING
@@ -136,12 +141,27 @@ export class MClassService {
         );
       }
 
+      // phase 필터링이 있는 경우 메타데이터 조정
+      let responseTotal = result.total;
+      let responseTotalPages = result.totalPages;
+
+      if (query.phase) {
+        // 현재 페이지에서 필터링된 결과만으로는 정확한 total을 알 수 없으므로
+        // 클라이언트에게 현재 상황을 명확히 알림
+        responseTotal = filteredItems.length;
+        responseTotalPages = 1; // 현재 페이지만 표시
+
+        logger.info(
+          `[MClassService] Phase 필터링 적용: ${query.phase}, 필터링된 결과: ${filteredItems.length}개`
+        );
+      }
+
       const response = {
         items: filteredItems,
-        total: result.total,
+        total: responseTotal,
         page: result.page,
         size: result.size,
-        totalPages: result.totalPages,
+        totalPages: responseTotalPages,
       };
 
       logger.info(

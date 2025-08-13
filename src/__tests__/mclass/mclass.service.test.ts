@@ -426,8 +426,8 @@ describe('MClassService', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0].phase).toBe('RECRUITING');
       expect(result.items[0].title).toBe('Recruiting Class');
-      // ?�터�??�에??total�?totalPages???�본 �??��? (?�비??로직??맞춤)
-      expect(result.total).toBe(2);
+      // 필터링 후에는 total이 필터링된 결과 수와 일치해야 함
+      expect(result.total).toBe(1);
       expect(result.totalPages).toBe(1);
     });
 

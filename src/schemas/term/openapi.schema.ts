@@ -14,9 +14,9 @@ export const termResponseSchema = z.object({
     .string()
     .openapi({ description: '약관 제목', example: '서비스 이용약관' }),
   content: z.string().openapi({ description: '약관 내용' }),
-  is_required: z.boolean().openapi({ description: '필수 동의 여부' }),
+  isRequired: z.boolean().openapi({ description: '필수 동의 여부' }),
   version: z.string().openapi({ description: '약관 버전', example: '1.0.0' }),
-  created_at: z.string().datetime().openapi({ description: '생성일시' }),
+  createdAt: z.string().datetime().openapi({ description: '생성일시' }),
 });
 
 // 약관 생성 스키마

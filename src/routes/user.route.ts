@@ -1,9 +1,14 @@
 import { Router } from 'express';
 import { UserController } from '../domains/user/user.controller.js';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import {
+  authenticateToken,
+  requireSignUpCompleted,
+} from '../middleware/auth.middleware.js';
 import { validateBody } from '../middleware/validate.middleware.js';
-import { updateUserSchema } from '../schemas/user/index.js';
+import { updateUserProfileSchema } from '../schemas/user/update.schema.js';
+import { adminUpdateUserRoleSchema } from '../schemas/user/update.schema.js';
+import { requireAdmin } from '../middleware/auth.middleware.js';
 import { registry } from '../config/swagger-zod.js';
 import {
   SuccessResponseSchema,
@@ -59,13 +64,14 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
     path: '/api/users/profile',
     tags: ['Users'],
     summary: '사용자 프로필 수정',
-    description: '현재 로그인한 사용자의 프로필 정보를 수정합니다.',
+    description:
+      '현재 로그인한 사용자의 프로필 정보를 수정합니다. (역할 수정 불가)',
     security: [{ bearerAuth: [] }],
     request: {
       body: {
         content: {
           'application/json': {
-            schema: updateUserSchema,
+            schema: updateUserProfileSchema,
           },
         },
       },
@@ -89,6 +95,66 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
       },
       401: {
         description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      404: {
+        description: '사용자를 찾을 수 없음',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'put',
+    path: '/api/users/{id}/role',
+    tags: ['Users'],
+    summary: '사용자 역할 수정 (관리자 전용)',
+    description: '관리자가 특정 사용자의 역할을 수정합니다.',
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: adminUpdateUserRoleSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: '역할 수정 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      400: {
+        description: '잘못된 요청',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      403: {
+        description: '권한 없음',
         content: {
           'application/json': {
             schema: ErrorResponseSchema,
@@ -147,16 +213,23 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
     authenticateToken,
     controller.getUserProfile.bind(controller)
   );
+
+  // 일반 사용자 프로필 수정
   router.put(
     '/profile',
     authenticateToken,
-    validateBody(updateUserSchema),
-    controller.updateUser.bind(controller)
+    requireSignUpCompleted,
+    validateBody(updateUserProfileSchema),
+    controller.updateUserProfile.bind(controller)
   );
-  router.delete(
-    '/profile',
+
+  // 관리자 전용 역할 수정
+  router.put(
+    '/:id/role',
     authenticateToken,
-    controller.deleteUser.bind(controller)
+    requireAdmin,
+    validateBody(adminUpdateUserRoleSchema),
+    controller.updateUserRole.bind(controller)
   );
 
   return router;

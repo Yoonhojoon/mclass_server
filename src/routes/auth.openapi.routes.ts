@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../domains/auth/auth.controller.js';
-import {
-  authenticateToken,
-  requireSignUpCompleted,
-} from '../middleware/auth.middleware.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody } from '../middleware/validate.middleware.js';
 import {
   loginSchema,
@@ -15,6 +12,7 @@ import {
   logoutResponseSchema,
   registerResponseSchema,
 } from '../schemas/auth/openapi.schema.js';
+import { registerSchema } from '../schemas/auth/register.schema.js';
 import { registry } from '../config/swagger-zod.js';
 import {
   SuccessResponseSchema,
@@ -67,6 +65,51 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
       },
       401: {
         description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/auth/register',
+    tags: ['인증'],
+    summary: '사용자 회원가입',
+    description: '새로운 사용자를 등록합니다.',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: registerSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      201: {
+        description: '회원가입 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema.extend({
+              data: registerResponseSchema,
+            }),
+          },
+        },
+      },
+      400: {
+        description: '잘못된 요청',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      409: {
+        description: '이미 존재하는 사용자',
         content: {
           'application/json': {
             schema: ErrorResponseSchema,
@@ -286,30 +329,42 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
   });
 
   // 라우트 정의
-  router.post('/login', validateBody(loginSchema), authController.login);
+  router.post(
+    '/login',
+    validateBody(loginSchema),
+    authController.login.bind(authController)
+  );
+  router.post(
+    '/register',
+    validateBody(registerSchema),
+    authController.register.bind(authController)
+  );
   router.post(
     '/social/login',
     validateBody(socialLoginSchema),
-    authController.socialLogin
+    authController.socialLogin.bind(authController)
   );
   router.post(
     '/complete-signup',
     authenticateToken,
-    requireSignUpCompleted,
     validateBody(completeSignUpSchema),
-    authController.completeSignUp
+    authController.completeSignUp.bind(authController)
   );
   router.post(
     '/refresh',
     validateBody(refreshTokenSchema),
-    authController.refreshToken
+    authController.refreshToken.bind(authController)
   );
-  router.post('/logout', authenticateToken, authController.logout);
+  router.post(
+    '/logout',
+    authenticateToken,
+    authController.logout.bind(authController)
+  );
   router.post(
     '/change-password',
     authenticateToken,
     validateBody(changePasswordSchema),
-    authController.changePassword
+    authController.changePassword.bind(authController)
   );
 
   return router;

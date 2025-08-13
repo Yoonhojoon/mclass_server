@@ -52,13 +52,25 @@ export const authenticateToken = async (
           error: tokenError instanceof Error ? tokenError.message : tokenError,
         }
       );
-      next(tokenError);
+
+      // 일관된 에러 처리를 위해 AuthError로 래핑
+      if (tokenError instanceof AuthError) {
+        next(tokenError);
+      } else {
+        next(AuthError.authenticationFailed('유효하지 않은 토큰입니다.'));
+      }
     }
   } catch (error) {
     logger.warn(`[AuthMiddleware] 토큰 인증 실패: ${req.method} ${req.path}`, {
       error: error instanceof Error ? error.message : error,
     });
-    next(error);
+
+    // 일관된 에러 처리를 위해 AuthError로 래핑
+    if (error instanceof AuthError) {
+      next(error);
+    } else {
+      next(AuthError.authenticationFailed('인증에 실패했습니다.'));
+    }
   }
 };
 
@@ -94,7 +106,13 @@ export const requireSignUpCompleted = async (
       `[AuthMiddleware] 회원가입 완료 확인 실패: ${req.method} ${req.path}`,
       { error: error instanceof Error ? error.message : error }
     );
-    next(error);
+
+    // 일관된 에러 처리를 위해 AuthError로 래핑
+    if (error instanceof AuthError) {
+      next(error);
+    } else {
+      next(AuthError.authenticationFailed('인증에 실패했습니다.'));
+    }
   }
 };
 
@@ -130,6 +148,12 @@ export const requireAdmin = async (
       `[AuthMiddleware] 관리자 권한 확인 실패: ${req.method} ${req.path}`,
       { error: error instanceof Error ? error.message : error }
     );
-    next(error);
+
+    // 일관된 에러 처리를 위해 AuthError로 래핑
+    if (error instanceof AuthError) {
+      next(error);
+    } else {
+      next(AuthError.authenticationFailed('인증에 실패했습니다.'));
+    }
   }
 };

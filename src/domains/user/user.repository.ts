@@ -103,4 +103,22 @@ export class UserRepository {
 
     return user;
   }
+
+  /**
+   * 사용자 역할 업데이트 (관리자 전용)
+   */
+  async updateUserRole(id: string, role: 'USER' | 'ADMIN'): Promise<User> {
+    const existingUser = await this.findById(id);
+
+    if (!existingUser) {
+      throw UserError.notFound();
+    }
+
+    return await this.prisma.user.update({
+      where: { id },
+      data: {
+        isAdmin: role === 'ADMIN',
+      },
+    });
+  }
 }

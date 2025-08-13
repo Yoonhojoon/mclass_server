@@ -3,7 +3,10 @@ import { EnrollmentFormController } from '../domains/enrollmentForm/enrollmentFo
 import { EnrollmentFormService } from '../domains/enrollmentForm/enrollmentForm.service.js';
 import { EnrollmentFormRepository } from '../domains/enrollmentForm/enrollmentForm.repository.js';
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import {
+  authenticateToken,
+  requireSignUpCompleted,
+} from '../middleware/auth.middleware.js';
 import {
   validateBody,
   validateParams,
@@ -261,6 +264,7 @@ router.get(
 router.post(
   '/mclasses/:id/enrollment-form',
   authenticateToken,
+  requireSignUpCompleted,
   validateParams(mClassIdForEnrollmentFormParamSchema),
   validateBody(CreateEnrollmentFormSchema),
   controller.createEnrollmentForm.bind(controller)
@@ -269,6 +273,7 @@ router.post(
 router.put(
   '/mclasses/:id/enrollment-form',
   authenticateToken,
+  requireSignUpCompleted,
   validateParams(mClassIdForEnrollmentFormParamSchema),
   validateBody(UpdateEnrollmentFormSchema),
   controller.updateEnrollmentForm.bind(controller)
@@ -277,6 +282,7 @@ router.put(
 router.delete(
   '/mclasses/:id/enrollment-form',
   authenticateToken,
+  requireSignUpCompleted,
   validateParams(mClassIdForEnrollmentFormParamSchema),
   controller.deleteEnrollmentForm.bind(controller)
 );

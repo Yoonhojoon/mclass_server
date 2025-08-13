@@ -1,13 +1,36 @@
 import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import {
   CreateEnrollmentFormDto,
   UpdateEnrollmentFormDto,
   EnrollmentFormResponseInterface as EnrollmentFormResponse,
+  Question,
+  QuestionSchema,
 } from '../../schemas/enrollmentForm/index.js';
 import { EnrollmentFormError } from '../../common/exception/enrollmentForm/EnrollmentFormError.js';
+import logger from '../../config/logger.config.js';
 
 export class EnrollmentFormRepository {
   constructor(private prisma: PrismaClient) {}
+
+  /**
+   * 질문 배열을 런타임 검증 후 Question[] 으로 반환
+   */
+  private parseQuestions(raw: unknown): Question[] {
+    try {
+      return z.array(QuestionSchema).parse(raw);
+    } catch (error) {
+      // 잘못된 형식의 데이터가 저장되어 있을 경우 빈 배열로 처리
+      logger.warn(
+        '⚠️ 지원서 양식의 questions 필드가 올바르지 않은 형식입니다',
+        {
+          error: error instanceof Error ? error.message : error,
+          rawData: raw,
+        }
+      );
+      return [];
+    }
+  }
 
   /**
    * MClass ID로 지원서 양식 조회
@@ -23,7 +46,7 @@ export class EnrollmentFormRepository {
 
     return {
       ...form,
-      questions: form.questions as any,
+      questions: this.parseQuestions(form.questions),
     };
   }
 
@@ -39,7 +62,7 @@ export class EnrollmentFormRepository {
 
     return {
       ...form,
-      questions: form.questions as any,
+      questions: this.parseQuestions(form.questions),
     };
   }
 
@@ -62,7 +85,7 @@ export class EnrollmentFormRepository {
 
     return {
       ...form,
-      questions: form.questions as any,
+      questions: this.parseQuestions(form.questions),
     };
   }
 
@@ -93,22 +116,41 @@ export class EnrollmentFormRepository {
         throw EnrollmentFormError.notFound(mclassId);
       }
 
+      // 업데이트 데이터 구성
+      const updateData: Partial<{
+        title: string;
+        description: string | null;
+        questions: Question[];
+        isActive: boolean;
+      }> = {};
+
+      if (data.title !== undefined && data.title.trim()) {
+        updateData.title = data.title.trim();
+      }
+      if (data.description !== undefined) {
+        updateData.description = data.description;
+      }
+      if (data.questions) {
+        updateData.questions = data.questions;
+      }
+      if (data.isActive !== undefined) {
+        updateData.isActive = data.isActive;
+      }
+
+      // 빈 업데이트 방지
+      if (Object.keys(updateData).length === 0) {
+        throw EnrollmentFormError.validation('업데이트할 데이터가 없습니다.');
+      }
+
       // 트랜잭션 내에서 수정 수행
       const form = await tx.enrollmentForm.update({
         where: { mclassId },
-        data: {
-          ...(data.title && { title: data.title }),
-          ...(data.description !== undefined && {
-            description: data.description,
-          }),
-          ...(data.questions && { questions: data.questions }),
-          ...(data.isActive !== undefined && { isActive: data.isActive }),
-        },
+        data: updateData,
       });
 
       return {
         ...form,
-        questions: form.questions as any,
+        questions: this.parseQuestions(form.questions),
       };
     });
   }

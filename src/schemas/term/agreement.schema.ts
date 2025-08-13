@@ -3,7 +3,7 @@ import { z } from 'zod';
 // 약관 동의 스키마
 export const agreeToTermSchema = z
   .object({
-    termId: z.string().uuid('유효한 UUID 형식이어야 합니다.'),
+    termId: z.string().trim().uuid('유효한 UUID 형식이어야 합니다.'),
   })
   .strict();
 
