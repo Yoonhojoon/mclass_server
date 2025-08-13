@@ -71,7 +71,7 @@ if [ $retry_count -eq $max_retries ]; then
     exit 1
 fi
 
-# Prisma 마이그레이션 실행 (백오프 재시도 포함)
+# Prisma 마이그레이션 실행 (백오프 재시도 + 공식 명령어 자동 처리)
 log_info "Prisma 마이그레이션 시작..."
 max_migration_retries=3
 migration_retry_count=0
@@ -83,6 +83,20 @@ while [ $migration_retry_count -lt $max_migration_retries ]; do
     else
         migration_retry_count=$((migration_retry_count + 1))
         log_warning "마이그레이션 실패 (시도 $migration_retry_count/$max_migration_retries)"
+        
+        # P3009/P3018 오류 자동 처리
+        if [ $migration_retry_count -eq 1 ]; then
+            log_info "P3009/P3018 오류 자동 복구 시도 중..."
+            
+            # 실패한 마이그레이션 해결 시도
+            if npx prisma migrate resolve --rolled-back 20250811065406_make_recruit_dates_required 2>/dev/null; then
+                log_success "실패한 마이그레이션 해결 완료"
+                log_info "마이그레이션 재시도 중..."
+                continue
+            else
+                log_warning "자동 복구 실패 - 수동 개입 필요"
+            fi
+        fi
         
         if [ $migration_retry_count -lt $max_migration_retries ]; then
             log_info "5초 후 재시도..."
