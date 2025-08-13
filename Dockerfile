@@ -22,8 +22,8 @@ RUN npm run build
 # 프로덕션 스테이지
 FROM node:18-alpine AS production
 
-# curl 설치 (헬스체크용)
-RUN apk add --no-cache curl
+# curl과 postgresql-client 설치 (헬스체크용, 마이그레이션 정리용)
+RUN apk add --no-cache curl postgresql-client
 
 # 보안을 위해 non-root 사용자 생성
 RUN addgroup -g 1001 -S nodejs
@@ -51,7 +51,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "DATABASE_URL: $DATABASE_URL"' >> /app/start.sh && \
     echo 'echo "NODE_ENV: $NODE_ENV"' >> /app/start.sh && \
     echo 'echo "🔄 실패한 마이그레이션 정리..."' >> /app/start.sh && \
-    echo 'npx prisma migrate resolve --applied 20250811065406_make_recruit_dates_required || echo "마이그레이션 정리 완료"' >> /app/start.sh && \
+    echo 'psql "$DATABASE_URL" -c "DELETE FROM _prisma_migrations WHERE migration_name = '\''20250811065406_make_recruit_dates_required'\'';" || echo "마이그레이션 정리 완료"' >> /app/start.sh && \
     echo 'echo "🔄 데이터베이스 마이그레이션 시작..."' >> /app/start.sh && \
     echo 'npx prisma migrate deploy' >> /app/start.sh && \
     echo 'if [ $? -eq 0 ]; then' >> /app/start.sh && \
