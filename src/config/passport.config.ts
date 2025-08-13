@@ -52,7 +52,7 @@ async function handleOAuthCallback(
     );
 
     logger.info('👤 최종 사용자 정보:', {
-      id: result.user.id,
+      id: result.user.userId,
       email: result.user.email,
       name: result.user.name,
       provider: provider,

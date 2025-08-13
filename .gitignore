@@ -87,3 +87,5 @@ dev-debug.log
 .cursor/
 .env.prod
 .env.test
+
+docs/

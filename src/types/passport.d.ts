@@ -33,6 +33,29 @@ interface AuthenticateRequest {
   [key: string]: unknown;
 }
 
+// User 타입 정의
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+  role: 'USER' | 'ADMIN';
+  isAdmin: boolean;
+  provider: 'LOCAL' | 'KAKAO' | 'GOOGLE' | 'NAVER';
+  socialId?: string;
+  isSignUpCompleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Express Request 타입 확장
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
+
 declare module 'passport-kakao' {
   import { Strategy as BaseStrategy } from 'passport';
 

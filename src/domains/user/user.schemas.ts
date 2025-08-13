@@ -11,7 +11,7 @@ const emailSchema = z
 // 사용자 역할 스키마
 const userRoleSchema = z.enum(['USER', 'ADMIN']);
 
-// 사용자 정보 수정 스키마
+// 사용자 정보 수정 스키마 (role 필드 제외)
 export const updateUserSchema = z
   .object({
     name: z
@@ -20,10 +20,9 @@ export const updateUserSchema = z
       .max(50, '이름은 50자 이하여야 합니다.')
       .trim()
       .optional(),
-    role: userRoleSchema.optional(),
   })
   .strict()
-  .refine(data => Object.keys(data).length > 0, {
+  .refine(data => Object.values(data).some(v => v !== undefined), {
     message: '최소 하나의 필드를 수정해야 합니다.',
   });
 

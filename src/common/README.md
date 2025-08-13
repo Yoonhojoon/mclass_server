@@ -41,8 +41,13 @@ src/
 ### 1. 에러 처리
 
 #### 기본 에러 클래스 사용
+
 ```typescript
-import { ValidationError, NotFoundError, ConflictError } from '../common/errors';
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
+} from '../common/errors';
 
 // 검증 에러
 throw new ValidationError('이메일 형식이 올바르지 않습니다.');
@@ -55,9 +60,13 @@ throw new ConflictError('이미 존재하는 리소스입니다.');
 ```
 
 #### 도메인별 에러 사용
+
 ```typescript
 import { UserNotFoundError, UserAlreadyExistsError } from '../common/errors';
-import { ClassNotFoundError, ClassCapacityExceededError } from '../common/errors';
+import {
+  ClassNotFoundError,
+  ClassCapacityExceededError,
+} from '../common/errors';
 
 // 사용자 도메인 에러
 throw new UserNotFoundError('user-123');
@@ -71,6 +80,7 @@ throw new ClassCapacityExceededError(30);
 ### 2. 성공 응답 처리
 
 #### 기본 응답 핸들러 사용
+
 ```typescript
 import { ResponseHandler } from '../common/response';
 
@@ -85,6 +95,7 @@ ResponseHandler.noContent(res);
 ```
 
 #### 도메인별 성공 메시지 사용
+
 ```typescript
 import { UserSuccessMessage, UserResponseMessages } from '../common/errors';
 import { ClassSuccessMessage, ClassResponseMessages } from '../common/errors';
@@ -100,18 +111,19 @@ ResponseHandler.created(res, newUser, message);
 ### 3. 비동기 에러 처리
 
 #### ErrorHandler.asyncHandler 사용
+
 ```typescript
 import { ErrorHandler, UserNotFoundError } from '../common/errors';
 
 export const getUser = ErrorHandler.asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { userId } = req.params;
-    
+
     const user = await findUserById(userId);
     if (!user) {
       throw new UserNotFoundError(userId);
     }
-    
+
     ResponseHandler.success(res, user, UserSuccessMessage.PROFILE_GET_SUCCESS);
   }
 );
@@ -120,24 +132,29 @@ export const getUser = ErrorHandler.asyncHandler(
 ## 도메인별 에러 및 응답
 
 ### User 도메인
+
 - **에러**: `UserNotFoundError`, `UserAlreadyExistsError`, `UserValidationError` 등
 - **성공**: 회원가입, 로그인, 프로필 업데이트 등 관련 메시지
 
 ### Class 도메인
+
 - **에러**: `ClassNotFoundError`, `ClassCapacityExceededError`, `ClassPermissionError` 등
 - **성공**: 클래스 생성, 수정, 조회 등 관련 메시지
 
 ### Enrollment 도메인
+
 - **에러**: `EnrollmentNotFoundError`, `EnrollmentDuplicateError`, `EnrollmentCapacityExceededError` 등
 - **성공**: 신청, 취소, 상태 변경 등 관련 메시지
 
 ### Auth 도메인
+
 - **에러**: `AuthenticationError`, `InvalidCredentialsError`, `TokenExpiredError` 등
 - **성공**: 로그인, 토큰 갱신, 권한 부여 등 관련 메시지
 
 ## 응답 형식
 
 ### 성공 응답
+
 ```json
 {
   "success": true,
@@ -149,6 +166,7 @@ export const getUser = ErrorHandler.asyncHandler(
 ```
 
 ### 에러 응답
+
 ```json
 {
   "success": false,
@@ -163,6 +181,7 @@ export const getUser = ErrorHandler.asyncHandler(
 ## 설정
 
 ### 메인 애플리케이션에서 에러 핸들러 등록
+
 ```typescript
 import { ErrorHandler } from './common/errors/ErrorHandler';
 
@@ -173,4 +192,4 @@ app.use(ErrorHandler.notFound);
 app.use(ErrorHandler.handle);
 ```
 
-이 구조를 통해 도메인별로 체계적인 에러 처리와 응답 관리를 할 수 있습니다. 
+이 구조를 통해 도메인별로 체계적인 에러 처리와 응답 관리를 할 수 있습니다.

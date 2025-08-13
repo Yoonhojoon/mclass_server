@@ -1,12 +1,8 @@
 import request from 'supertest';
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import { createAuthRoutes } from '../../routes/auth.routes';
 import jwt from 'jsonwebtoken';
-import authRoutes from '../../routes/auth.routes';
-import { AuthService } from '../../domains/auth/auth.service';
-import { UserService } from '../../domains/user/user.service';
-import { TokenService } from '../../domains/token/token.service';
 
 // Mock external dependencies only
 jest.mock('../../config/logger.config', () => ({
@@ -21,7 +17,7 @@ jest.mock('../../config/logger.config', () => ({
 
 // Mock passport
 jest.mock('passport', () => ({
-  authenticate: jest.fn((strategy, options) => {
+  authenticate: jest.fn(() => {
     return (req: any, res: any, next: any) => {
       // Mock successful authentication
       req.user = {
@@ -56,9 +52,6 @@ jest.mock('passport-naver', () => ({
 describe('Auth E2E Tests', () => {
   let app: express.Application;
   let prisma: PrismaClient;
-  let authService: AuthService;
-  let userService: UserService;
-  let tokenService: TokenService;
   let dbConnected = false;
 
   const testUser = {
@@ -79,15 +72,10 @@ describe('Auth E2E Tests', () => {
     // Setup Express app
     app = express();
     app.use(express.json());
-    app.use('/api/auth', authRoutes);
+    app.use('/api/auth', createAuthRoutes(prisma));
 
     // Setup Prisma - 기존 .env 설정 사용
     prisma = new PrismaClient();
-
-    // Initialize services
-    authService = new AuthService(prisma);
-    userService = new UserService(prisma);
-    tokenService = new TokenService();
 
     // Test database connection
     try {

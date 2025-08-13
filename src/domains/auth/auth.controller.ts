@@ -4,16 +4,15 @@ import { AuthError } from '../../common/exception/auth/AuthError.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import { AuthSuccess } from '../../common/exception/auth/AuthSuccess.js';
 import logger from '../../config/logger.config.js';
-import { AuthenticatedRequest } from '../../middleware/auth.middleware.js';
 import { PrismaClient } from '@prisma/client';
+import { LoginRequest, RegisterRequest } from '../../schemas/auth/index.js';
 import {
-  LoginDto,
-  RegisterDto,
   SocialLoginDto,
   CompleteSignUpDto,
   RefreshTokenDto,
   ChangePasswordDto,
 } from './auth.schemas.js';
+import { userResponseSchema } from '../../schemas/auth/response.schema.js';
 
 export class AuthController {
   private authService: AuthService;
@@ -27,16 +26,16 @@ export class AuthController {
    */
   async login(req: Request, res: Response): Promise<void> {
     try {
-      const loginData: LoginDto = req.body;
+      const loginData: LoginRequest = req.body;
       logger.info('🔐 로그인 컨트롤러 호출', { email: loginData.email });
 
       const result = await this.authService.login(loginData);
+      const userResponse = userResponseSchema.parse(result.user);
 
-      return AuthSuccess.loginSuccess(
-        result.user.id,
-        result.user.role,
-        result
-      ).send(res);
+      return AuthSuccess.loginSuccess(result.user.userId, result.user.role, {
+        ...result,
+        user: userResponse,
+      }).send(res);
     } catch (error) {
       logger.error('❌ 로그인 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -58,19 +57,19 @@ export class AuthController {
    */
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const registerData: RegisterDto = req.body;
+      const registerData: RegisterRequest = req.body;
       logger.info('📝 회원가입 컨트롤러 호출', {
         email: registerData.email,
         name: registerData.name,
       });
 
       const result = await this.authService.register(registerData);
+      const userResponse = userResponseSchema.parse(result.user);
 
-      return AuthSuccess.loginSuccess(
-        result.user.id,
-        result.user.role,
-        result
-      ).send(res);
+      return AuthSuccess.loginSuccess(result.user.userId, result.user.role, {
+        ...result,
+        user: userResponse,
+      }).send(res);
     } catch (error) {
       logger.error('❌ 회원가입 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -101,7 +100,7 @@ export class AuthController {
       const result = await this.authService.handleSocialLogin(profile);
 
       return AuthSuccess.loginSuccess(
-        result.user.id,
+        result.user.userId,
         result.user.role,
         result
       ).send(res);
@@ -125,7 +124,7 @@ export class AuthController {
    * 회원가입 완료
    */
   async completeSignUp(
-    req: AuthenticatedRequest & { body: CompleteSignUpDto },
+    req: Request & { body: CompleteSignUpDto },
     res: Response
   ): Promise<void> {
     try {
@@ -146,7 +145,7 @@ export class AuthController {
       const result = await this.authService.completeSignUp(userId, termIds);
 
       return AuthSuccess.loginSuccess(
-        result.user.id,
+        result.user.userId,
         result.user.role,
         result
       ).send(res);
@@ -226,7 +225,7 @@ export class AuthController {
    * 비밀번호 변경
    */
   async changePassword(
-    req: AuthenticatedRequest & { body: ChangePasswordDto },
+    req: Request & { body: ChangePasswordDto },
     res: Response
   ): Promise<void> {
     try {
