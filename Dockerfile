@@ -50,6 +50,8 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "🔍 환경 변수 확인..."' >> /app/start.sh && \
     echo 'echo "DATABASE_URL: $DATABASE_URL"' >> /app/start.sh && \
     echo 'echo "NODE_ENV: $NODE_ENV"' >> /app/start.sh && \
+    echo 'echo "🔄 실패한 마이그레이션 정리..."' >> /app/start.sh && \
+    echo 'npx prisma migrate resolve --applied 20250811065406_make_recruit_dates_required || echo "마이그레이션 정리 완료"' >> /app/start.sh && \
     echo 'echo "🔄 데이터베이스 마이그레이션 시작..."' >> /app/start.sh && \
     echo 'npx prisma migrate deploy' >> /app/start.sh && \
     echo 'if [ $? -eq 0 ]; then' >> /app/start.sh && \
