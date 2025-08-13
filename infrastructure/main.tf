@@ -670,7 +670,7 @@ output "rds_port" {
 resource "aws_ssm_parameter" "database_url" {
   name      = "/mclass/database_url"
   type      = "SecureString"
-  value     = "postgresql://postgres:${var.database_password}@${aws_db_instance.main.endpoint}:${aws_db_instance.main.port}/${aws_db_instance.main.db_name}"
+  value     = "postgresql://postgres:${var.database_password}@${aws_db_instance.main.endpoint}/${aws_db_instance.main.db_name}"
   overwrite = true
 
   tags = {
