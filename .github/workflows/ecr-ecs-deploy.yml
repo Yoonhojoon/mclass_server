@@ -93,8 +93,6 @@ jobs:
         
         echo "✅ Terraform으로 관리되는 환경변수 확인 완료"
         
-        echo "✅ Terraform으로 관리되는 환경변수 확인 완료"
-    
     - name: Verify existing infrastructure
       run: |
         echo "✅ Terraform으로 생성된 인프라 확인:"

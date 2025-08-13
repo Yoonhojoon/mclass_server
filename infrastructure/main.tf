@@ -670,7 +670,7 @@ output "rds_port" {
 resource "aws_ssm_parameter" "database_url" {
   name      = "/mclass/database_url"
   type      = "SecureString"
-  value     = var.database_url
+  value     = "postgresql://postgres:${var.database_password}@${aws_db_instance.main.endpoint}:${aws_db_instance.main.port}/${aws_db_instance.main.db_name}"
   overwrite = true
 
   tags = {
@@ -885,7 +885,7 @@ resource "aws_db_instance" "main" {
   identifier = "mclass-postgresql"
 
   engine         = "postgres"
-  engine_version = "15.10"
+  engine_version = "15"
   instance_class = "db.t3.micro" # 프리티어
 
   allocated_storage     = 20
