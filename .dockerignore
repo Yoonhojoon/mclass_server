@@ -17,4 +17,7 @@ build
 .idea
 *.swp
 *.swo
-*~ 
+*~
+# Prisma 관련 파일들은 빌드 시 필요하므로 제외하지 않음
+# .prisma
+# prisma/migrations/ 
