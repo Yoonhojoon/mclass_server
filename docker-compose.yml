@@ -36,10 +36,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/mclass_prod
-      - REDIS_URL=redis://redis:6379
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: "postgresql://postgres:password@postgres:5432/mclass_prod"
+      REDIS_URL: "redis://redis:6379"
+      TZ: "Asia/Seoul"
     volumes:
       - ./src:/app/src
       - ./dist:/app/dist
