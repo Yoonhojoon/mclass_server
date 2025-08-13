@@ -13,6 +13,9 @@ RUN npm ci
 # 소스 코드 복사
 COPY . .
 
+# Prisma 클라이언트 생성 (빌드용)
+RUN npx prisma generate
+
 # TypeScript 빌드
 RUN npm run build
 
