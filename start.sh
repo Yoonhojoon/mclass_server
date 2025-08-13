@@ -88,14 +88,28 @@ while [ $migration_retry_count -lt $max_migration_retries ]; do
         if [ $migration_retry_count -eq 1 ]; then
             log_info "P3009/P3018 오류 자동 복구 시도 중..."
             
-            # 실패한 마이그레이션 해결 시도
-            if npx prisma migrate resolve --rolled-back 20250811065406_make_recruit_dates_required 2>/dev/null; then
-                log_success "실패한 마이그레이션 해결 완료"
-                log_info "마이그레이션 재시도 중..."
-                continue
+            # 실패한 마이그레이션 동적 감지 및 해결
+            log_info "실패한 마이그레이션 확인 중..."
+            
+            # 마이그레이션 상태에서 실패한 것들 찾기
+            FAILED_MIGRATIONS=$(npx prisma migrate status 2>&1 | grep -E "failed|Failed" | grep -oE "[0-9]{14}_[a-zA-Z_]+" || echo "")
+            
+            if [ -n "$FAILED_MIGRATIONS" ]; then
+                log_info "실패한 마이그레이션 발견: $FAILED_MIGRATIONS"
+                for migration in $FAILED_MIGRATIONS; do
+                    log_info "마이그레이션 $migration 해결 시도 중..."
+                    if npx prisma migrate resolve --rolled-back "$migration" 2>/dev/null; then
+                        log_success "마이그레이션 $migration 해결 완료"
+                    else
+                        log_warning "마이그레이션 $migration 해결 실패 (이미 해결되었거나 존재하지 않음)"
+                    fi
+                done
             else
-                log_warning "자동 복구 실패 - 수동 개입 필요"
+                log_info "실패한 마이그레이션이 감지되지 않음 - 수동 해결 필요"
             fi
+            
+            log_info "마이그레이션 재시도 중..."
+            continue
         fi
         
         if [ $migration_retry_count -lt $max_migration_retries ]; then
