@@ -52,3 +52,9 @@ export const CreateEnrollmentFormSchema = z.object({
 export type CreateEnrollmentFormRequest = z.infer<
   typeof CreateEnrollmentFormSchema
 >;
+
+// DTO 타입으로도 export (기존 DTO와 호환성 유지)
+export type CreateEnrollmentFormDto = z.infer<
+  typeof CreateEnrollmentFormSchema
+>;
+export type Question = z.infer<typeof QuestionSchema>;

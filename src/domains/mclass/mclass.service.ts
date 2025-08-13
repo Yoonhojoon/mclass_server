@@ -40,9 +40,9 @@ export class MClassService {
   constructor(private repository: MClassRepository) {}
 
   /**
-   * Phase 계산 로직
+   * Phase 계산 로직 (실시간 approvedCount 사용)
    */
-  private calculatePhase(mclass: any): MClassPhase {
+  private async calculatePhase(mclass: any): Promise<MClassPhase> {
     const now = new Date();
     const {
       recruitStartAt,
@@ -51,7 +51,6 @@ export class MClassService {
       endAt,
       visibility,
       capacity,
-      approvedCount,
     } = mclass;
 
     // UPCOMING: 모집 시작 전
@@ -59,16 +58,18 @@ export class MClassService {
       return 'UPCOMING';
     }
 
-    // RECRUITING: 모집 중
+    // RECRUITING: 모집 중 (실시간 approvedCount 계산)
     if (
       recruitStartAt &&
       recruitEndAt &&
       now >= recruitStartAt &&
       now < recruitEndAt &&
-      visibility === 'PUBLIC' &&
-      (capacity === null || approvedCount < capacity)
+      visibility === 'PUBLIC'
     ) {
-      return 'RECRUITING';
+      const approvedCount = await this.repository.getApprovedCount(mclass.id);
+      if (capacity === null || approvedCount < capacity) {
+        return 'RECRUITING';
+      }
     }
 
     // IN_PROGRESS: 진행 중
@@ -88,8 +89,8 @@ export class MClassService {
   /**
    * MClass 데이터에 phase 추가 및 Date를 문자열로 변환
    */
-  private addPhaseToMClass(mclass: any): MClassWithPhase {
-    const phase = this.calculatePhase(mclass);
+  private async addPhaseToMClass(mclass: any): Promise<MClassWithPhase> {
+    const phase = await this.calculatePhase(mclass);
     return {
       ...mclass,
       phase,
@@ -122,9 +123,9 @@ export class MClassService {
     try {
       const result = await this.repository.findWithFilters(query, isAdmin);
 
-      // 각 MClass에 phase 추가
-      const itemsWithPhase = result.items.map(mclass =>
-        this.addPhaseToMClass(mclass)
+      // 각 MClass에 phase 추가 (비동기 처리)
+      const itemsWithPhase = await Promise.all(
+        result.items.map(mclass => this.addPhaseToMClass(mclass))
       );
 
       // phase 필터링 (서비스 레벨에서 처리)
@@ -168,7 +169,7 @@ export class MClassService {
         throw MClassError.notFound(id);
       }
 
-      const result = this.addPhaseToMClass(mclass);
+      const result = await this.addPhaseToMClass(mclass);
       logger.info(
         `[MClassService] MClass 단일 조회 성공: ${id}, Phase: ${result.phase}`
       );
@@ -203,7 +204,7 @@ export class MClassService {
       }
 
       const mclass = await this.repository.create(data, adminId);
-      const result = this.addPhaseToMClass(mclass);
+      const result = await this.addPhaseToMClass(mclass);
       logger.info(
         `[MClassService] MClass 생성 성공: ID ${result.id}, 제목 "${data.title}", 관리자 ID ${adminId}`
       );
@@ -246,7 +247,7 @@ export class MClassService {
       }
 
       // 모집 중인 클래스 수정 제한 체크
-      const currentPhase = this.calculatePhase(existingMClass);
+      const currentPhase = await this.calculatePhase(existingMClass);
       if (currentPhase === 'RECRUITING') {
         logger.warn(
           `[MClassService] 모집 중인 MClass 수정 시도: ${id}, Phase: ${currentPhase}`
@@ -255,7 +256,7 @@ export class MClassService {
       }
 
       const mclass = await this.repository.update(id, data);
-      const result = this.addPhaseToMClass(mclass);
+      const result = await this.addPhaseToMClass(mclass);
       logger.info(
         `[MClassService] MClass 수정 성공: ${id}, Phase: ${result.phase}`
       );
@@ -283,7 +284,7 @@ export class MClassService {
       }
 
       // 진행 중인 클래스 삭제 제한 체크
-      const currentPhase = this.calculatePhase(existingMClass);
+      const currentPhase = await this.calculatePhase(existingMClass);
       if (currentPhase === 'IN_PROGRESS') {
         logger.warn(
           `[MClassService] 진행 중인 MClass 삭제 시도: ${id}, Phase: ${currentPhase}`

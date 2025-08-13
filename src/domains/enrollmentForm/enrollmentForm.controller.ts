@@ -3,9 +3,9 @@ import { EnrollmentFormService } from './enrollmentForm.service.js';
 import { EnrollmentFormSuccess } from '../../common/exception/enrollmentForm/EnrollmentFormSuccess.js';
 import { EnrollmentFormError } from '../../common/exception/enrollmentForm/EnrollmentFormError.js';
 import {
-  CreateEnrollmentFormDtoSchema,
-  UpdateEnrollmentFormDtoSchema,
-} from './enrollmentForm.schemas.js';
+  CreateEnrollmentFormSchema as CreateEnrollmentFormDtoSchema,
+  UpdateEnrollmentFormSchema as UpdateEnrollmentFormDtoSchema,
+} from '../../schemas/enrollmentForm/index.js';
 import { ZodError } from 'zod';
 import logger from '../../config/logger.config.js';
 
@@ -125,11 +125,8 @@ export class EnrollmentFormController {
       // 요청 데이터 파싱 및 검증
       const data = UpdateEnrollmentFormDtoSchema.parse(req.body);
 
-      // 먼저 MClass ID로 양식 조회
-      const existingForm = await this.service.findByMClassId(mclassId);
-
-      // 서비스 호출
-      const form = await this.service.update(existingForm.id, data);
+      // 트랜잭션으로 안전하게 수정
+      const form = await this.service.updateByMClassId(mclassId, data);
 
       // 응답 전송
       const response = EnrollmentFormSuccess.updated(form.id, form);
@@ -178,16 +175,13 @@ export class EnrollmentFormController {
         throw EnrollmentFormError.forbidden();
       }
 
-      // 먼저 MClass ID로 양식 조회
-      const existingForm = await this.service.findByMClassId(mclassId);
-
-      // 서비스 호출
-      await this.service.delete(existingForm.id);
+      // 트랜잭션으로 안전하게 삭제
+      await this.service.deleteByMClassId(mclassId);
 
       // 응답 전송
-      const response = EnrollmentFormSuccess.deleted(existingForm.id);
+      const response = EnrollmentFormSuccess.deleted(mclassId);
       logger.info(
-        `[EnrollmentFormController] 지원서 양식 삭제 성공: MClass ID ${mclassId}, 양식 ID ${existingForm.id}, 사용자 ID ${userId}`
+        `[EnrollmentFormController] 지원서 양식 삭제 성공: MClass ID ${mclassId}, 사용자 ID ${userId}`
       );
       response.send(res);
     } catch (error) {

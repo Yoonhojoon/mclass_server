@@ -29,7 +29,7 @@ export type ApiResponse<T = unknown, E = unknown> =
 
 // 인증된 사용자 타입 (기존 타입과 호환성을 위해 유지)
 export interface AuthenticatedUser {
-  id: string;
+  userId: string;
   email: string;
   role: string;
   isAdmin?: boolean;

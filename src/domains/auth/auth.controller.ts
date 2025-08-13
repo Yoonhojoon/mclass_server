@@ -32,7 +32,7 @@ export class AuthController {
       const result = await this.authService.login(loginData);
       const userResponse = userResponseSchema.parse(result.user);
 
-      return AuthSuccess.loginSuccess(result.user.id, result.user.role, {
+      return AuthSuccess.loginSuccess(result.user.userId, result.user.role, {
         ...result,
         user: userResponse,
       }).send(res);
@@ -66,7 +66,7 @@ export class AuthController {
       const result = await this.authService.register(registerData);
       const userResponse = userResponseSchema.parse(result.user);
 
-      return AuthSuccess.loginSuccess(result.user.id, result.user.role, {
+      return AuthSuccess.loginSuccess(result.user.userId, result.user.role, {
         ...result,
         user: userResponse,
       }).send(res);
@@ -100,7 +100,7 @@ export class AuthController {
       const result = await this.authService.handleSocialLogin(profile);
 
       return AuthSuccess.loginSuccess(
-        result.user.id,
+        result.user.userId,
         result.user.role,
         result
       ).send(res);
@@ -145,7 +145,7 @@ export class AuthController {
       const result = await this.authService.completeSignUp(userId, termIds);
 
       return AuthSuccess.loginSuccess(
-        result.user.id,
+        result.user.userId,
         result.user.role,
         result
       ).send(res);

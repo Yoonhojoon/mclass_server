@@ -21,7 +21,7 @@ export class AuthService {
    */
   async login(loginData: LoginDto): Promise<{
     user: {
-      id: string;
+      userId: string;
       email: string;
       name: string | null;
       role: string;
@@ -68,7 +68,7 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -95,7 +95,7 @@ export class AuthService {
    */
   async register(registerData: RegisterDto): Promise<{
     user: {
-      id: string;
+      userId: string;
       email: string;
       name: string | null;
       role: string;
@@ -138,7 +138,7 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -279,7 +279,7 @@ export class AuthService {
    */
   async handleSocialLogin(profile: SocialLoginDto): Promise<{
     user: {
-      id: string;
+      userId: string;
       email: string;
       name: string | null;
       role: string;
@@ -348,7 +348,7 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
@@ -379,7 +379,7 @@ export class AuthService {
     termIds: string[]
   ): Promise<{
     user: {
-      id: string;
+      userId: string;
       email: string;
       name: string | null;
       role: string;
@@ -434,7 +434,7 @@ export class AuthService {
 
       return {
         user: {
-          id: user.id,
+          userId: user.id,
           email: user.email,
           name: user.name,
           role: user.role,

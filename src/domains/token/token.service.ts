@@ -214,7 +214,11 @@ export class TokenService {
       logger.error(`[TokenService] 토큰 갱신 실패`, {
         error: error instanceof Error ? error.message : error,
       });
-      throw TokenError.expiredToken('리프레시 토큰이 만료되었습니다');
+      // 이미 TokenError인 경우 재전파, 그렇지 않으면 일반적인 검증 실패로 처리
+      if (error instanceof TokenError) {
+        throw error;
+      }
+      throw TokenError.tokenVerificationFailed('토큰 갱신에 실패했습니다');
     }
   }
 

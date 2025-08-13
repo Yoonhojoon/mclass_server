@@ -44,3 +44,15 @@ export const enrollmentFormResponseSchema = z.object({
 export type EnrollmentFormResponse = z.infer<
   typeof enrollmentFormResponseSchema
 >;
+
+// 기존 DTO와 호환성을 위한 interface도 export
+export interface EnrollmentFormResponseInterface {
+  id: string;
+  mclassId: string;
+  title: string;
+  description: string | null;
+  questions: QuestionResponse[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}

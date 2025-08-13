@@ -82,14 +82,13 @@ describe('AuthController', () => {
 
     const mockLoginResult = {
       user: {
-        id: '550e8400-e29b-41d4-a716-446655440001',
+        userId: '550e8400-e29b-41d4-a716-446655440001',
         email: 'test@example.com',
         name: 'Test User',
         role: 'USER',
         isAdmin: false,
+        isSignUpCompleted: true,
         provider: 'LOCAL',
-        social_id: null,
-        created_at: '2024-01-01T00:00:00.000Z',
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -183,14 +182,13 @@ describe('AuthController', () => {
 
     const mockRegisterResult = {
       user: {
-        id: '550e8400-e29b-41d4-a716-446655440002',
+        userId: '550e8400-e29b-41d4-a716-446655440002',
         email: 'newuser@example.com',
         name: 'New User',
         role: 'USER',
         isAdmin: false,
+        isSignUpCompleted: true,
         provider: 'LOCAL',
-        social_id: null,
-        created_at: '2024-01-01T00:00:00.000Z',
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -263,7 +261,7 @@ describe('AuthController', () => {
 
     const mockSocialResult = {
       user: {
-        id: 'user-789',
+        userId: 'user-789',
         email: 'social@example.com',
         name: 'Social User',
         role: 'USER',
@@ -341,7 +339,7 @@ describe('AuthController', () => {
 
     const mockCompleteSignUpResult = {
       user: {
-        id: 'user-789',
+        userId: 'user-789',
         email: 'social@example.com',
         name: 'Social User',
         role: 'USER',

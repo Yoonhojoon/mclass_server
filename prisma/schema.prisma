@@ -45,7 +45,6 @@ model MClass {
   // 선발 관련
   selectionType    SelectionType @default(FIRST_COME)
   capacity         Int?          // null이면 무제한
-  approvedCount    Int           @default(0) // 승인된 인원 카운터
   allowWaitlist    Boolean       @default(false)
   waitlistCapacity Int?
   // 표시/장소/비용

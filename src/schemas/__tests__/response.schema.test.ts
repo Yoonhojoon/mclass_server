@@ -10,14 +10,13 @@ describe('Auth Response Schemas', () => {
   describe('userResponseSchema', () => {
     it('should validate valid user data', () => {
       const validUser = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
+        userId: '123e4567-e89b-12d3-a456-426614174000',
         email: 'test@example.com',
         name: 'Test User',
         role: 'USER',
         isAdmin: false,
+        isSignUpCompleted: true,
         provider: 'LOCAL',
-        social_id: null,
-        created_at: '2025-01-15T10:00:00.000Z',
       };
 
       const result = userResponseSchema.safeParse(validUser);
@@ -26,14 +25,13 @@ describe('Auth Response Schemas', () => {
 
     it('should reject invalid email', () => {
       const invalidUser = {
-        id: '123e4567-e89b-12d3-a456-426614174000',
+        userId: '123e4567-e89b-12d3-a456-426614174000',
         email: 'invalid-email',
         name: 'Test User',
         role: 'USER',
         isAdmin: false,
+        isSignUpCompleted: true,
         provider: 'LOCAL',
-        social_id: null,
-        created_at: '2025-01-15T10:00:00.000Z',
       };
 
       const result = userResponseSchema.safeParse(invalidUser);
@@ -45,17 +43,16 @@ describe('Auth Response Schemas', () => {
     it('should validate valid login response', () => {
       const validLoginResponse = {
         user: {
-          id: '123e4567-e89b-12d3-a456-426614174000',
+          userId: '123e4567-e89b-12d3-a456-426614174000',
           email: 'test@example.com',
           name: 'Test User',
           role: 'USER',
           isAdmin: false,
+          isSignUpCompleted: true,
           provider: 'LOCAL',
-          social_id: null,
-          created_at: '2025-01-15T10:00:00.000Z',
         },
-        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        accessToken: 'test-access-token',
+        refreshToken: 'test-refresh-token',
       };
 
       const result = loginResponseSchema.safeParse(validLoginResponse);

@@ -84,8 +84,8 @@ dev-debug.log
 # tasks.json
 # tasks/ 
 
-.cursor/rules/
+.cursor/
 .env.prod
 .env.test
 
-.docs/
+docs/

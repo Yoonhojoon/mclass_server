@@ -1,7 +1,10 @@
 import { EnrollmentFormRepository } from './enrollmentForm.repository.js';
-import { CreateEnrollmentFormDto } from './dto/CreateEnrollmentFormDto.js';
-import { UpdateEnrollmentFormDto } from './dto/UpdateEnrollmentFormDto.js';
-import { EnrollmentFormResponse } from './dto/EnrollmentFormResponse.js';
+import {
+  CreateEnrollmentFormDto,
+  UpdateEnrollmentFormDto,
+  EnrollmentFormResponseInterface as EnrollmentFormResponse,
+  Question,
+} from '../../schemas/enrollmentForm/index.js';
 import { EnrollmentFormError } from '../../common/exception/enrollmentForm/EnrollmentFormError.js';
 import logger from '../../config/logger.config.js';
 
@@ -125,7 +128,7 @@ export class EnrollmentFormService {
   }
 
   /**
-   * 지원서 양식 수정
+   * 지원서 양식 수정 (ID로 - 테스트용)
    */
   async update(
     id: string,
@@ -146,7 +149,7 @@ export class EnrollmentFormService {
       // 질문이 제공된 경우 검증
       if (data.questions) {
         // 질문 ID 중복 검증
-        const questionIds = data.questions.map(q => q.id);
+        const questionIds = data.questions.map((q: Question) => q.id);
         const uniqueIds = new Set(questionIds);
         if (questionIds.length !== uniqueIds.size) {
           logger.warn(`[EnrollmentFormService] 중복된 질문 ID 발견: ${id}`);
@@ -171,7 +174,11 @@ export class EnrollmentFormService {
         }
       }
 
-      const result = await this.repository.update(id, data);
+      // MClass ID로 트랜잭션 업데이트 수행
+      const result = await this.repository.updateByMClassId(
+        existingForm.mclassId,
+        data
+      );
       logger.info(`[EnrollmentFormService] 지원서 양식 수정 성공: ${id}`);
       return result;
     } catch (error) {
@@ -183,7 +190,59 @@ export class EnrollmentFormService {
   }
 
   /**
-   * 지원서 양식 삭제
+   * MClass ID로 지원서 양식 수정 (트랜잭션 처리)
+   */
+  async updateByMClassId(
+    mclassId: string,
+    data: UpdateEnrollmentFormDto
+  ): Promise<EnrollmentFormResponse> {
+    logger.info(
+      `[EnrollmentFormService] MClass ID로 지원서 양식 수정 시작: ${mclassId}`
+    );
+
+    try {
+      // 트랜잭션 내에서 조회 및 수정 수행
+      const result = await this.repository.updateByMClassId(mclassId, data);
+
+      logger.info(
+        `[EnrollmentFormService] MClass ID로 지원서 양식 수정 성공: ${mclassId}`
+      );
+      return result;
+    } catch (error) {
+      logger.error(
+        `[EnrollmentFormService] MClass ID로 지원서 양식 수정 실패: ${mclassId}`,
+        { error: error instanceof Error ? error.message : error }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * MClass ID로 지원서 양식 삭제 (트랜잭션 처리)
+   */
+  async deleteByMClassId(mclassId: string): Promise<void> {
+    logger.info(
+      `[EnrollmentFormService] MClass ID로 지원서 양식 삭제 시작: ${mclassId}`
+    );
+
+    try {
+      // 트랜잭션 내에서 조회 및 삭제 수행
+      await this.repository.deleteByMClassId(mclassId);
+
+      logger.info(
+        `[EnrollmentFormService] MClass ID로 지원서 양식 삭제 성공: ${mclassId}`
+      );
+    } catch (error) {
+      logger.error(
+        `[EnrollmentFormService] MClass ID로 지원서 양식 삭제 실패: ${mclassId}`,
+        { error: error instanceof Error ? error.message : error }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * 지원서 양식 삭제 (ID로)
    */
   async delete(id: string): Promise<void> {
     logger.info(`[EnrollmentFormService] 지원서 양식 삭제 시작: ${id}`);
@@ -198,7 +257,8 @@ export class EnrollmentFormService {
         throw EnrollmentFormError.notFound(id);
       }
 
-      await this.repository.delete(id);
+      // MClass ID로 트랜잭션 삭제 수행
+      await this.repository.deleteByMClassId(existingForm.mclassId);
       logger.info(`[EnrollmentFormService] 지원서 양식 삭제 성공: ${id}`);
     } catch (error) {
       logger.error(`[EnrollmentFormService] 지원서 양식 삭제 실패: ${id}`, {

@@ -23,7 +23,7 @@ describe('MClassService', () => {
   });
 
   describe('calculatePhase', () => {
-    it('should return UPCOMING when now < recruitStartAt', () => {
+    it('should return UPCOMING when now < recruitStartAt', async () => {
       const mclass = {
         id: '1',
         title: 'Test Class',
@@ -34,7 +34,6 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -46,11 +45,11 @@ describe('MClassService', () => {
         updatedAt: new Date(),
       };
 
-      const result = service['calculatePhase'](mclass);
+      const result = await service['calculatePhase'](mclass);
       expect(result).toBe('UPCOMING');
     });
 
-    it('should return RECRUITING when in recruitment period', () => {
+    it('should return RECRUITING when in recruitment period', async () => {
       const mclass = {
         id: '1',
         title: 'Test Class',
@@ -61,7 +60,6 @@ describe('MClassService', () => {
         endAt: new Date('2026-01-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -73,11 +71,14 @@ describe('MClassService', () => {
         updatedAt: new Date(),
       };
 
-      const result = service['calculatePhase'](mclass);
+      // RECRUITING 조건을 만족하기 위해 approvedCount를 capacity보다 작게 설정
+      mockRepository.getApprovedCount.mockResolvedValue(5);
+
+      const result = await service['calculatePhase'](mclass);
       expect(result).toBe('RECRUITING');
     });
 
-    it('should return IN_PROGRESS when in progress', () => {
+    it('should return IN_PROGRESS when in progress', async () => {
       const mclass = {
         id: '1',
         title: 'Test Class',
@@ -88,7 +89,6 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -100,11 +100,11 @@ describe('MClassService', () => {
         updatedAt: new Date(),
       };
 
-      const result = service['calculatePhase'](mclass);
+      const result = await service['calculatePhase'](mclass);
       expect(result).toBe('IN_PROGRESS');
     });
 
-    it('should return ENDED when ended', () => {
+    it('should return ENDED when ended', async () => {
       const mclass = {
         id: '1',
         title: 'Test Class',
@@ -115,7 +115,6 @@ describe('MClassService', () => {
         endAt: new Date('2021-01-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -127,7 +126,7 @@ describe('MClassService', () => {
         updatedAt: new Date(),
       };
 
-      const result = service['calculatePhase'](mclass);
+      const result = await service['calculatePhase'](mclass);
       expect(result).toBe('ENDED');
     });
   });
@@ -144,7 +143,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -195,7 +194,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
         capacity: null,
-        approvedCount: 0,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -242,7 +241,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
         capacity: null,
-        approvedCount: 0,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -275,7 +274,7 @@ describe('MClassService', () => {
           endAt: new Date('2026-01-25'),
           selectionType: 'FIRST_COME' as const,
           capacity: 10,
-          approvedCount: 5,
+
           allowWaitlist: false,
           waitlistCapacity: null,
           visibility: 'PUBLIC' as const,
@@ -301,7 +300,7 @@ describe('MClassService', () => {
           endAt: new Date('2024-12-25'),
           selectionType: 'FIRST_COME' as const,
           capacity: 10,
-          approvedCount: 5,
+
           allowWaitlist: false,
           waitlistCapacity: null,
           visibility: 'PUBLIC' as const,
@@ -357,7 +356,7 @@ describe('MClassService', () => {
           endAt: new Date('2025-09-25'),
           selectionType: 'FIRST_COME' as const,
           capacity: 10,
-          approvedCount: 5,
+
           allowWaitlist: false,
           waitlistCapacity: null,
           visibility: 'PUBLIC' as const,
@@ -383,7 +382,7 @@ describe('MClassService', () => {
           endAt: new Date('2021-01-25'),
           selectionType: 'FIRST_COME' as const,
           capacity: 10,
-          approvedCount: 5,
+
           allowWaitlist: false,
           waitlistCapacity: null,
           visibility: 'PUBLIC' as const,
@@ -411,6 +410,9 @@ describe('MClassService', () => {
 
       mockRepository.findWithFilters.mockResolvedValue(mockResult);
 
+      // RECRUITING 조건을 만족하기 위해 approvedCount를 capacity보다 작게 설정
+      mockRepository.getApprovedCount.mockResolvedValue(5);
+
       const query = {
         page: 1,
         size: 10,
@@ -424,7 +426,7 @@ describe('MClassService', () => {
       expect(result.items).toHaveLength(1);
       expect(result.items[0].phase).toBe('RECRUITING');
       expect(result.items[0].title).toBe('Recruiting Class');
-      // 필터링 후에도 total과 totalPages는 원본 값 유지 (서비스 로직에 맞춤)
+      // ?�터�??�에??total�?totalPages???�본 �??��? (?�비??로직??맞춤)
       expect(result.total).toBe(2);
       expect(result.totalPages).toBe(1);
     });
@@ -465,7 +467,6 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -520,7 +521,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -542,7 +543,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -575,7 +576,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -615,7 +616,7 @@ describe('MClassService', () => {
         endAt: new Date('2026-01-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -628,6 +629,9 @@ describe('MClassService', () => {
       };
 
       mockRepository.findById.mockResolvedValue(recruitingMClass);
+
+      // RECRUITING 조건을 만족하기 위해 approvedCount를 capacity보다 작게 설정
+      mockRepository.getApprovedCount.mockResolvedValue(5);
 
       const updateData = { title: 'Updated Title' };
 
@@ -649,7 +653,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -686,7 +690,7 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-        approvedCount: 5,
+
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,

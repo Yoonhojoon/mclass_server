@@ -19,7 +19,6 @@ export const mClassResponseSchema = z.object({
   endAt: z.string().datetime(),
   selectionType: z.enum(['FIRST_COME', 'REVIEW']),
   capacity: z.number().int().nullable(),
-  approvedCount: z.number().int(),
   allowWaitlist: z.boolean(),
   waitlistCapacity: z.number().int().nullable(),
   visibility: z.enum(['PUBLIC', 'UNLISTED']),

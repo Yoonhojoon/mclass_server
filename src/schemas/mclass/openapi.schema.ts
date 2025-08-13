@@ -42,7 +42,6 @@ export const mClassResponseSchema = z.object({
     .int()
     .nullable()
     .openapi({ description: '수용 인원 (null이면 무제한)' }),
-  approvedCount: z.number().int().openapi({ description: '승인된 인원 수' }),
   allowWaitlist: z.boolean().openapi({ description: '대기열 허용 여부' }),
   waitlistCapacity: z
     .number()

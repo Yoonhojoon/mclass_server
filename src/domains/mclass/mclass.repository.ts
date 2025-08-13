@@ -9,6 +9,35 @@ export class MClassRepository {
   constructor(private prisma: PrismaClient) {}
 
   /**
+   * 날짜 유효성 검증 헬퍼 메서드
+   */
+  private validateDate(dateValue: any, fieldName: string): Date {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+      throw new Error(
+        `${fieldName}에 유효하지 않은 날짜가 입력되었습니다: ${dateValue}`
+      );
+    }
+    return date;
+  }
+
+  /**
+   * 날짜 범위 유효성 검증 헬퍼 메서드
+   */
+  private validateDateRange(
+    startDate: Date,
+    endDate: Date,
+    startFieldName: string,
+    endFieldName: string
+  ): void {
+    if (startDate >= endDate) {
+      throw new Error(
+        `${startFieldName}은 ${endFieldName}보다 이전이어야 합니다.`
+      );
+    }
+  }
+
+  /**
    * 필터링된 MClass 목록 조회
    */
   async findWithFilters(
@@ -103,6 +132,25 @@ export class MClassRepository {
    * MClass 생성
    */
   async create(data: CreateMClassRequest, adminId: string): Promise<MClass> {
+    // 날짜 유효성 검증
+    const recruitStartAt = this.validateDate(
+      data.recruitStartAt,
+      '모집 시작일'
+    );
+    const recruitEndAt = this.validateDate(data.recruitEndAt, '모집 종료일');
+    const startAt = this.validateDate(data.startAt, '행사 시작일');
+    const endAt = this.validateDate(data.endAt, '행사 종료일');
+
+    // 날짜 범위 유효성 검증
+    this.validateDateRange(
+      recruitStartAt,
+      recruitEndAt,
+      '모집 시작일',
+      '모집 종료일'
+    );
+    this.validateDateRange(startAt, endAt, '행사 시작일', '행사 종료일');
+    this.validateDateRange(recruitEndAt, startAt, '모집 종료일', '행사 시작일');
+
     const mclassData: Prisma.MClassCreateInput = {
       title: data.title,
       description: data.description,
@@ -111,10 +159,10 @@ export class MClassRepository {
       allowWaitlist: data.allowWaitlist,
       waitlistCapacity: data.waitlistCapacity,
       visibility: data.visibility,
-      recruitStartAt: new Date(data.recruitStartAt),
-      recruitEndAt: new Date(data.recruitEndAt),
-      startAt: new Date(data.startAt),
-      endAt: new Date(data.endAt),
+      recruitStartAt,
+      recruitEndAt,
+      startAt,
+      endAt,
       isOnline: data.isOnline,
       location: data.location,
       fee: data.fee,
@@ -155,12 +203,64 @@ export class MClassRepository {
     if (data.waitlistCapacity !== undefined)
       updateData.waitlistCapacity = data.waitlistCapacity;
     if (data.visibility !== undefined) updateData.visibility = data.visibility;
-    if (data.recruitStartAt !== undefined)
-      updateData.recruitStartAt = new Date(data.recruitStartAt);
-    if (data.recruitEndAt !== undefined)
-      updateData.recruitEndAt = new Date(data.recruitEndAt);
-    if (data.startAt !== undefined) updateData.startAt = new Date(data.startAt);
-    if (data.endAt !== undefined) updateData.endAt = new Date(data.endAt);
+
+    // 날짜 필드들 처리
+    let recruitStartAt: Date | undefined;
+    let recruitEndAt: Date | undefined;
+    let startAt: Date | undefined;
+    let endAt: Date | undefined;
+
+    if (data.recruitStartAt !== undefined) {
+      recruitStartAt = this.validateDate(data.recruitStartAt, '모집 시작일');
+      updateData.recruitStartAt = recruitStartAt;
+    }
+    if (data.recruitEndAt !== undefined) {
+      recruitEndAt = this.validateDate(data.recruitEndAt, '모집 종료일');
+      updateData.recruitEndAt = recruitEndAt;
+    }
+    if (data.startAt !== undefined) {
+      startAt = this.validateDate(data.startAt, '행사 시작일');
+      updateData.startAt = startAt;
+    }
+    if (data.endAt !== undefined) {
+      endAt = this.validateDate(data.endAt, '행사 종료일');
+      updateData.endAt = endAt;
+    }
+
+    // 기존 데이터 조회하여 날짜 범위 검증
+    if (recruitStartAt || recruitEndAt || startAt || endAt) {
+      const existingMClass = await this.findById(id);
+      if (!existingMClass) {
+        throw new Error('수정할 MClass를 찾을 수 없습니다.');
+      }
+
+      const finalRecruitStartAt =
+        recruitStartAt || existingMClass.recruitStartAt;
+      const finalRecruitEndAt = recruitEndAt || existingMClass.recruitEndAt;
+      const finalStartAt = startAt || existingMClass.startAt;
+      const finalEndAt = endAt || existingMClass.endAt;
+
+      // 날짜 범위 유효성 검증
+      this.validateDateRange(
+        finalRecruitStartAt,
+        finalRecruitEndAt,
+        '모집 시작일',
+        '모집 종료일'
+      );
+      this.validateDateRange(
+        finalStartAt,
+        finalEndAt,
+        '행사 시작일',
+        '행사 종료일'
+      );
+      this.validateDateRange(
+        finalRecruitEndAt,
+        finalStartAt,
+        '모집 종료일',
+        '행사 시작일'
+      );
+    }
+
     if (data.isOnline !== undefined) updateData.isOnline = data.isOnline;
     if (data.location !== undefined) updateData.location = data.location;
     if (data.fee !== undefined) updateData.fee = data.fee;

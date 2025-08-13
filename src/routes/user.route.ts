@@ -153,6 +153,11 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
     validateBody(updateUserSchema),
     controller.updateUser.bind(controller)
   );
+  router.delete(
+    '/profile',
+    authenticateToken,
+    controller.deleteUser.bind(controller)
+  );
 
   return router;
 };

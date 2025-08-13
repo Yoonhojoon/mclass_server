@@ -31,6 +31,34 @@
 - [x] class-validator/transformer 의존성 제거
 - [x] tsconfig.json 정리 (experimentalDecorators, emitDecoratorMetadata)
 
+## 현재 DTO/미들웨어 현황 (2024년 12월 기준)
+
+### 남아있는 DTO 파일들
+**EnrollmentForm 도메인**:
+- `src/domains/enrollmentForm/dto/CreateEnrollmentFormDto.ts` - Zod 기반으로 마이그레이션 완료
+- `src/domains/enrollmentForm/dto/UpdateEnrollmentFormDto.ts` - Zod 기반으로 마이그레이션 완료
+- `src/domains/enrollmentForm/dto/EnrollmentFormResponse.ts` - TypeScript 인터페이스 (제거 예정)
+
+**Auth 도메인**:
+- `src/domains/auth/dto/OAuthProfile.ts` - TypeScript 인터페이스 (제거 예정)
+
+**User 도메인**:
+- `src/domains/user/dto/UserProfileResponse.ts` - TypeScript 인터페이스 (제거 예정)
+
+### 제거된 항목들
+- `validateDto.middleware.ts` - 완전히 제거됨
+- class-validator 관련 의존성 - package.json에서 제거됨
+- class-transformer 관련 의존성 - package.json에서 제거됨
+
+### DTO 제거 예정 목록
+다음 파일들은 TypeScript 인터페이스로만 구성되어 있으며, Zod 스키마로 대체하여 제거 예정입니다:
+
+1. `src/domains/enrollmentForm/dto/EnrollmentFormResponse.ts`
+2. `src/domains/auth/dto/OAuthProfile.ts`
+3. `src/domains/user/dto/UserProfileResponse.ts`
+
+**총 제거 예정 파일 수**: 3개
+
 ## 리스크 관리
 
 ### 고위험 항목

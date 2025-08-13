@@ -2,16 +2,18 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EnrollmentFormService } from '../../domains/enrollmentForm/enrollmentForm.service.js';
 
 import { EnrollmentFormError } from '../../common/exception/enrollmentForm/EnrollmentFormError.js';
-import { CreateEnrollmentFormDto } from '../../domains/enrollmentForm/dto/CreateEnrollmentFormDto.js';
-import { UpdateEnrollmentFormDto } from '../../domains/enrollmentForm/dto/UpdateEnrollmentFormDto.js';
+import {
+  CreateEnrollmentFormDto,
+  UpdateEnrollmentFormDto,
+} from '../../schemas/enrollmentForm/index.js';
 
 // Repository 모킹
 const mockRepository = {
   findByMClassId: jest.fn(),
   findById: jest.fn(),
   create: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
+  updateByMClassId: jest.fn(),
+  deleteByMClassId: jest.fn(),
   existsByMClassId: jest.fn(),
 } as any;
 
@@ -233,13 +235,13 @@ describe('EnrollmentFormService', () => {
       };
 
       mockRepository.findById.mockResolvedValue(existingForm);
-      mockRepository.update.mockResolvedValue(mockUpdatedForm);
+      mockRepository.updateByMClassId.mockResolvedValue(mockUpdatedForm);
 
       const result = await service.update('form-1', validUpdateData);
 
       expect(mockRepository.findById).toHaveBeenCalledWith('form-1');
-      expect(mockRepository.update).toHaveBeenCalledWith(
-        'form-1',
+      expect(mockRepository.updateByMClassId).toHaveBeenCalledWith(
+        'mclass-1',
         validUpdateData
       );
       expect(result).toEqual(mockUpdatedForm);
@@ -325,12 +327,12 @@ describe('EnrollmentFormService', () => {
       };
 
       mockRepository.findById.mockResolvedValue(existingForm);
-      mockRepository.delete.mockResolvedValue(undefined);
+      mockRepository.deleteByMClassId.mockResolvedValue(undefined);
 
       await service.delete('form-1');
 
       expect(mockRepository.findById).toHaveBeenCalledWith('form-1');
-      expect(mockRepository.delete).toHaveBeenCalledWith('form-1');
+      expect(mockRepository.deleteByMClassId).toHaveBeenCalledWith('mclass-1');
     });
 
     it('존재하지 않는 양식을 삭제할 때 NotFound 에러를 던진다', async () => {

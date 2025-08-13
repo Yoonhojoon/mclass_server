@@ -27,3 +27,8 @@ export const UpdateEnrollmentFormSchema = z
 export type UpdateEnrollmentFormRequest = z.infer<
   typeof UpdateEnrollmentFormSchema
 >;
+
+// DTO 타입으로도 export (기존 DTO와 호환성 유지)
+export type UpdateEnrollmentFormDto = z.infer<
+  typeof UpdateEnrollmentFormSchema
+>;

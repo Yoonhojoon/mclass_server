@@ -15,14 +15,14 @@ export class UserService {
    * 이메일로 사용자 찾기
    */
   async findByEmail(email: string): Promise<User | null> {
-    logger.debug(`[UserService] 이메일로 사용자 찾기: ${email}`);
+    logger.info(`[UserService] 이메일로 사용자 찾기: ${email}`);
 
     try {
       const user = await this.userRepository.findByEmail(email);
       if (user) {
-        logger.debug(`[UserService] 이메일로 사용자 찾기 성공: ${email}`);
+        logger.info(`[UserService] 이메일로 사용자 찾기 성공: ${email}`);
       } else {
-        logger.debug(`[UserService] 이메일로 사용자를 찾을 수 없음: ${email}`);
+        logger.info(`[UserService] 이메일로 사용자를 찾을 수 없음: ${email}`);
       }
       return user;
     } catch (error) {
@@ -37,14 +37,14 @@ export class UserService {
    * ID로 사용자 찾기
    */
   async findById(id: string): Promise<User | null> {
-    logger.debug(`[UserService] ID로 사용자 찾기: ${id}`);
+    logger.info(`[UserService] ID로 사용자 찾기: ${id}`);
 
     try {
       const user = await this.userRepository.findById(id);
       if (user) {
-        logger.debug(`[UserService] ID로 사용자 찾기 성공: ${id}`);
+        logger.info(`[UserService] ID로 사용자 찾기 성공: ${id}`);
       } else {
-        logger.debug(`[UserService] ID로 사용자를 찾을 수 없음: ${id}`);
+        logger.info(`[UserService] ID로 사용자를 찾을 수 없음: ${id}`);
       }
       return user;
     } catch (error) {

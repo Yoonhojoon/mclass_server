@@ -8,7 +8,9 @@ const mockService = {
   findById: jest.fn(),
   create: jest.fn(),
   update: jest.fn(),
+  updateByMClassId: jest.fn(),
   delete: jest.fn(),
+  deleteByMClassId: jest.fn(),
 } as any;
 
 // Logger 모킹
@@ -221,25 +223,18 @@ describe('EnrollmentFormController', () => {
     });
 
     it('관리자 권한으로 지원서 양식을 성공적으로 수정한다', async () => {
-      const existingForm = {
+      const updatedForm = {
         id: 'form-1',
         mclassId: 'mclass-1',
-        title: '기존 제목',
-        description: '기존 설명',
+        title: '수정된 제목',
+        description: '수정된 설명',
         questions: [],
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      const updatedForm = {
-        ...existingForm,
-        title: '수정된 제목',
-        description: '수정된 설명',
-      };
-
-      mockService.findByMClassId.mockResolvedValue(existingForm);
-      mockService.update.mockResolvedValue(updatedForm);
+      mockService.updateByMClassId.mockResolvedValue(updatedForm);
 
       await controller.updateEnrollmentForm(
         mockRequest as any,
@@ -247,9 +242,8 @@ describe('EnrollmentFormController', () => {
         mockNext
       );
 
-      expect(mockService.findByMClassId).toHaveBeenCalledWith('mclass-1');
-      expect(mockService.update).toHaveBeenCalledWith(
-        'form-1',
+      expect(mockService.updateByMClassId).toHaveBeenCalledWith(
+        'mclass-1',
         mockRequest.body
       );
       expect(mockResponse.status).toHaveBeenCalledWith(200);
@@ -285,7 +279,7 @@ describe('EnrollmentFormController', () => {
 
     it('서비스 에러 시 next 함수를 호출한다', async () => {
       const error = new Error('서비스 에러');
-      mockService.findByMClassId.mockRejectedValue(error);
+      mockService.updateByMClassId.mockRejectedValue(error);
 
       await controller.updateEnrollmentForm(
         mockRequest as any,
@@ -316,19 +310,7 @@ describe('EnrollmentFormController', () => {
     });
 
     it('관리자 권한으로 지원서 양식을 성공적으로 삭제한다', async () => {
-      const existingForm = {
-        id: 'form-1',
-        mclassId: 'mclass-1',
-        title: '삭제할 양식',
-        description: '삭제할 설명',
-        questions: [],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockService.findByMClassId.mockResolvedValue(existingForm);
-      mockService.delete.mockResolvedValue(undefined);
+      mockService.deleteByMClassId.mockResolvedValue(undefined);
 
       await controller.deleteEnrollmentForm(
         mockRequest as any,
@@ -336,8 +318,7 @@ describe('EnrollmentFormController', () => {
         mockNext
       );
 
-      expect(mockService.findByMClassId).toHaveBeenCalledWith('mclass-1');
-      expect(mockService.delete).toHaveBeenCalledWith('form-1');
+      expect(mockService.deleteByMClassId).toHaveBeenCalledWith('mclass-1');
       expect(mockResponse.status).toHaveBeenCalledWith(200);
       expect(mockResponse.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -371,7 +352,7 @@ describe('EnrollmentFormController', () => {
 
     it('서비스 에러 시 next 함수를 호출한다', async () => {
       const error = new Error('서비스 에러');
-      mockService.findByMClassId.mockRejectedValue(error);
+      mockService.deleteByMClassId.mockRejectedValue(error);
 
       await controller.deleteEnrollmentForm(
         mockRequest as any,

@@ -553,12 +553,12 @@ describe('MClassRepository', () => {
         endAt: '2025-12-25T18:00:00Z',
       };
 
-      const mockUpdatedMClass = {
+      const mockExistingMClass = {
         id: '1',
         title: 'Test Class',
         description: null,
-        recruitStartAt: new Date('2025-11-01'),
-        recruitEndAt: new Date('2025-12-15'),
+        recruitStartAt: new Date('2025-01-01'),
+        recruitEndAt: new Date('2025-01-15'),
         startAt: new Date('2025-12-20'),
         endAt: new Date('2025-12-25'),
         selectionType: 'FIRST_COME' as const,
@@ -580,6 +580,15 @@ describe('MClassRepository', () => {
         },
       };
 
+      const mockUpdatedMClass = {
+        ...mockExistingMClass,
+        recruitStartAt: new Date('2025-11-01'),
+        recruitEndAt: new Date('2025-12-15'),
+        startAt: new Date('2025-12-20'),
+        endAt: new Date('2025-12-25'),
+      };
+
+      mockPrisma.mClass.findUnique.mockResolvedValue(mockExistingMClass);
       mockPrisma.mClass.update.mockResolvedValue(mockUpdatedMClass);
 
       await repository.update('1', updateData);

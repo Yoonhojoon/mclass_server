@@ -2,6 +2,12 @@ import { Request, Response } from 'express';
 import { AdminService } from './admin.service.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import logger from '../../config/logger.config.js';
+// UpdateRoleDto 타입 정의
+type UpdateRoleDto = {
+  role: 'USER' | 'ADMIN';
+  isAdmin: boolean;
+  reason?: string;
+};
 
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -39,7 +45,7 @@ export class AdminController {
     try {
       const { id } = req.params;
       const adminId = req.user?.userId;
-      const { role, isAdmin, reason } = req.body as any;
+      const { role, isAdmin, reason } = req.body as UpdateRoleDto;
 
       if (!adminId) {
         const error = ValidationError.unauthorized();

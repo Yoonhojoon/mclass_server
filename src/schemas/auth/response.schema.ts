@@ -5,14 +5,13 @@ const userRoleSchema = z.enum(['USER', 'ADMIN']);
 
 // 사용자 응답 스키마
 export const userResponseSchema = z.object({
-  id: z.string().uuid(),
+  userId: z.string().uuid(),
   email: z.string().email(),
   name: z.string(),
   role: userRoleSchema,
   isAdmin: z.boolean(),
+  isSignUpCompleted: z.boolean(),
   provider: z.enum(['LOCAL', 'KAKAO', 'GOOGLE', 'NAVER']),
-  social_id: z.string().nullable(),
-  created_at: z.string().datetime(),
 });
 
 export type UserResponse = z.infer<typeof userResponseSchema>;

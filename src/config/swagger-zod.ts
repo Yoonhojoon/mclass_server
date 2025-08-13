@@ -28,9 +28,7 @@ const getServerUrls = (): Array<{ url: string; description: string }> => {
   // 스테이징 환경
   if (process.env.NODE_ENV === 'staging' || process.env.STAGING_URL) {
     servers.push({
-      url:
-        process.env.STAGING_URL ||
-        'https://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+      url: process.env.API_BASE_URL || 'http://localhost:3000',
       description: '스테이징 서버',
     });
   }
@@ -38,9 +36,7 @@ const getServerUrls = (): Array<{ url: string; description: string }> => {
   // 프로덕션 환경
   if (process.env.NODE_ENV === 'production' || process.env.PROD_URL) {
     servers.push({
-      url:
-        process.env.PROD_URL ||
-        'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+      url: process.env.API_BASE_URL || 'http://localhost:3000',
       description: '프로덕션 서버',
     });
   }

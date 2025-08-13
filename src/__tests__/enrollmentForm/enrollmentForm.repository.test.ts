@@ -1,17 +1,18 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { EnrollmentFormRepository } from '../../domains/enrollmentForm/enrollmentForm.repository.js';
-import { CreateEnrollmentFormDto } from '../../domains/enrollmentForm/dto/CreateEnrollmentFormDto.js';
-import { UpdateEnrollmentFormDto } from '../../domains/enrollmentForm/dto/UpdateEnrollmentFormDto.js';
+import {
+  CreateEnrollmentFormDto,
+  UpdateEnrollmentFormDto,
+} from '../../schemas/enrollmentForm/index.js';
 
 // PrismaClient 모킹
 const mockPrisma = {
   enrollmentForm: {
     findUnique: jest.fn(),
     create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
     count: jest.fn(),
   },
+  $transaction: jest.fn(),
 } as any;
 
 describe('EnrollmentFormRepository', () => {
@@ -149,57 +150,17 @@ describe('EnrollmentFormRepository', () => {
     });
   });
 
-  describe('update', () => {
-    it('지원서 양식을 성공적으로 수정한다', async () => {
+  describe('updateByMClassId', () => {
+    it('MClass ID로 지원서 양식을 성공적으로 수정한다', async () => {
       const updateData: UpdateEnrollmentFormDto = {
         title: '수정된 제목',
         description: '수정된 설명',
       };
 
-      const mockUpdatedForm = {
+      const mockExistingForm = {
         id: 'form-1',
         mclassId: 'mclass-1',
-        title: '수정된 제목',
-        description: '수정된 설명',
-        questions: [
-          {
-            id: 'q1',
-            type: 'text',
-            label: '이름',
-            required: true,
-          },
-        ],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockPrisma.enrollmentForm.update.mockResolvedValue(mockUpdatedForm);
-
-      const result = await repository.update('form-1', updateData);
-
-      expect(mockPrisma.enrollmentForm.update).toHaveBeenCalledWith({
-        where: { id: 'form-1' },
-        data: {
-          title: updateData.title,
-          description: updateData.description,
-        },
-      });
-      expect(result).toEqual({
-        ...mockUpdatedForm,
-        questions: mockUpdatedForm.questions,
-      });
-    });
-
-    it('부분 업데이트를 성공적으로 수행한다', async () => {
-      const updateData: UpdateEnrollmentFormDto = {
-        title: '수정된 제목만',
-      };
-
-      const mockUpdatedForm = {
-        id: 'form-1',
-        mclassId: 'mclass-1',
-        title: '수정된 제목만',
+        title: '기존 제목',
         description: '기존 설명',
         questions: [],
         isActive: true,
@@ -207,16 +168,17 @@ describe('EnrollmentFormRepository', () => {
         updatedAt: new Date(),
       };
 
-      mockPrisma.enrollmentForm.update.mockResolvedValue(mockUpdatedForm);
+      const mockUpdatedForm = {
+        ...mockExistingForm,
+        title: '수정된 제목',
+        description: '수정된 설명',
+      };
 
-      const result = await repository.update('form-1', updateData);
+      mockPrisma.$transaction.mockResolvedValue(mockUpdatedForm);
 
-      expect(mockPrisma.enrollmentForm.update).toHaveBeenCalledWith({
-        where: { id: 'form-1' },
-        data: {
-          title: updateData.title,
-        },
-      });
+      const result = await repository.updateByMClassId('mclass-1', updateData);
+
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
       expect(result).toEqual({
         ...mockUpdatedForm,
         questions: mockUpdatedForm.questions,
@@ -224,15 +186,24 @@ describe('EnrollmentFormRepository', () => {
     });
   });
 
-  describe('delete', () => {
-    it('지원서 양식을 성공적으로 삭제한다', async () => {
-      mockPrisma.enrollmentForm.delete.mockResolvedValue(undefined);
+  describe('deleteByMClassId', () => {
+    it('MClass ID로 지원서 양식을 성공적으로 삭제한다', async () => {
+      const mockExistingForm = {
+        id: 'form-1',
+        mclassId: 'mclass-1',
+        title: '삭제할 양식',
+        description: '삭제할 설명',
+        questions: [],
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      await repository.delete('form-1');
+      mockPrisma.$transaction.mockResolvedValue(undefined);
 
-      expect(mockPrisma.enrollmentForm.delete).toHaveBeenCalledWith({
-        where: { id: 'form-1' },
-      });
+      await repository.deleteByMClassId('mclass-1');
+
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
     });
   });
 

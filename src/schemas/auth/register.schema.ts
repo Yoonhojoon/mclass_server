@@ -17,11 +17,10 @@ export const registerSchema = z
     email: emailSchema,
     name: z
       .string()
+      .trim()
       .min(1, '이름은 필수입니다.')
-      .max(50, '이름은 50자 이하여야 합니다.')
-      .trim(),
+      .max(50, '이름은 50자 이하여야 합니다.'),
     password: passwordSchema,
-    role: z.enum(['USER', 'ADMIN']).optional().default('USER'),
   })
   .strict();
 

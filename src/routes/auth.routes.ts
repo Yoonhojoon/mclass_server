@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { AuthController } from '../domains/auth/auth.controller.js';
-import {
-  authenticateToken,
-  requireSignUpCompleted,
-} from '../middleware/auth.middleware.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody } from '../middleware/validate.middleware.js';
 import {
   loginSchema,
@@ -332,7 +329,6 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
   router.post(
     '/complete-signup',
     authenticateToken,
-    requireSignUpCompleted,
     validateBody(completeSignUpSchema),
     authController.completeSignUp
   );

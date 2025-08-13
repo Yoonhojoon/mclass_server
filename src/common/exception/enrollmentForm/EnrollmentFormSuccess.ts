@@ -1,5 +1,5 @@
 import { BaseSuccess } from '../BaseSuccess.js';
-import { EnrollmentFormResponse } from '../../../domains/enrollmentForm/dto/EnrollmentFormResponse.js';
+import { EnrollmentFormResponseInterface as EnrollmentFormResponse } from '../../../schemas/enrollmentForm/index.js';
 
 export class EnrollmentFormSuccess extends BaseSuccess<EnrollmentFormResponse> {
   /**
