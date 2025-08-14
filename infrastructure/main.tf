@@ -266,13 +266,13 @@ resource "aws_lb_target_group" "main" {
   health_check {
     enabled             = true
     healthy_threshold   = 2
-    interval            = 30
+    interval            = 60
     matcher             = "200"
     path                = "/health"
     port                = "traffic-port"
     protocol            = "HTTP"
-    timeout             = 5
-    unhealthy_threshold = 2
+    timeout             = 10
+    unhealthy_threshold = 3
   }
 }
 
@@ -402,10 +402,10 @@ resource "aws_ecs_task_definition" "main" {
       }
       healthCheck = {
         command     = ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-        interval    = 30
-        timeout     = 5
+        interval    = 60
+        timeout     = 10
         retries     = 3
-        startPeriod = 60
+        startPeriod = 120
       }
     }
   ])

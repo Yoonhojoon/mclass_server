@@ -75,13 +75,13 @@ fi
 log_info "Prisma 마이그레이션 시작..."
 
 # 강제 마이그레이션 리셋 실행 (임시)
-log_warning "임시로 마이그레이션 리셋 실행 중..."
-if npx prisma migrate reset --force; then
-    log_success "마이그레이션 리셋 완료"
-else
-    log_error "마이그레이션 리셋 실패"
-    exit 1
-fi
+# log_warning "임시로 마이그레이션 리셋 실행 중..."
+# if npx prisma migrate reset --force; then
+#     log_success "마이그레이션 리셋 완료"
+# else
+#     log_error "마이그레이션 리셋 실패"
+#     exit 1
+# fi
 
 max_migration_retries=3
 migration_retry_count=0
