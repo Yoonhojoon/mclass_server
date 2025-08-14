@@ -10,11 +10,14 @@ COPY package*.json ./
 # 모든 의존성 설치 (빌드에 필요)
 RUN npm ci
 
+# Prisma 스키마 파일 복사
+COPY prisma ./prisma
+
+# Prisma 클라이언트 생성 (빌드 타임)
+RUN npx prisma generate
+
 # 소스 코드 복사
 COPY . .
-
-# Prisma 클라이언트 생성
-RUN npx prisma generate
 
 # TypeScript 빌드
 RUN npm run build
@@ -22,8 +25,8 @@ RUN npm run build
 # 프로덕션 스테이지
 FROM node:18-alpine AS production
 
-# curl 설치 (헬스체크용)
-RUN apk add --no-cache curl
+# curl과 postgresql-client 설치 (헬스체크용)
+RUN apk add --no-cache curl postgresql-client
 
 # 보안을 위해 non-root 사용자 생성
 RUN addgroup -g 1001 -S nodejs
@@ -41,25 +44,16 @@ RUN npm ci --only=production --ignore-scripts && npm cache clean --force
 # 빌드된 파일들을 복사
 COPY --from=builder /app/dist ./dist
 
-# Prisma 클라이언트 복사
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Prisma 스키마 파일과 마이그레이션 파일들 복사 (마이그레이션용)
+# Prisma 스키마 파일과 마이그레이션 파일들 복사
 COPY --from=builder /app/prisma ./prisma
 
-# 시작 스크립트 생성
-RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'echo "🔄 데이터베이스 마이그레이션 시작..."' >> /app/start.sh && \
-    echo 'npx prisma migrate deploy' >> /app/start.sh && \
-    echo 'if [ $? -eq 0 ]; then' >> /app/start.sh && \
-    echo '  echo "✅ 마이그레이션 완료"' >> /app/start.sh && \
-    echo '  echo "🚀 애플리케이션 시작..."' >> /app/start.sh && \
-    echo '  exec node dist/index.js' >> /app/start.sh && \
-    echo 'else' >> /app/start.sh && \
-    echo '  echo "❌ 마이그레이션 실패"' >> /app/start.sh && \
-    echo '  exit 1' >> /app/start.sh && \
-    echo 'fi' >> /app/start.sh && \
-    chmod +x /app/start.sh
+# Prisma 클라이언트 생성된 파일들 복사 (런타임 generate 제거)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# 시작 스크립트 복사
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 # 사용자 권한 변경
 RUN chown -R nodejs:nodejs /app

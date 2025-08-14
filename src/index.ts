@@ -124,17 +124,8 @@ app.get('/', (req: Request, res: Response) => {
     message: 'TypeScript Express 서버가 실행 중입니다!',
     metrics: '/metrics',
     docs: '/api-docs',
-    health: '/healthz',
+    health: '/health',
     ready: '/readyz',
-  });
-});
-
-// 기존 헬스체크 엔드포인트 (하위 호환성)
-app.get('/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
   });
 });
 

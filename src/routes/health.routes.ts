@@ -6,7 +6,7 @@ import logger from '../config/logger.config.js';
 const router = Router();
 
 // Liveness probe - 애플리케이션 생존 여부 확인
-router.get('/healthz', (req: Request, res: Response) => {
+router.get('/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),

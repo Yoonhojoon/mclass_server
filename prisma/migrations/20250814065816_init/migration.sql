@@ -146,19 +146,19 @@ CREATE UNIQUE INDEX "enrollment_forms_mclassId_key" ON "public"."enrollment_form
 ALTER TABLE "public"."mclasses" ADD CONSTRAINT "mclasses_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."user_term_agreements" ADD CONSTRAINT "user_term_agreements_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "public"."user_term_agreements" ADD CONSTRAINT "user_term_agreements_termId_fkey" FOREIGN KEY ("termId") REFERENCES "public"."terms"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."enrollments" ADD CONSTRAINT "enrollments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "public"."user_term_agreements" ADD CONSTRAINT "user_term_agreements_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."enrollments" ADD CONSTRAINT "enrollments_enrollmentFormId_fkey" FOREIGN KEY ("enrollmentFormId") REFERENCES "public"."enrollment_forms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."enrollments" ADD CONSTRAINT "enrollments_mclassId_fkey" FOREIGN KEY ("mclassId") REFERENCES "public"."mclasses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."enrollments" ADD CONSTRAINT "enrollments_enrollmentFormId_fkey" FOREIGN KEY ("enrollmentFormId") REFERENCES "public"."enrollment_forms"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."enrollments" ADD CONSTRAINT "enrollments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."enrollment_forms" ADD CONSTRAINT "enrollment_forms_mclassId_fkey" FOREIGN KEY ("mclassId") REFERENCES "public"."mclasses"("id") ON DELETE CASCADE ON UPDATE CASCADE;

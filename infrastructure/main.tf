@@ -266,13 +266,13 @@ resource "aws_lb_target_group" "main" {
   health_check {
     enabled             = true
     healthy_threshold   = 2
-    interval            = 30
+    interval            = 60
     matcher             = "200"
     path                = "/health"
     port                = "traffic-port"
     protocol            = "HTTP"
-    timeout             = 5
-    unhealthy_threshold = 2
+    timeout             = 10
+    unhealthy_threshold = 3
   }
 }
 
@@ -401,11 +401,11 @@ resource "aws_ecs_task_definition" "main" {
         }
       }
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
-        interval    = 30
-        timeout     = 5
+        command     = ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+        interval    = 60
+        timeout     = 10
         retries     = 3
-        startPeriod = 60
+        startPeriod = 120
       }
     }
   ])
@@ -670,7 +670,7 @@ output "rds_port" {
 resource "aws_ssm_parameter" "database_url" {
   name      = "/mclass/database_url"
   type      = "SecureString"
-  value     = var.database_url
+  value     = "postgresql://postgres:${var.database_password}@${aws_db_instance.main.endpoint}/${aws_db_instance.main.db_name}"
   overwrite = true
 
   tags = {
@@ -863,10 +863,10 @@ resource "aws_security_group" "rds" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs.id]
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -885,7 +885,7 @@ resource "aws_db_instance" "main" {
   identifier = "mclass-postgresql"
 
   engine         = "postgres"
-  engine_version = "15.10"
+  engine_version = "15"
   instance_class = "db.t3.micro" # 프리티어
 
   allocated_storage     = 20
@@ -899,6 +899,9 @@ resource "aws_db_instance" "main" {
 
   vpc_security_group_ids = [aws_security_group.rds.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
+
+  # 퍼블릭 액세스 활성화
+  publicly_accessible = true
 
   backup_retention_period = 7
   backup_window           = "03:00-04:00"

@@ -14,6 +14,35 @@ export const registry = new OpenAPIRegistry();
 const getServerUrls = (): Array<{ url: string; description: string }> => {
   const servers = [];
 
+  // 프로덕션 환경
+  if (process.env.NODE_ENV === 'production') {
+    // API_BASE_URL이 설정되어 있으면 사용
+    if (process.env.API_BASE_URL) {
+      servers.push({
+        url: process.env.API_BASE_URL,
+        description: '프로덕션 서버',
+      });
+    }
+    // ALB DNS 이름이 환경 변수로 설정되어 있으면 사용
+    else if (process.env.ALB_DNS_NAME) {
+      servers.push({
+        url: `http://${process.env.ALB_DNS_NAME}`,
+        description: '프로덕션 서버 (ALB)',
+      });
+    }
+  }
+
+  // 스테이징 환경
+  if (process.env.NODE_ENV === 'staging') {
+    servers.push({
+      url:
+        process.env.API_BASE_URL ||
+        process.env.STAGING_URL ||
+        'http://localhost:3000',
+      description: '스테이징 서버',
+    });
+  }
+
   // 로컬 개발 환경
   if (
     process.env.NODE_ENV !== 'production' &&
@@ -22,22 +51,6 @@ const getServerUrls = (): Array<{ url: string; description: string }> => {
     servers.push({
       url: process.env.LOCAL_URL || 'http://localhost:3000',
       description: '로컬 개발 서버',
-    });
-  }
-
-  // 스테이징 환경
-  if (process.env.NODE_ENV === 'staging' || process.env.STAGING_URL) {
-    servers.push({
-      url: process.env.API_BASE_URL || 'http://localhost:3000',
-      description: '스테이징 서버',
-    });
-  }
-
-  // 프로덕션 환경
-  if (process.env.NODE_ENV === 'production' || process.env.PROD_URL) {
-    servers.push({
-      url: process.env.API_BASE_URL || 'http://localhost:3000',
-      description: '프로덕션 서버',
     });
   }
 
