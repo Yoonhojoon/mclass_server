@@ -124,7 +124,7 @@ app.get('/', (req: Request, res: Response) => {
     message: 'TypeScript Express 서버가 실행 중입니다!',
     metrics: '/metrics',
     docs: '/api-docs',
-    health: '/healthz',
+    health: '/health',
     ready: '/readyz',
   });
 });
