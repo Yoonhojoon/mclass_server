@@ -22,6 +22,7 @@ model User {
   enrollments        Enrollment[]
   mclasses           MClass[]
   userTermAgreements UserTermAgreement[]
+  decidedByAdmin     Enrollment[]        @relation("AdminDecisions")
 
   @@unique([provider, socialId])
   @@map("users")
@@ -91,15 +92,32 @@ model Enrollment {
   decidedAt        DateTime?
   canceledAt       DateTime?
   reason           String?
+  
+  // 버전 관리 필드
+  formVersion      Int              @default(1)
+  formSnapshot     Json?            // 폼 수정 시 히스토리 보존용
+  
+  // 감사 추적 필드
+  decidedByAdminId String?          // 승인/거절/대기 결정한 관리자
+  reasonType       ReasonType?      // 사유 타입 구분
+  
+  // 멱등성 필드
+  idempotencyKey   String?          @unique // 중복 요청 방지
+  
+  // 낙관적 락
+  version          Int              @default(1) // rowVersion
+  
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   enrollmentForm   EnrollmentForm   @relation(fields: [enrollmentFormId], references: [id], onDelete: Cascade)
   mclass           MClass           @relation(fields: [mclassId], references: [id], onDelete: Cascade)
   user             User             @relation(fields: [userId], references: [id])
+  decidedByAdmin   User?            @relation("AdminDecisions", fields: [decidedByAdminId], references: [id])
 
   @@unique([userId, mclassId])
   @@index([mclassId, status])
   @@index([userId])
+  @@index([mclassId, status, appliedAt]) // 대기열 FIFO 처리용 인덱스
   @@map("enrollments")
 }
 
@@ -116,6 +134,26 @@ model EnrollmentForm {
   enrollments Enrollment[]
 
   @@map("enrollment_forms")
+}
+
+// 이메일 아웃박스 패턴
+model EmailOutbox {
+  id          String           @id @default(uuid())
+  type        EmailType        // 이메일 타입
+  to          String           // 수신자 이메일
+  subject     String?          // 제목 (템플릿에서 생성)
+  payload     Json             // 이메일 데이터
+  template    String           // 템플릿 이름
+  attempts    Int              @default(0) // 재시도 횟수
+  nextTryAt   DateTime?        // 다음 재시도 시간
+  processedAt DateTime?        // 발송 완료 시간
+  error       String?          // 마지막 에러 메시지
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([type, processedAt])
+  @@index([nextTryAt, attempts])
+  @@map("email_outbox")
 }
 
 enum UserRole {
@@ -157,4 +195,18 @@ enum EnrollmentStatus {
   REJECTED
   WAITLISTED
   CANCELED
+}
+
+enum ReasonType {
+  REJECT
+  CANCEL
+}
+
+enum EmailType {
+  ENROLLMENT_APPLIED
+  ENROLLMENT_APPROVED
+  ENROLLMENT_REJECTED
+  ENROLLMENT_WAITLISTED
+  ENROLLMENT_CANCELED
+  WAITLIST_PROMOTED
 }
