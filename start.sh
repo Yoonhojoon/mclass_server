@@ -74,20 +74,13 @@ fi
 # Prisma 마이그레이션 실행 (백오프 재시도 + 공식 명령어 자동 처리)
 log_info "Prisma 마이그레이션 시작..."
 
-# P3009 오류가 발생한 경우 마이그레이션 리셋 시도 (환경 변수로 제어)
-if [ "$RESET_MIGRATIONS" = "true" ] || npx prisma migrate status 2>&1 | grep -q "P3009\|failed migrations"; then
-    if [ "$RESET_MIGRATIONS" = "true" ]; then
-        log_warning "RESET_MIGRATIONS=true - 강제 마이그레이션 리셋 실행"
-    else
-        log_warning "P3009 오류 감지 - 마이그레이션 리셋 시도 중..."
-    fi
-    
-    if npx prisma migrate reset --force; then
-        log_success "마이그레이션 리셋 완료"
-    else
-        log_error "마이그레이션 리셋 실패"
-        exit 1
-    fi
+# 강제 마이그레이션 리셋 실행 (임시)
+log_warning "임시로 마이그레이션 리셋 실행 중..."
+if npx prisma migrate reset --force; then
+    log_success "마이그레이션 리셋 완료"
+else
+    log_error "마이그레이션 리셋 실패"
+    exit 1
 fi
 
 max_migration_retries=3
