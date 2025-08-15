@@ -288,6 +288,30 @@ resource "aws_lb_listener" "main" {
   }
 }
 
+# ALB Listener Rule for /metrics (VPC 내부 IP만 허용)
+resource "aws_lb_listener_rule" "allow_metrics_internal" {
+  listener_arn = aws_lb_listener.main.arn
+  priority     = 20
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.main.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/metrics"]
+    }
+  }
+
+  # VPC 내부에서만 접근 허용 (10.0.0.0/16)
+  condition {
+    source_ip {
+      values = ["10.0.0.0/16"]
+    }
+  }
+}
+
 # ECS Service
 resource "aws_ecs_service" "main" {
   name            = "mclass-service"
@@ -392,6 +416,10 @@ resource "aws_ecs_task_definition" "main" {
           valueFrom = aws_ssm_parameter.initial_admin_name.arn
         },
         {
+          name      = "METRICS_TOKEN"
+          valueFrom = aws_ssm_parameter.metrics_token.arn
+        },
+        {
           name      = "EMAIL_HOST"
           valueFrom = aws_ssm_parameter.email_host.arn
         },
@@ -462,6 +490,24 @@ resource "aws_ecs_task_definition" "prometheus" {
         "--web.console.libraries=/etc/prometheus/console_libraries",
         "--web.console.templates=/etc/prometheus/consoles"
       ]
+      environment = [
+        {
+          name  = "ALB_DNS_NAME"
+          value = aws_lb.main.dns_name
+        }
+      ]
+      mountPoints = [
+        {
+          sourceVolume  = "prometheus-config"
+          containerPath = "/etc/prometheus"
+          readOnly      = true
+        },
+        {
+          sourceVolume  = "metrics-token"
+          containerPath = "/etc/prometheus/secrets"
+          readOnly      = true
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -472,6 +518,22 @@ resource "aws_ecs_task_definition" "prometheus" {
       }
     }
   ])
+
+  volume {
+    name = "prometheus-config"
+    efs_volume_configuration {
+      file_system_id = aws_efs_file_system.prometheus_config.id
+      root_directory = "/"
+    }
+  }
+
+  volume {
+    name = "metrics-token"
+    efs_volume_configuration {
+      file_system_id = aws_efs_file_system.prometheus_config.id
+      root_directory = "/secrets"
+    }
+  }
 }
 
 # Prometheus ECS Service
@@ -609,6 +671,49 @@ resource "aws_cloudwatch_log_group" "grafana" {
   retention_in_days = 7
 }
 
+# EFS File System for Prometheus Configuration
+resource "aws_efs_file_system" "prometheus_config" {
+  creation_token = "mclass-prometheus-config"
+  encrypted      = true
+
+  tags = {
+    Name = "mclass-prometheus-config"
+  }
+}
+
+# EFS Mount Target for Prometheus Configuration
+resource "aws_efs_mount_target" "prometheus_config" {
+  count           = 2
+  file_system_id  = aws_efs_file_system.prometheus_config.id
+  subnet_id       = aws_subnet.public[count.index].id
+  security_groups = [aws_security_group.efs.id]
+}
+
+# EFS Security Group
+resource "aws_security_group" "efs" {
+  name        = "mclass-efs-sg"
+  description = "Security group for EFS"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [aws_security_group.prometheus.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "mclass-efs-sg"
+  }
+}
+
 # Data source for availability zones
 data "aws_availability_zones" "available" {
   state = "available"
@@ -629,6 +734,22 @@ output "rds_endpoint" {
 
 output "rds_port" {
   value = aws_db_instance.main.port
+}
+
+output "alb_listener_arn" {
+  value = aws_lb_listener.main.arn
+}
+
+output "alb_security_group_id" {
+  value = aws_security_group.alb.id
+}
+
+output "prometheus_security_group_id" {
+  value = aws_security_group.prometheus.id
+}
+
+output "efs_file_system_id" {
+  value = aws_efs_file_system.prometheus_config.id
 }
 
 # output "prometheus_workspace_id" {
@@ -858,6 +979,18 @@ resource "aws_ssm_parameter" "initial_admin_name" {
 
   tags = {
     Name = "mclass-initial-admin-name"
+  }
+}
+
+# Metrics Token for Prometheus authentication
+resource "aws_ssm_parameter" "metrics_token" {
+  name      = "/mclass/metrics_token"
+  type      = "SecureString"
+  value     = var.metrics_token
+  overwrite = true
+
+  tags = {
+    Name = "mclass-metrics-token"
   }
 }
 

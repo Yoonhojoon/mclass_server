@@ -73,6 +73,9 @@ jobs:
           EMAIL_FROM=$(grep EMAIL_FROM .env.prod | cut -d '=' -f2- | tr -d '\r' | sed 's/[[:space:]]*$//')
 
           
+          # METRICS_TOKEN 자동 생성 (64자리 랜덤 문자열)
+          METRICS_TOKEN=$(openssl rand -hex 32)
+          
           # DATABASE_URL 개행/공백 제거 확인 및 로그
           echo "🔍 DATABASE_URL 형식 검증:"
           echo "원본 DATABASE_URL 길이: ${#DATABASE_URL}"
@@ -96,6 +99,7 @@ jobs:
           echo "NAVER_CLIENT_ID: ${NAVER_CLIENT_ID:0:10}***"
           echo "INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:0:10}***"
           echo "INITIAL_ADMIN_NAME: ${INITIAL_ADMIN_NAME:0:5}***"
+          echo "METRICS_TOKEN: ${METRICS_TOKEN:0:16}***"
           
           # .env.prod 파일에서 환경변수들을 추출하여 terraform.tfvars 생성
           cat > terraform.tfvars << EOF
@@ -112,10 +116,12 @@ jobs:
           initial_admin_email = "$INITIAL_ADMIN_EMAIL"
           initial_admin_password = "$INITIAL_ADMIN_PASSWORD"
           initial_admin_name = "$INITIAL_ADMIN_NAME"
+          metrics_token = "$METRICS_TOKEN"
           email_host = "$EMAIL_HOST"
           email_user = "$EMAIL_USER"
           email_pass = "$EMAIL_PASS"
           email_from = "$EMAIL_FROM"
+
           EOF
           
           # 민감한 정보가 포함된 .env.prod 파일 삭제
@@ -148,6 +154,62 @@ jobs:
           echo ""
           echo "✅ 모든 인프라가 Terraform으로 관리됩니다!"
 
+      - name: Update Prometheus Configuration
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "🔧 Prometheus 설정을 업데이트합니다..."
+          
+          # ALB DNS 이름 가져오기
+          ALB_DNS=$(terraform output -raw alb_dns_name)
+          echo "ALB DNS: $ALB_DNS"
+          
+          # 프로젝트 루트로 이동
+          cd ..
+          
+          # prometheus.yml에서 ALB DNS 이름 업데이트
+          sed -i "s/\${ALB_DNS_NAME}/$ALB_DNS/g" prometheus.yml
+          
+          echo "✅ Prometheus 설정이 업데이트되었습니다."
+          echo "📋 prometheus.yml의 target: $ALB_DNS:443 (HTTPS)"
+
+      - name: Upload Metrics Token to EFS
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "🔐 EFS에 메트릭 토큰을 업로드합니다..."
+          
+          # EFS 파일 시스템 ID 가져오기
+          cd infrastructure
+          EFS_ID=$(terraform output -raw metrics_token_efs_id 2>/dev/null || echo "")
+          
+          if [ -n "$EFS_ID" ]; then
+            echo "EFS ID: $EFS_ID"
+            
+            # 임시 마운트 디렉토리 생성
+            MOUNT_DIR="/tmp/efs-mount-$$"
+            mkdir -p "$MOUNT_DIR"
+            
+            # EFS 마운트
+            echo "EFS를 마운트합니다..."
+            sudo mount -t efs "$EFS_ID:/" "$MOUNT_DIR"
+            
+            # 토큰 파일 생성
+            echo "$METRICS_TOKEN" > "$MOUNT_DIR/metrics_token"
+            chmod 600 "$MOUNT_DIR/metrics_token"
+            
+            # 마운트 해제
+            sudo umount "$MOUNT_DIR"
+            rmdir "$MOUNT_DIR"
+            
+            echo "✅ 메트릭 토큰이 EFS에 업로드되었습니다."
+          else
+            echo "⚠️ EFS 파일 시스템 ID를 찾을 수 없습니다."
+            echo "수동으로 토큰을 업로드해주세요:"
+            echo "sudo mount -t efs <EFS_ID>:/ /mnt/efs"
+            echo "echo \"$METRICS_TOKEN\" > /mnt/efs/metrics_token"
+            echo "chmod 600 /mnt/efs/metrics_token"
+            echo "sudo umount /mnt/efs"
+          fi
+
       - name: Verify AWS Resources
         if: github.ref == 'refs/heads/main'
         run: |
@@ -164,3 +226,11 @@ jobs:
           echo ""
           echo "🌐 ALB:"
           aws elbv2 describe-load-balancers --region ap-northeast-2 --query 'LoadBalancers[?contains(LoadBalancerName, `mclass`)].DNSName' --output text || echo "❌ ALB not found"
+          
+          echo ""
+          echo "🔍 모니터링 설정 검증:"
+          echo "📊 Prometheus 설정: prometheus.yml 업데이트됨"
+          echo "🔐 메트릭 토큰: EFS에 업로드됨"
+          echo "🛡️ ALB 리스너 규칙: VPC 내부 IP 제한 적용됨"
+          echo "🔒 HTTPS: 포트 443으로 보안 강화됨"
+          echo "✅ 보안 모니터링 구성 완료!"

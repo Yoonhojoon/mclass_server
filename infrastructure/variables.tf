@@ -102,4 +102,16 @@ variable "database_url" {
   description = "Complete database connection URL"
   type        = string
   sensitive   = true
+}
+
+variable "metrics_token" {
+  description = "Prometheus metrics endpoint authentication token"
+  type        = string
+  sensitive   = true
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for HTTPS"
+  type        = string
+  default     = ""
 } 
