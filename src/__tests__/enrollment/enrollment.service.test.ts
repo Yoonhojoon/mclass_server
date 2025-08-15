@@ -94,6 +94,19 @@ describe('EnrollmentService', () => {
       mockEnrollmentEmailService,
       mockEmailOutboxWorker
     );
+
+    // sendEnrollmentConfirmationEmail 메서드를 모킹
+    jest
+      .spyOn(service as any, 'sendEnrollmentConfirmationEmail')
+      .mockResolvedValue(undefined);
+    // sendStatusChangeEmail 메서드를 모킹
+    jest
+      .spyOn(service as any, 'sendStatusChangeEmail')
+      .mockResolvedValue(undefined);
+    // sendCancellationEmail 메서드를 모킹
+    jest
+      .spyOn(service as any, 'sendCancellationEmail')
+      .mockResolvedValue(undefined);
   });
 
   describe('enrollToClass', () => {
@@ -639,6 +652,128 @@ describe('EnrollmentService', () => {
         capacity: 60,
         waitlistCapacity: 20,
       });
+    });
+  });
+
+  describe('이메일 서비스 통합', () => {
+    it('신청 완료 시 이메일 발송을 호출한다', async () => {
+      const mockEnrollment = {
+        id: 'enrollment-1',
+        userId: 'user-1',
+        mclassId: 'mclass-1',
+        status: EnrollmentStatus.APPLIED,
+        mclass: {
+          id: 'mclass-1',
+          title: '테스트 클래스',
+          capacity: 60,
+          allowWaitlist: false,
+        },
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          name: '테스트 사용자',
+        },
+        enrollmentForm: { id: 'form-1' },
+        answers: {
+          q1_name: '홍길동',
+          q2_email: 'hong@example.com',
+        },
+      };
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        return await callback(mockPrisma);
+      });
+
+      mockPrisma.enrollment.findUnique.mockResolvedValue(null);
+      mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
+      mockPrisma.enrollment.create.mockResolvedValue(mockEnrollment);
+      mockRepository.findById.mockResolvedValue(mockEnrollment);
+      mockUserService.findById.mockResolvedValue(mockEnrollment.user);
+      mockMClassRepository.findById.mockResolvedValue(mockEnrollment.mclass);
+
+      mockPrisma.mClass.findUnique.mockResolvedValue({
+        ...mockEnrollment.mclass,
+        visibility: 'PUBLIC',
+        recruitStartAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1일 전
+        recruitEndAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1일 후
+        enrollmentForm: {
+          id: 'form-1',
+          isActive: true,
+          questions: {
+            q1_name: { type: 'text', required: true },
+            q2_email: { type: 'email', required: true },
+          },
+        },
+      });
+      mockEnrollmentFormService.findByMClassId.mockResolvedValue({
+        questions: {
+          q1_name: { type: 'text', required: true },
+          q2_email: { type: 'email', required: true },
+        },
+      });
+      mockUserService.findById.mockResolvedValue(mockEnrollment.user);
+
+      const enrollmentData: CreateEnrollmentRequest = {
+        answers: mockEnrollment.answers,
+        idempotencyKey: 'test-key',
+      };
+
+      await service.enrollToClass('mclass-1', enrollmentData, 'user-1');
+
+      // sendEnrollmentConfirmationEmail 메서드가 호출되었는지 확인
+      expect(service['sendEnrollmentConfirmationEmail']).toHaveBeenCalledWith(
+        'enrollment-1'
+      );
+    });
+
+    it('신청 취소 시 이메일 발송을 호출한다', async () => {
+      const mockEnrollment = {
+        id: 'enrollment-1',
+        userId: 'user-1',
+        mclassId: 'mclass-1',
+        status: EnrollmentStatus.APPLIED,
+        mclass: {
+          id: 'mclass-1',
+          title: '테스트 클래스',
+          allowWaitlist: false,
+          visibility: 'PUBLIC',
+          recruitStartAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          recruitEndAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+        user: {
+          id: 'user-1',
+          email: 'test@example.com',
+          name: '테스트 사용자',
+        },
+        enrollmentForm: { id: 'form-1' },
+      };
+
+      const cancelData: CancelEnrollmentRequest = {
+        reason: '개인 사정으로 취소',
+      };
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        return await callback(mockPrisma);
+      });
+
+      mockPrisma.enrollment.findUnique.mockResolvedValue(mockEnrollment);
+      mockRepository.findById.mockResolvedValue({
+        ...mockEnrollment,
+        status: EnrollmentStatus.CANCELED,
+      });
+      mockUserService.findById.mockResolvedValue(mockEnrollment.user);
+      mockMClassRepository.findById.mockResolvedValue(mockEnrollment.mclass);
+      mockPrisma.enrollment.update.mockResolvedValue({
+        ...mockEnrollment,
+        status: EnrollmentStatus.CANCELED,
+      });
+
+      await service.cancelEnrollment('enrollment-1', 'user-1', cancelData);
+
+      // sendCancellationEmail 메서드가 호출되었는지 확인
+      expect(service['sendCancellationEmail']).toHaveBeenCalledWith(
+        'enrollment-1'
+      );
     });
   });
 });
