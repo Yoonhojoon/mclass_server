@@ -170,45 +170,7 @@ jobs:
           sed -i "s/\${ALB_DNS_NAME}/$ALB_DNS/g" prometheus.yml
           
           echo "✅ Prometheus 설정이 업데이트되었습니다."
-          echo "📋 prometheus.yml의 target: $ALB_DNS:443 (HTTPS)"
-
-      - name: Upload Metrics Token to EFS
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "🔐 EFS에 메트릭 토큰을 업로드합니다..."
-          
-          # EFS 파일 시스템 ID 가져오기
-          cd infrastructure
-          EFS_ID=$(terraform output -raw metrics_token_efs_id 2>/dev/null || echo "")
-          
-          if [ -n "$EFS_ID" ]; then
-            echo "EFS ID: $EFS_ID"
-            
-            # 임시 마운트 디렉토리 생성
-            MOUNT_DIR="/tmp/efs-mount-$$"
-            mkdir -p "$MOUNT_DIR"
-            
-            # EFS 마운트
-            echo "EFS를 마운트합니다..."
-            sudo mount -t efs "$EFS_ID:/" "$MOUNT_DIR"
-            
-            # 토큰 파일 생성
-            echo "$METRICS_TOKEN" > "$MOUNT_DIR/metrics_token"
-            chmod 600 "$MOUNT_DIR/metrics_token"
-            
-            # 마운트 해제
-            sudo umount "$MOUNT_DIR"
-            rmdir "$MOUNT_DIR"
-            
-            echo "✅ 메트릭 토큰이 EFS에 업로드되었습니다."
-          else
-            echo "⚠️ EFS 파일 시스템 ID를 찾을 수 없습니다."
-            echo "수동으로 토큰을 업로드해주세요:"
-            echo "sudo mount -t efs <EFS_ID>:/ /mnt/efs"
-            echo "echo \"$METRICS_TOKEN\" > /mnt/efs/metrics_token"
-            echo "chmod 600 /mnt/efs/metrics_token"
-            echo "sudo umount /mnt/efs"
-          fi
+          echo "📋 prometheus.yml의 target: $ALB_DNS:80 (HTTP)"
 
       - name: Verify AWS Resources
         if: github.ref == 'refs/heads/main'
@@ -230,7 +192,6 @@ jobs:
           echo ""
           echo "🔍 모니터링 설정 검증:"
           echo "📊 Prometheus 설정: prometheus.yml 업데이트됨"
-          echo "🔐 메트릭 토큰: EFS에 업로드됨"
           echo "🛡️ ALB 리스너 규칙: VPC 내부 IP 제한 적용됨"
-          echo "🔒 HTTPS: 포트 443으로 보안 강화됨"
-          echo "✅ 보안 모니터링 구성 완료!"
+          echo "🔒 HTTP: 포트 80으로 간단한 구성"
+          echo "✅ 간소화된 모니터링 구성 완료!"
