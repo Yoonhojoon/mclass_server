@@ -168,11 +168,13 @@ export class AdminController {
         return;
       }
 
-      // 테스트 데이터
+      // 테스트 데이터 - 템플릿에 맞는 키로 구성
       const testData = {
+        enrollmentId: 'TEST-ENR-000',
         mclassTitle: '테스트 클래스',
         userName: '테스트 사용자',
-        enrollmentDate: new Date().toLocaleDateString('ko-KR'),
+        appliedAt: new Date().toLocaleString('ko-KR'),
+        status: '신청됨',
         reason: '테스트 이메일 발송',
       };
 

@@ -29,7 +29,7 @@ import {
 } from './middleware/auth.middleware.js';
 import { corsMiddleware, corsPreflightMiddleware } from './middleware/cors.js';
 import bcrypt from 'bcrypt';
-import { EmailService } from './services/email/email.service.js';
+import { ServiceContainer } from './services/email/index.js';
 import { EmailOutboxWorker } from './services/email/email-outbox.worker.js';
 import { EmailOutboxCron } from './cron/email-outbox.cron.js';
 
@@ -307,7 +307,7 @@ const startServer = async (): Promise<void> => {
 
     // 이메일 서비스 초기화
     logger.info('📧 이메일 서비스 초기화 중...');
-    const emailService = new EmailService(logger);
+    const emailService = ServiceContainer.getEmailService(logger);
     const emailOutboxWorker = new EmailOutboxWorker(emailService, logger);
 
     // 이메일 서버 연결 확인

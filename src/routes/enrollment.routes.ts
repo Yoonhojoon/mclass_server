@@ -6,7 +6,7 @@ import { MClassRepository } from '../domains/mclass/mclass.repository.js';
 import { EnrollmentFormService } from '../domains/enrollmentForm/enrollmentForm.service.js';
 import { EnrollmentFormRepository } from '../domains/enrollmentForm/enrollmentForm.repository.js';
 import { UserService } from '../domains/user/user.service.js';
-import { EmailService } from '../services/email/email.service.js';
+import { ServiceContainer } from '../services/email/index.js';
 import { EmailOutboxWorker } from '../services/email/email-outbox.worker.js';
 import { EnrollmentEmailService } from '../services/email/enrollment.email.service.js';
 import logger from '../config/logger.config.js';
@@ -46,7 +46,7 @@ export const createEnrollmentRoutes = (prisma: PrismaClient): Router => {
     new EnrollmentFormRepository(prisma)
   );
   const userService = new UserService(prisma);
-  const emailService = new EmailService(logger);
+  const emailService = ServiceContainer.getEmailService(logger);
   const enrollmentEmailService = new EnrollmentEmailService(
     emailService,
     logger

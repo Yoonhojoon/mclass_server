@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { AdminController } from '../domains/admin/admin.controller.js';
 import { AdminService } from '../domains/admin/admin.service.js';
-import { EmailService } from '../services/email/email.service.js';
+import { ServiceContainer } from '../services/email/index.js';
 import { PrismaClient } from '@prisma/client';
 import {
   authenticateToken,
@@ -40,7 +40,7 @@ import logger from '../config/logger.config.js';
 export const createAdminRoutes = (prisma: PrismaClient): Router => {
   const router = Router();
   const adminService = new AdminService(prisma);
-  const emailService = new EmailService(logger);
+  const emailService = ServiceContainer.getEmailService(logger);
   const adminController = new AdminController(adminService, emailService);
 
   // OpenAPI 경로 등록

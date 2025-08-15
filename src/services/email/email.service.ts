@@ -5,14 +5,15 @@ import { emailTemplates } from './email.templates';
 export interface EmailOptions {
   to: string;
   template: string;
-  data: Record<string, any>;
+  data: Record<string, string | number | boolean | undefined>;
   subject?: string;
 }
 
 export class EmailService {
+  private static instance: EmailService | null = null;
   private transporter: Transporter;
 
-  constructor(private logger: Logger) {
+  private constructor(private logger: Logger) {
     // 환경 변수 검증
     this.validateEmailConfig();
 
@@ -39,6 +40,25 @@ export class EmailService {
     this.transporter.on('idle', () => {
       this.logger.info('이메일 전송기 준비됨');
     });
+  }
+
+  /**
+   * EmailService 싱글톤 인스턴스를 반환합니다.
+   * @param logger Winston 로거 인스턴스
+   * @returns EmailService 인스턴스
+   */
+  public static getInstance(logger: Logger): EmailService {
+    if (!EmailService.instance) {
+      EmailService.instance = new EmailService(logger);
+    }
+    return EmailService.instance;
+  }
+
+  /**
+   * 싱글톤 인스턴스를 초기화합니다. (테스트용)
+   */
+  public static resetInstance(): void {
+    EmailService.instance = null;
   }
 
   private validateEmailConfig(): void {
@@ -101,7 +121,7 @@ export class EmailService {
 
   private async renderTemplate(
     template: string,
-    data: Record<string, any>
+    data: Record<string, string | number | boolean | undefined>
   ): Promise<string> {
     const templateHtml =
       emailTemplates[template as keyof typeof emailTemplates];
@@ -134,7 +154,7 @@ export class EmailService {
 
   private getDefaultSubject(
     template: string,
-    data: Record<string, any>
+    data: Record<string, string | number | boolean | undefined>
   ): string {
     const subjects: Record<string, string> = {
       'enrollment-status': `[${data.mclassTitle}] 신청이 완료되었습니다.`,
