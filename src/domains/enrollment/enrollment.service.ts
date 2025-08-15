@@ -442,7 +442,8 @@ export class EnrollmentService {
           // 승인 시 정원 체크 (클래스 정보 잠금)
           if (data.status === 'APPROVED') {
             const mclass = await this.repository.findMclassBasicWithLock(
-              enrollment.mclassId
+              enrollment.mclassId,
+              tx
             );
             if (!mclass) {
               throw new EnrollmentError('클래스 정보를 찾을 수 없습니다.');
