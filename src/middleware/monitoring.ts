@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import promClient from 'prom-client';
 import logger from '../config/logger.config.js';
 
+const METRICS_TOKEN = process.env.METRICS_TOKEN || '';
+
 // 메트릭 정의
 const httpRequestDurationMicroseconds = new promClient.Histogram({
   name: 'http_request_duration_seconds',
@@ -80,6 +82,37 @@ export const prometheusMiddleware = (
   });
 
   next();
+};
+
+// 메트릭 토큰 인증 미들웨어
+export const requireMetricsToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const auth = req.headers['authorization'] || '';
+  const token = auth.replace('Bearer ', '');
+
+  if (!METRICS_TOKEN) {
+    logger.error('METRICS_TOKEN 환경변수가 설정되지 않았습니다.');
+    return res.status(500).send('Internal Server Error');
+  }
+
+  if (!token || token !== METRICS_TOKEN) {
+    logger.warn('무효한 metrics 토큰으로 접근 시도', {
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      path: req.path,
+    });
+    return res.status(401).send('Unauthorized');
+  }
+
+  logger.debug('유효한 metrics 토큰으로 접근', {
+    ip: req.ip,
+    path: req.path,
+  });
+
+  return next();
 };
 
 // 메트릭 엔드포인트

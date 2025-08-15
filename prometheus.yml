@@ -4,14 +4,18 @@ global:
 scrape_configs:
   - job_name: 'mclass-server'
     static_configs:
-      - targets: ['app:3000']
+      - targets: ['${ALB_DNS_NAME}:80']  # ALB DNS 이름으로 변경 필요 (HTTP 사용)
     metrics_path: '/metrics'
     scrape_interval: 5s
+    scheme: 'http'  # HTTP 사용 (ALB가 80 포트 사용)
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/metrics_token
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
         regex: '(.*)'
-        replacement: 'mclass-server-local'
+        replacement: 'mclass-server-alb'
 
   - job_name: 'prometheus'
     static_configs:
