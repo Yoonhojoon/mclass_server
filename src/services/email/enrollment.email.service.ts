@@ -1,5 +1,5 @@
 import { Logger } from 'winston';
-import { EmailService } from './email.service';
+import { EmailService } from './email.service.js';
 import { Enrollment, User, MClass, EnrollmentStatus } from '@prisma/client';
 
 export class EnrollmentEmailService {

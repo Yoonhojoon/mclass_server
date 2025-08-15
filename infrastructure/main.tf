@@ -288,13 +288,38 @@ resource "aws_lb_listener" "main" {
   }
 }
 
+# ALB Listener Rule for /metrics (VPC 내부 IP만 허용)
+resource "aws_lb_listener_rule" "allow_metrics_internal" {
+  listener_arn = aws_lb_listener.main.arn
+  priority     = 20
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.main.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/metrics"]
+    }
+  }
+
+  # VPC 내부에서만 접근 허용 (10.0.0.0/16)
+  condition {
+    source_ip {
+      values = ["10.0.0.0/16"]
+    }
+  }
+}
+
 # ECS Service
 resource "aws_ecs_service" "main" {
-  name            = "mclass-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = 2
-  launch_type     = "FARGATE"
+  name                   = "mclass-service"
+  cluster                = aws_ecs_cluster.main.id
+  task_definition        = aws_ecs_task_definition.main.arn
+  desired_count          = 2
+  launch_type            = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
@@ -390,6 +415,26 @@ resource "aws_ecs_task_definition" "main" {
         {
           name      = "INITIAL_ADMIN_NAME"
           valueFrom = aws_ssm_parameter.initial_admin_name.arn
+        },
+        {
+          name      = "METRICS_TOKEN"
+          valueFrom = aws_ssm_parameter.metrics_token.arn
+        },
+        {
+          name      = "EMAIL_HOST"
+          valueFrom = aws_ssm_parameter.email_host.arn
+        },
+        {
+          name      = "EMAIL_USER"
+          valueFrom = aws_ssm_parameter.email_user.arn
+        },
+        {
+          name      = "EMAIL_PASS"
+          valueFrom = aws_ssm_parameter.email_pass.arn
+        },
+        {
+          name      = "EMAIL_FROM"
+          valueFrom = aws_ssm_parameter.email_from.arn
         }
       ]
       logConfiguration = {
@@ -419,7 +464,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 
 # 무료 모니터링 스택 (ECS에서 실행)
 
-# Prometheus ECS Task Definition
+# Prometheus ECS Task Definition (간단한 구성)
 resource "aws_ecs_task_definition" "prometheus" {
   family                   = "mclass-prometheus-task"
   network_mode             = "awsvpc"
@@ -440,11 +485,11 @@ resource "aws_ecs_task_definition" "prometheus" {
         }
       ]
       essential = true
-      command = [
-        "--config.file=/etc/prometheus/prometheus.yml",
-        "--storage.tsdb.path=/prometheus",
-        "--web.console.libraries=/etc/prometheus/console_libraries",
-        "--web.console.templates=/etc/prometheus/consoles"
+      # 컨테이너 시작 시 설정 파일 생성 후 Prometheus 실행
+      entryPoint = [
+        "/bin/sh",
+        "-c",
+        "cat > /etc/prometheus/prometheus.yml << 'EOF'\nglobal:\n  scrape_interval: 15s\n  evaluation_interval: 15s\n\nscrape_configs:\n  - job_name: 'mclass-server'\n    static_configs:\n      - targets:\n          - 'mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com:80'\n    scheme: http\n    metrics_path: /metrics\n    scrape_interval: 5s\n\n    relabel_configs:\n      - source_labels: [__address__]\n        target_label: instance\n        replacement: mclass-server-alb\n\n  - job_name: 'prometheus'\n    static_configs:\n      - targets: ['localhost:9090']\nEOF\n\nexec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --web.console.libraries=/etc/prometheus/console_libraries --web.console.templates=/etc/prometheus/consoles"
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -460,11 +505,12 @@ resource "aws_ecs_task_definition" "prometheus" {
 
 # Prometheus ECS Service
 resource "aws_ecs_service" "prometheus" {
-  name            = "mclass-prometheus-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.prometheus.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                   = "mclass-prometheus-service"
+  cluster                = aws_ecs_cluster.main.id
+  task_definition        = aws_ecs_task_definition.prometheus.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
@@ -543,11 +589,12 @@ resource "aws_ecs_task_definition" "grafana" {
 
 # Grafana ECS Service
 resource "aws_ecs_service" "grafana" {
-  name            = "mclass-grafana-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.grafana.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                   = "mclass-grafana-service"
+  cluster                = aws_ecs_cluster.main.id
+  task_definition        = aws_ecs_task_definition.grafana.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
@@ -593,6 +640,9 @@ resource "aws_cloudwatch_log_group" "grafana" {
   retention_in_days = 7
 }
 
+# Prometheus 설정을 위한 간단한 구성 (EFS 제거)
+# 설정 파일은 컨테이너 시작 시 환경변수에서 생성
+
 # Data source for availability zones
 data "aws_availability_zones" "available" {
   state = "available"
@@ -615,56 +665,19 @@ output "rds_port" {
   value = aws_db_instance.main.port
 }
 
-# output "prometheus_workspace_id" {
-#   value = aws_prometheus_workspace.main.id
-# }
+output "alb_listener_arn" {
+  value = aws_lb_listener.main.arn
+}
 
-# output "prometheus_endpoint" {
-#   value = aws_prometheus_workspace.main.prometheus_endpoint
-# }
+output "alb_security_group_id" {
+  value = aws_security_group.alb.id
+}
 
-# output "grafana_workspace_url" {
-#   value = aws_grafana_workspace.main.endpoint
-# }
+output "prometheus_security_group_id" {
+  value = aws_security_group.prometheus.id
+}
 
-# AWS Managed Prometheus 워크스페이스 (비용 발생 - 주석 처리)
-# resource "aws_prometheus_workspace" "main" {
-#   alias = "mclass-prometheus"
 
-#   tags = {
-#     Name = "mclass-prometheus-workspace"
-#   }
-# }
-
-# AWS Managed Grafana 워크스페이스 (비용 발생 - 주석 처리)
-# resource "aws_grafana_workspace" "main" {
-#   account_access_type      = "CURRENT_ACCOUNT"
-#   authentication_providers = ["AWS_SSO"]
-#   permission_type         = "SERVICE_MANAGED"
-#   role_arn                = aws_iam_role.grafana_role.arn
-
-#   tags = {
-#     Name = "mclass-grafana-workspace"
-#   }
-# }
-
-# Grafana IAM Role (비용 발생 - 주석 처리)
-# resource "aws_iam_role" "grafana_role" {
-#   name = "grafana-role"
-
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Action = "sts:AssumeRole"
-#         Effect = "Allow"
-#         Principal = {
-#           Service = "grafana.amazonaws.com"
-#         }
-#       }
-#     ]
-#   })
-# }
 
 # Parameter Store for Environment Variables
 resource "aws_ssm_parameter" "database_url" {
@@ -766,6 +779,51 @@ resource "aws_ssm_parameter" "naver_client_secret" {
   }
 }
 
+# 이메일 관련 SSM 파라미터들 추가
+resource "aws_ssm_parameter" "email_host" {
+  name      = "/mclass/email_host"
+  type      = "SecureString"
+  value     = var.email_host
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-host"
+  }
+}
+
+resource "aws_ssm_parameter" "email_user" {
+  name      = "/mclass/email_user"
+  type      = "SecureString"
+  value     = var.email_user
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-user"
+  }
+}
+
+resource "aws_ssm_parameter" "email_pass" {
+  name      = "/mclass/email_pass"
+  type      = "SecureString"
+  value     = var.email_pass
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-pass"
+  }
+}
+
+resource "aws_ssm_parameter" "email_from" {
+  name      = "/mclass/email_from"
+  type      = "SecureString"
+  value     = var.email_from
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-from"
+  }
+}
+
 # 초기 관리자 관련 SSM 파라미터들 추가
 resource "aws_ssm_parameter" "initial_admin_email" {
   name      = "/mclass/initial_admin_email"
@@ -800,6 +858,18 @@ resource "aws_ssm_parameter" "initial_admin_name" {
   }
 }
 
+# Metrics Token for Prometheus authentication
+resource "aws_ssm_parameter" "metrics_token" {
+  name      = "/mclass/metrics_token"
+  type      = "SecureString"
+  value     = var.metrics_token
+  overwrite = true
+
+  tags = {
+    Name = "mclass-metrics-token"
+  }
+}
+
 # ECS Task Role Policy for Parameter Store access
 resource "aws_iam_role_policy" "ecs_task_parameter_store" {
   name = "ecs-task-parameter-store"
@@ -815,6 +885,28 @@ resource "aws_iam_role_policy" "ecs_task_parameter_store" {
           "ssm:GetParameter"
         ]
         Resource = "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/*"
+      }
+    ]
+  })
+}
+
+# ECS Task Role Policy for SSM Session Manager (ECS Execute Command)
+resource "aws_iam_role_policy" "ecs_task_ssm_session" {
+  name = "ecs-task-ssm-session"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ]
+        Resource = "*"
       }
     ]
   })

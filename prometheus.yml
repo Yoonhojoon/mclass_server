@@ -1,18 +1,24 @@
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
 
 scrape_configs:
+  # (1) 우리 서비스: ALB 경유로 /metrics 스크랩
   - job_name: 'mclass-server'
     static_configs:
-      - targets: ['app:3000']
-    metrics_path: '/metrics'
+      - targets:
+          - 'mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com:80'
+    scheme: http
+    metrics_path: /metrics
     scrape_interval: 5s
+
+    # 선택: 인스턴스 라벨 고정 (대시보드에서 보기 좋게)
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-        regex: '(.*)'
-        replacement: 'mclass-server-local'
+        replacement: mclass-server-alb
 
+  # (2) Prometheus 자기 자신
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090'] 
+      - targets: ['localhost:9090']

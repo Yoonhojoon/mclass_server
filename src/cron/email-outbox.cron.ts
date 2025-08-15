@@ -1,5 +1,5 @@
 import { CronJob } from 'cron';
-import { EmailOutboxWorker } from '../services/email/email-outbox.worker';
+import { EmailOutboxWorker } from '../services/email/email-outbox.worker.js';
 import { Logger } from 'winston';
 
 export class EmailOutboxCron {

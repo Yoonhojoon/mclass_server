@@ -48,6 +48,31 @@ variable "naver_client_secret" {
   sensitive   = true
 }
 
+# 이메일 관련 변수들 추가
+variable "email_host" {
+  description = "SMTP host for email service"
+  type        = string
+  sensitive   = true
+}
+
+variable "email_user" {
+  description = "SMTP username for email service"
+  type        = string
+  sensitive   = true
+}
+
+variable "email_pass" {
+  description = "SMTP password for email service"
+  type        = string
+  sensitive   = true
+}
+
+variable "email_from" {
+  description = "From email address for sending emails"
+  type        = string
+  sensitive   = true
+}
+
 # 초기 관리자 관련 변수들 추가
 variable "initial_admin_email" {
   description = "Initial admin email"
@@ -77,4 +102,16 @@ variable "database_url" {
   description = "Complete database connection URL"
   type        = string
   sensitive   = true
+}
+
+variable "metrics_token" {
+  description = "Prometheus metrics endpoint authentication token"
+  type        = string
+  sensitive   = true
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for HTTPS"
+  type        = string
+  default     = ""
 } 
