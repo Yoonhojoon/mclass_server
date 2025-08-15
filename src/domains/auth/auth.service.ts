@@ -83,6 +83,20 @@ export class AuthService {
       if (error instanceof AuthError) {
         throw error;
       }
+
+      // UserError를 적절한 AuthError로 변환
+      if (error instanceof UserError) {
+        if (error.errorCode === 'USER_PASSWORD_MISMATCH') {
+          throw AuthError.authenticationFailed('비밀번호가 일치하지 않습니다.');
+        } else if (error.errorCode === 'USER_NOT_FOUND') {
+          throw AuthError.invalidCredentials();
+        } else if (error.errorCode === 'USER_INVALID_PROVIDER') {
+          throw AuthError.socialProviderNotSupported('LOCAL');
+        } else {
+          throw AuthError.authenticationFailed(error.message);
+        }
+      }
+
       logger.error('❌ 로그인 처리 중 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });

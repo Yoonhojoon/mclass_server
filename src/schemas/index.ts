@@ -7,3 +7,4 @@ export * from './mclass/index.js';
 export * from './term/index.js';
 export * from './user/index.js';
 export * from './enrollmentForm/index.js';
+export * from './enrollment/index.js';

@@ -9,9 +9,9 @@ export const termResponseSchema = z.object({
   type: termTypeSchema,
   title: z.string(),
   content: z.string(),
-  is_required: z.boolean(),
+  isRequired: z.boolean(),
   version: z.string(),
-  created_at: z.string().datetime(),
+  createdAt: z.string().datetime(),
 });
 
 export type TermResponse = z.infer<typeof termResponseSchema>;

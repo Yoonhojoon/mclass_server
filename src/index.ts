@@ -11,7 +11,8 @@ import { createAuthOpenApiRoutes } from './routes/auth.openapi.routes.js';
 import { createTermRoutes } from './routes/term.routes.js';
 import { createAdminRoutes } from './routes/admin.routes.js';
 import mclassRoutes from './routes/mclass.routes.js';
-import enrollmentFormRoutes from './routes/enrollmentForm.routes.js';
+import { createEnrollmentRoutes } from './routes/enrollment.routes.js';
+import { createEnrollmentFormRoutes } from './routes/enrollmentForm.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import {
   prometheusMiddleware,
@@ -82,8 +83,9 @@ app.use('/api/users', createUserRoutes(prisma));
 app.use('/api/auth', createAuthOpenApiRoutes(prisma));
 app.use('/api', createTermRoutes(prisma));
 app.use('/api/admin', createAdminRoutes(prisma));
-app.use('/api', mclassRoutes);
-app.use('/api', enrollmentFormRoutes);
+app.use('/api', mclassRoutes(prisma));
+app.use('/api', createEnrollmentRoutes(prisma));
+app.use('/api', createEnrollmentFormRoutes(prisma));
 
 // 헬스체크 라우트
 app.use('/', healthRoutes);
