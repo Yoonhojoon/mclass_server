@@ -154,23 +154,7 @@ jobs:
           echo ""
           echo "✅ 모든 인프라가 Terraform으로 관리됩니다!"
 
-      - name: Update Prometheus Configuration
-        if: github.ref == 'refs/heads/main'
-        run: |
-          echo "🔧 Prometheus 설정을 업데이트합니다..."
-          
-          # ALB DNS 이름 가져오기
-          ALB_DNS=$(terraform output -raw alb_dns_name)
-          echo "ALB DNS: $ALB_DNS"
-          
-          # 프로젝트 루트로 이동
-          cd ..
-          
-          # prometheus.yml에서 ALB DNS 이름 업데이트
-          sed -i "s/\${ALB_DNS_NAME}/$ALB_DNS/g" prometheus.yml
-          
-          echo "✅ Prometheus 설정이 업데이트되었습니다."
-          echo "📋 prometheus.yml의 target: $ALB_DNS:80 (HTTP)"
+# Prometheus 설정은 이미 prometheus.yml에 하드코딩되어 있음
 
       - name: Verify AWS Resources
         if: github.ref == 'refs/heads/main'
