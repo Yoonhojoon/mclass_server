@@ -463,7 +463,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 
 # 무료 모니터링 스택 (ECS에서 실행)
 
-# Prometheus ECS Task Definition
+# Prometheus ECS Task Definition (간단한 구성)
 resource "aws_ecs_task_definition" "prometheus" {
   family                   = "mclass-prometheus-task"
   network_mode             = "awsvpc"
@@ -490,23 +490,6 @@ resource "aws_ecs_task_definition" "prometheus" {
         "--web.console.libraries=/etc/prometheus/console_libraries",
         "--web.console.templates=/etc/prometheus/consoles"
       ]
-      environment = [
-        {
-          name  = "ALB_DNS_NAME"
-          value = aws_lb.main.dns_name
-        },
-        {
-          name  = "METRICS_TOKEN"
-          value = var.metrics_token
-        }
-      ]
-      mountPoints = [
-        {
-          sourceVolume  = "prometheus-config"
-          containerPath = "/etc/prometheus"
-          readOnly      = true
-        }
-      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -517,14 +500,6 @@ resource "aws_ecs_task_definition" "prometheus" {
       }
     }
   ])
-
-  volume {
-    name = "prometheus-config"
-    efs_volume_configuration {
-      file_system_id = aws_efs_file_system.prometheus_config.id
-      root_directory = "/"
-    }
-  }
 }
 
 # Prometheus ECS Service
@@ -662,48 +637,8 @@ resource "aws_cloudwatch_log_group" "grafana" {
   retention_in_days = 7
 }
 
-# EFS File System for Prometheus Configuration (간소화된 구성)
-resource "aws_efs_file_system" "prometheus_config" {
-  creation_token = "mclass-prometheus-config"
-  encrypted      = true
-
-  tags = {
-    Name = "mclass-prometheus-config"
-  }
-}
-
-# EFS Mount Target for Prometheus Configuration
-resource "aws_efs_mount_target" "prometheus_config" {
-  count           = 2
-  file_system_id  = aws_efs_file_system.prometheus_config.id
-  subnet_id       = aws_subnet.public[count.index].id
-  security_groups = [aws_security_group.efs.id]
-}
-
-# EFS Security Group
-resource "aws_security_group" "efs" {
-  name        = "mclass-efs-sg"
-  description = "Security group for EFS"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 2049
-    to_port         = 2049
-    protocol        = "tcp"
-    security_groups = [aws_security_group.prometheus.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "mclass-efs-sg"
-  }
-}
+# Prometheus 설정을 위한 간단한 구성 (EFS 제거)
+# 설정 파일은 컨테이너 시작 시 환경변수에서 생성
 
 # Data source for availability zones
 data "aws_availability_zones" "available" {
@@ -739,9 +674,7 @@ output "prometheus_security_group_id" {
   value = aws_security_group.prometheus.id
 }
 
-output "efs_file_system_id" {
-  value = aws_efs_file_system.prometheus_config.id
-}
+# EFS 출력 제거 (EFS 사용하지 않음)
 
 # output "prometheus_workspace_id" {
 #   value = aws_prometheus_workspace.main.id
