@@ -6,6 +6,10 @@ import { MClassRepository } from '../domains/mclass/mclass.repository.js';
 import { EnrollmentFormService } from '../domains/enrollmentForm/enrollmentForm.service.js';
 import { EnrollmentFormRepository } from '../domains/enrollmentForm/enrollmentForm.repository.js';
 import { UserService } from '../domains/user/user.service.js';
+import { ServiceContainer } from '../services/email/index.js';
+import { EmailOutboxWorker } from '../services/email/email-outbox.worker.js';
+import { EnrollmentEmailService } from '../services/email/enrollment.email.service.js';
+import logger from '../config/logger.config.js';
 
 import { PrismaClient } from '@prisma/client';
 import {
@@ -42,12 +46,21 @@ export const createEnrollmentRoutes = (prisma: PrismaClient): Router => {
     new EnrollmentFormRepository(prisma)
   );
   const userService = new UserService(prisma);
+  const emailService = ServiceContainer.getEmailService(logger);
+  const enrollmentEmailService = new EnrollmentEmailService(
+    emailService,
+    logger
+  );
+  const emailOutboxWorker = new EmailOutboxWorker(emailService, logger);
+
   const service = new EnrollmentService(
     prisma,
     repository,
     mclassRepository,
     enrollmentFormService,
-    userService
+    userService,
+    enrollmentEmailService,
+    emailOutboxWorker
   );
   const enrollmentController = new EnrollmentController(service);
 

@@ -29,6 +29,9 @@ import {
 } from './middleware/auth.middleware.js';
 import { corsMiddleware, corsPreflightMiddleware } from './middleware/cors.js';
 import bcrypt from 'bcrypt';
+import { ServiceContainer } from './services/email/index.js';
+import { EmailOutboxWorker } from './services/email/email-outbox.worker.js';
+import { EmailOutboxCron } from './cron/email-outbox.cron.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -301,6 +304,41 @@ const startServer = async (): Promise<void> => {
     // 초기 관리자 계정 생성
     logger.info('👑 초기 관리자 계정 확인 중...');
     await createInitialAdmin();
+
+    // 이메일 서비스 초기화
+    logger.info('📧 이메일 서비스 초기화 중...');
+    const emailService = ServiceContainer.getEmailService(logger);
+    const emailOutboxWorker = new EmailOutboxWorker(emailService, logger);
+
+    // 이메일 서버 연결 확인
+    logger.info('📧 이메일 서버 연결 확인 중...');
+    logger.info(`  - EMAIL_HOST: ${process.env.EMAIL_HOST || 'not set'}`);
+    logger.info(`  - EMAIL_PORT: ${process.env.EMAIL_PORT || '587 (default)'}`);
+    logger.info(
+      `  - EMAIL_USER: ${process.env.EMAIL_USER ? '설정됨' : 'not set'}`
+    );
+    logger.info(
+      `  - EMAIL_PASS: ${process.env.EMAIL_PASS ? '설정됨' : 'not set'}`
+    );
+    logger.info(`  - EMAIL_FROM: ${process.env.EMAIL_FROM || 'not set'}`);
+
+    const emailConnectionOk = await emailService.verifyConnection();
+    if (!emailConnectionOk) {
+      logger.error('❌ 이메일 서버 연결 실패');
+      logger.error('🔧 해결 방법:');
+      logger.error('  1. Gmail 2단계 인증 활성화');
+      logger.error('  2. 앱 비밀번호 생성');
+      logger.error('  3. 환경 변수 확인');
+      logger.error('  4. docs/email-setup.md 참조');
+      logger.warn('⚠️ 이메일 알림 기능이 제한될 수 있습니다');
+    } else {
+      logger.info('✅ 이메일 서버 연결 확인 완료');
+    }
+
+    // 이메일 아웃박스 워커 시작
+    logger.info('📧 이메일 아웃박스 워커 시작 중...');
+    const emailCron = new EmailOutboxCron(emailOutboxWorker, logger);
+    emailCron.start();
 
     logger.info('🌐 HTTP 서버 시작 중...');
     app.listen(PORT, (): void => {

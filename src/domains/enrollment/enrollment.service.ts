@@ -15,6 +15,8 @@ import { EnrollmentError } from '../../common/exception/enrollment/EnrollmentErr
 import { MClassRepository } from '../mclass/mclass.repository.js';
 import { EnrollmentFormService } from '../enrollmentForm/enrollmentForm.service.js';
 import { UserService } from '../user/user.service.js';
+import { EnrollmentEmailService } from '../../services/email/enrollment.email.service.js';
+import { EmailOutboxWorker } from '../../services/email/email-outbox.worker.js';
 import logger from '../../config/logger.config.js';
 
 export class EnrollmentService {
@@ -23,7 +25,9 @@ export class EnrollmentService {
     private repository: EnrollmentRepository,
     private mclassRepository: MClassRepository,
     private enrollmentFormService: EnrollmentFormService,
-    private userService: UserService
+    private userService: UserService,
+    private enrollmentEmailService: EnrollmentEmailService,
+    private emailOutboxWorker: EmailOutboxWorker
   ) {}
 
   /**
@@ -94,7 +98,7 @@ export class EnrollmentService {
     userId: string
   ): Promise<EnrollmentResponse> {
     return await this.withRetry(async () => {
-      return await this.prisma.$transaction(async tx => {
+      const enrollment = await this.prisma.$transaction(async tx => {
         // 1) 멱등성 체크 (중복 신청 방지)
         if (data.idempotencyKey) {
           const existing = await tx.enrollment.findFirst({
@@ -196,6 +200,16 @@ export class EnrollmentService {
 
         return enrollment as unknown as EnrollmentResponse;
       });
+
+      // 트랜잭션 성공 후 이메일 발송
+      this.sendEnrollmentConfirmationEmail(enrollment.id).catch(error => {
+        logger.error('신청 완료 이메일 발송 실패', {
+          enrollmentId: enrollment.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+      return enrollment;
     });
   }
 
@@ -288,7 +302,7 @@ export class EnrollmentService {
     data: CancelEnrollmentRequest
   ): Promise<EnrollmentResponse> {
     return await this.withRetry(async () => {
-      return await this.prisma.$transaction(async tx => {
+      const updatedEnrollment = await this.prisma.$transaction(async tx => {
         const enrollment = await tx.enrollment.findUnique({
           where: { id: enrollmentId },
           include: { mclass: true },
@@ -346,6 +360,16 @@ export class EnrollmentService {
 
         return updatedEnrollment as unknown as EnrollmentResponse;
       });
+
+      // 트랜잭션 성공 후 이메일 발송
+      this.sendCancellationEmail(enrollmentId).catch(error => {
+        logger.error('신청 취소 이메일 발송 실패', {
+          enrollmentId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+      return updatedEnrollment;
     });
   }
 
@@ -407,67 +431,85 @@ export class EnrollmentService {
     adminId: string
   ): Promise<EnrollmentResponse> {
     return await this.withRetry(async () => {
-      return await this.prisma.$transaction(async tx => {
-        const enrollment = await tx.enrollment.findUnique({
-          where: { id: enrollmentId },
-          include: { mclass: true },
-        });
-
-        if (!enrollment) {
-          throw new EnrollmentError('존재하지 않는 신청입니다.');
-        }
-
-        // 승인 시 정원 체크
-        if (data.status === 'APPROVED') {
-          const approvedCount = await tx.enrollment.count({
-            where: { mclassId: enrollment.mclassId, status: 'APPROVED' },
+      const [updatedEnrollment, previousStatus] =
+        await this.prisma.$transaction(async tx => {
+          const enrollment = await tx.enrollment.findUnique({
+            where: { id: enrollmentId },
+            include: { mclass: true },
           });
 
-          if (
-            enrollment.status !== 'APPROVED' &&
-            approvedCount >= (enrollment.mclass.capacity || 0)
-          ) {
-            throw new EnrollmentError('정원이 초과되었습니다.');
+          if (!enrollment) {
+            throw new EnrollmentError('존재하지 않는 신청입니다.');
           }
-        }
 
-        const updatedEnrollment = await tx.enrollment.update({
-          where: { id: enrollmentId },
-          data: {
-            status: data.status,
-            decidedAt: new Date(),
-            decidedByAdminId: adminId,
-            reason: data.reason,
-            reasonType: data.status === 'REJECTED' ? 'REJECT' : undefined,
-            updatedAt: new Date(),
-          },
-          include: {
-            mclass: true,
-            enrollmentForm: true,
-            user: true,
-          },
+          // 승인 시 정원 체크
+          if (data.status === 'APPROVED') {
+            const approvedCount = await tx.enrollment.count({
+              where: { mclassId: enrollment.mclassId, status: 'APPROVED' },
+            });
+
+            if (
+              enrollment.status !== 'APPROVED' &&
+              approvedCount >= (enrollment.mclass.capacity || 0)
+            ) {
+              throw new EnrollmentError('정원이 초과되었습니다.');
+            }
+          }
+
+          const updatedEnrollment = await tx.enrollment.update({
+            where: { id: enrollmentId },
+            data: {
+              status: data.status,
+              decidedAt: new Date(),
+              decidedByAdminId: adminId,
+              reason: data.reason,
+              reasonType: data.status === 'REJECTED' ? 'REJECT' : undefined,
+              updatedAt: new Date(),
+            },
+            include: {
+              mclass: true,
+              enrollmentForm: true,
+              user: true,
+            },
+          });
+
+          // 대기자 승격 처리: 승인 건이 줄어드는 전이에서만 실행
+          // (예: APPROVED → REJECTED, APPROVED → CANCELED)
+          // 승인할 때(WAITLISTED → APPROVED)는 승격하지 않음
+          if (
+            enrollment.status === 'APPROVED' &&
+            (data.status === 'REJECTED' || data.status === 'CANCELED') &&
+            enrollment.mclass.allowWaitlist
+          ) {
+            await this.promoteWaitlistInTransaction(tx, enrollment.mclassId);
+          }
+
+          logger.info('Enrollment 상태 변경 완료', {
+            enrollmentId,
+            oldStatus: enrollment.status,
+            newStatus: data.status,
+            adminId,
+          });
+
+          return [
+            updatedEnrollment as unknown as EnrollmentResponse,
+            enrollment.status,
+          ];
         });
 
-        // 대기자 승격 처리: 승인 건이 줄어드는 전이에서만 실행
-        // (예: APPROVED → REJECTED, APPROVED → CANCELED)
-        // 승인할 때(WAITLISTED → APPROVED)는 승격하지 않음
-        if (
-          enrollment.status === 'APPROVED' &&
-          (data.status === 'REJECTED' || data.status === 'CANCELED') &&
-          enrollment.mclass.allowWaitlist
-        ) {
-          await this.promoteWaitlistInTransaction(tx, enrollment.mclassId);
-        }
-
-        logger.info('Enrollment 상태 변경 완료', {
+      // 트랜잭션 성공 후 이메일 발송
+      this.sendStatusChangeEmail(
+        enrollmentId,
+        previousStatus,
+        data.reason
+      ).catch(error => {
+        logger.error('상태 변경 이메일 발송 실패', {
           enrollmentId,
-          oldStatus: enrollment.status,
-          newStatus: data.status,
-          adminId,
+          error: error instanceof Error ? error.message : String(error),
         });
-
-        return updatedEnrollment as unknown as EnrollmentResponse;
       });
+
+      return updatedEnrollment;
     });
   }
 
@@ -640,6 +682,274 @@ export class EnrollmentService {
         enrollmentId: oldestWaitlist.id,
         mclassId,
       });
+
+      // 대기자 승인 이메일 발송
+      await this.sendWaitlistApprovalEmail(oldestWaitlist.id);
     }
+  }
+
+  // ==================== 이메일 알림 메서드들 ====================
+
+  /**
+   * 신청 완료 이메일 발송
+   */
+  private async sendEnrollmentConfirmationEmail(
+    enrollmentId: string
+  ): Promise<void> {
+    try {
+      const enrollment = await this.repository.findById(enrollmentId);
+      if (!enrollment) {
+        logger.warn(
+          `신청 완료 이메일 발송 실패: enrollment ${enrollmentId}를 찾을 수 없음`
+        );
+        return;
+      }
+
+      const [user, mclass] = await Promise.all([
+        this.userService.findById(enrollment.userId),
+        this.mclassRepository.findById(enrollment.mclassId),
+      ]);
+
+      if (!user || !mclass) {
+        logger.warn(
+          `신청 완료 이메일 발송 실패: user 또는 mclass를 찾을 수 없음`,
+          {
+            enrollmentId,
+            userId: enrollment.userId,
+            mclassId: enrollment.mclassId,
+          }
+        );
+        return;
+      }
+
+      // 이메일 아웃박스에 추가 (비동기 발송)
+      await this.emailOutboxWorker.addToOutbox({
+        to: user.email,
+        template: 'enrollment-status',
+        payload: {
+          enrollmentId: enrollment.id,
+          mclassTitle: mclass.title,
+          status: this.getStatusText(enrollment.status),
+          appliedAt: enrollment.appliedAt.toLocaleString('ko-KR'),
+          userName: user.name,
+        },
+        type: 'ENROLLMENT_APPLIED',
+      });
+
+      logger.info(`신청 완료 이메일 아웃박스에 추가됨: ${user.email}`, {
+        enrollmentId: enrollment.id,
+        mclassTitle: mclass.title,
+      });
+    } catch (error) {
+      logger.error(`신청 완료 이메일 발송 실패: ${enrollmentId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * 상태 변경 이메일 발송
+   */
+  private async sendStatusChangeEmail(
+    enrollmentId: string,
+    previousStatus: EnrollmentStatus,
+    reason?: string
+  ): Promise<void> {
+    try {
+      const enrollment = await this.repository.findById(enrollmentId);
+      if (!enrollment) {
+        logger.warn(
+          `상태 변경 이메일 발송 실패: enrollment ${enrollmentId}를 찾을 수 없음`
+        );
+        return;
+      }
+
+      const [user, mclass] = await Promise.all([
+        this.userService.findById(enrollment.userId),
+        this.mclassRepository.findById(enrollment.mclassId),
+      ]);
+
+      if (!user || !mclass) {
+        logger.warn(
+          `상태 변경 이메일 발송 실패: user 또는 mclass를 찾을 수 없음`,
+          {
+            enrollmentId,
+            userId: enrollment.userId,
+            mclassId: enrollment.mclassId,
+          }
+        );
+        return;
+      }
+
+      // 이메일 타입 결정
+      let emailType = 'ENROLLMENT_STATUS_CHANGE';
+      switch (enrollment.status) {
+        case 'APPROVED':
+          emailType = 'ENROLLMENT_APPROVED';
+          break;
+        case 'REJECTED':
+          emailType = 'ENROLLMENT_REJECTED';
+          break;
+        case 'WAITLISTED':
+          emailType = 'ENROLLMENT_WAITLISTED';
+          break;
+        case 'CANCELED':
+          emailType = 'ENROLLMENT_CANCELED';
+          break;
+      }
+
+      // 이메일 아웃박스에 추가 (비동기 발송)
+      await this.emailOutboxWorker.addToOutbox({
+        to: user.email,
+        template: 'enrollment-status-change',
+        payload: {
+          enrollmentId: enrollment.id,
+          mclassTitle: mclass.title,
+          previousStatus: this.getStatusText(previousStatus),
+          currentStatus: this.getStatusText(enrollment.status),
+          changedAt:
+            enrollment.decidedAt?.toLocaleString('ko-KR') ||
+            new Date().toLocaleString('ko-KR'),
+          reason,
+          userName: user.name,
+        },
+        type: emailType,
+      });
+
+      logger.info(`상태 변경 이메일 아웃박스에 추가됨: ${user.email}`, {
+        enrollmentId: enrollment.id,
+        previousStatus,
+        currentStatus: enrollment.status,
+      });
+    } catch (error) {
+      logger.error(`상태 변경 이메일 발송 실패: ${enrollmentId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * 대기자 승인 이메일 발송
+   */
+  private async sendWaitlistApprovalEmail(enrollmentId: string): Promise<void> {
+    try {
+      const enrollment = await this.repository.findById(enrollmentId);
+      if (!enrollment) {
+        logger.warn(
+          `대기자 승인 이메일 발송 실패: enrollment ${enrollmentId}를 찾을 수 없음`
+        );
+        return;
+      }
+
+      const [user, mclass] = await Promise.all([
+        this.userService.findById(enrollment.userId),
+        this.mclassRepository.findById(enrollment.mclassId),
+      ]);
+
+      if (!user || !mclass) {
+        logger.warn(
+          `대기자 승인 이메일 발송 실패: user 또는 mclass를 찾을 수 없음`,
+          {
+            enrollmentId,
+            userId: enrollment.userId,
+            mclassId: enrollment.mclassId,
+          }
+        );
+        return;
+      }
+
+      // 이메일 아웃박스에 추가 (비동기 발송)
+      await this.emailOutboxWorker.addToOutbox({
+        to: user.email,
+        template: 'waitlist-promoted',
+        payload: {
+          enrollmentId: enrollment.id,
+          mclassTitle: mclass.title,
+          approvedAt:
+            enrollment.decidedAt?.toLocaleString('ko-KR') ||
+            new Date().toLocaleString('ko-KR'),
+          userName: user.name,
+        },
+        type: 'WAITLIST_PROMOTED',
+      });
+
+      logger.info(`대기자 승인 이메일 아웃박스에 추가됨: ${user.email}`, {
+        enrollmentId: enrollment.id,
+        mclassTitle: mclass.title,
+      });
+    } catch (error) {
+      logger.error(`대기자 승인 이메일 발송 실패: ${enrollmentId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * 신청 취소 이메일 발송
+   */
+  private async sendCancellationEmail(enrollmentId: string): Promise<void> {
+    try {
+      const enrollment = await this.repository.findById(enrollmentId);
+      if (!enrollment) {
+        logger.warn(
+          `신청 취소 이메일 발송 실패: enrollment ${enrollmentId}를 찾을 수 없음`
+        );
+        return;
+      }
+
+      const [user, mclass] = await Promise.all([
+        this.userService.findById(enrollment.userId),
+        this.mclassRepository.findById(enrollment.mclassId),
+      ]);
+
+      if (!user || !mclass) {
+        logger.warn(
+          `신청 취소 이메일 발송 실패: user 또는 mclass를 찾을 수 없음`,
+          {
+            enrollmentId,
+            userId: enrollment.userId,
+            mclassId: enrollment.mclassId,
+          }
+        );
+        return;
+      }
+
+      // 이메일 아웃박스에 추가 (비동기 발송)
+      await this.emailOutboxWorker.addToOutbox({
+        to: user.email,
+        template: 'enrollment-cancelled',
+        payload: {
+          enrollmentId: enrollment.id,
+          mclassTitle: mclass.title,
+          cancelledAt: new Date().toLocaleString('ko-KR'),
+          userName: user.name,
+        },
+        type: 'ENROLLMENT_CANCELED',
+      });
+
+      logger.info(`신청 취소 이메일 아웃박스에 추가됨: ${user.email}`, {
+        enrollmentId: enrollment.id,
+        mclassTitle: mclass.title,
+      });
+    } catch (error) {
+      logger.error(`신청 취소 이메일 발송 실패: ${enrollmentId}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * 상태 텍스트 변환
+   */
+  private getStatusText(status: EnrollmentStatus): string {
+    const statusMap: Record<EnrollmentStatus, string> = {
+      APPLIED: '신청됨',
+      APPROVED: '승인됨',
+      REJECTED: '거절됨',
+      WAITLISTED: '대기자',
+      CANCELED: '취소됨',
+    };
+
+    return statusMap[status] || status;
   }
 }

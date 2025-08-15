@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { AdminController } from '../domains/admin/admin.controller.js';
 import { AdminService } from '../domains/admin/admin.service.js';
+import { ServiceContainer } from '../services/email/index.js';
 import { PrismaClient } from '@prisma/client';
 import {
   authenticateToken,
@@ -25,6 +26,13 @@ import {
   usersListResponseSchema,
 } from '../schemas/admin/index.js';
 
+// 이메일 테스트 스키마
+const emailTestSchema = z.object({
+  to: z.string().email('유효한 이메일 주소를 입력하세요'),
+  template: z.string().optional().default('enrollment-status'),
+});
+import logger from '../config/logger.config.js';
+
 /**
  * 관리자 라우트 팩토리 함수
  * 의존성 주입을 통해 테스트 가능하고 유연한 구조 제공
@@ -32,7 +40,8 @@ import {
 export const createAdminRoutes = (prisma: PrismaClient): Router => {
   const router = Router();
   const adminService = new AdminService(prisma);
-  const adminController = new AdminController(adminService);
+  const emailService = ServiceContainer.getEmailService(logger);
+  const adminController = new AdminController(adminService, emailService);
 
   // OpenAPI 경로 등록
   registry.registerPath({
@@ -235,6 +244,73 @@ export const createAdminRoutes = (prisma: PrismaClient): Router => {
     },
   });
 
+  registry.registerPath({
+    method: 'post',
+    path: '/api/admin/test-email',
+    tags: ['Admin'],
+    summary: '이메일 테스트 발송',
+    description:
+      '이메일 서비스가 정상적으로 작동하는지 테스트합니다. (관리자만 가능)',
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: emailTestSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: '이메일 테스트 발송 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema.extend({
+              data: z.object({
+                to: z.string(),
+                template: z.string(),
+                sentAt: z.string(),
+              }),
+            }),
+          },
+        },
+      },
+      400: {
+        description: '잘못된 요청',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      403: {
+        description: '권한 없음',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      500: {
+        description: '이메일 발송 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
   // 실제 라우트 정의
   router.get(
     '/users/:id/role',
@@ -269,6 +345,15 @@ export const createAdminRoutes = (prisma: PrismaClient): Router => {
     requireAdmin,
     async (req: Request, res: Response): Promise<void> =>
       adminController.getAdminCount(req as AuthenticatedRequest, res)
+  );
+
+  router.post(
+    '/test-email',
+    authenticateToken,
+    requireAdmin,
+    validateBody(emailTestSchema),
+    async (req: Request, res: Response): Promise<void> =>
+      adminController.testEmail(req as AuthenticatedRequest, res)
   );
 
   return router;

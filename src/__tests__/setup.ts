@@ -12,6 +12,13 @@ process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
 process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret-key-for-testing-only';
 process.env.REDIS_URL = 'redis://localhost:6379/1';
 
+// 테스트용 이메일 설정 (더미 SMTP 서버)
+process.env.EMAIL_HOST = 'localhost';
+process.env.EMAIL_PORT = '1025';
+process.env.EMAIL_USER = 'dummy';
+process.env.EMAIL_PASS = 'dummy';
+process.env.EMAIL_FROM = 'test@example.com';
+
 // 글로벌 테스트 타임아웃 설정
 jest.setTimeout(30000);
 
