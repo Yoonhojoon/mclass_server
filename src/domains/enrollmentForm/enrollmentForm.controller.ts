@@ -21,7 +21,8 @@ export class EnrollmentFormController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const { id: mclassId } = req.params;
+    const { id } = req.params;
+    const mclassId = id;
     logger.info(
       `[EnrollmentFormController] MClass별 지원서 양식 조회 요청: ${mclassId}`
     );
@@ -54,7 +55,8 @@ export class EnrollmentFormController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const { id: mclassId } = req.params;
+    const { id } = req.params;
+    const mclassId = id;
     const userId = req.user?.userId;
     logger.info(
       `[EnrollmentFormController] 지원서 양식 생성 요청: MClass ID ${mclassId}, 사용자 ID ${userId}`
@@ -107,7 +109,8 @@ export class EnrollmentFormController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const { id: mclassId } = req.params;
+    const { id } = req.params;
+    const mclassId = id;
     const userId = req.user?.userId;
     logger.info(
       `[EnrollmentFormController] 지원서 양식 수정 요청: MClass ID ${mclassId}, 사용자 ID ${userId}`
@@ -160,7 +163,8 @@ export class EnrollmentFormController {
     res: Response,
     next: NextFunction
   ): Promise<void> {
-    const { id: mclassId } = req.params;
+    const { id } = req.params;
+    const mclassId = id;
     const userId = req.user?.userId;
     logger.info(
       `[EnrollmentFormController] 지원서 양식 삭제 요청: MClass ID ${mclassId}, 사용자 ID ${userId}`

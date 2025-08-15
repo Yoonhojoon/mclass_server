@@ -129,9 +129,9 @@ describe('Term Response Schemas', () => {
         type: 'SERVICE',
         title: '서비스 이용약관',
         content: '서비스 이용에 관한 약관 내용입니다.',
-        is_required: true,
+        isRequired: true,
         version: '1.0.0',
-        created_at: '2025-01-15T10:00:00.000Z',
+        createdAt: '2025-01-15T10:00:00.000Z',
       };
 
       const result = termResponseSchema.safeParse(validTerm);
@@ -144,9 +144,9 @@ describe('Term Response Schemas', () => {
         type: 'INVALID_TYPE', // Invalid type
         title: '서비스 이용약관',
         content: '서비스 이용에 관한 약관 내용입니다.',
-        is_required: true,
+        isRequired: true,
         version: '1.0.0',
-        created_at: '2025-01-15T10:00:00.000Z',
+        createdAt: '2025-01-15T10:00:00.000Z',
       };
 
       const result = termResponseSchema.safeParse(invalidTerm);

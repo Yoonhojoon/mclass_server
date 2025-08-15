@@ -20,7 +20,17 @@ export class TermController {
   async getAllTerms(req: Request, res: Response): Promise<void> {
     try {
       const terms = await this.termService.getAllTerms();
-      const termDtos = terms.map(term => termResponseSchema.parse(term));
+      const termDtos = terms.map(term =>
+        termResponseSchema.parse({
+          id: term.id,
+          type: term.type,
+          title: term.title,
+          content: term.content,
+          isRequired: term.isRequired,
+          version: term.version,
+          createdAt: term.createdAt.toISOString(),
+        })
+      );
       logger.info('✅ 모든 약관 목록 응답 성공', { count: terms.length });
       return TermSuccess.termsRetrieved(termDtos, { count: terms.length }).send(
         res
@@ -39,7 +49,16 @@ export class TermController {
     try {
       const { id } = req.params;
       const term = await this.termService.getTermById(id);
-      const termDto = termResponseSchema.parse(term);
+      // Prisma 객체를 response 스키마에 맞게 변환
+      const termDto = termResponseSchema.parse({
+        id: term.id,
+        type: term.type,
+        title: term.title,
+        content: term.content,
+        isRequired: term.isRequired,
+        version: term.version,
+        createdAt: term.createdAt.toISOString(),
+      });
       logger.info('✅ 특정 약관 조회 성공', {
         termId: id,
         type: term.type,
@@ -76,7 +95,16 @@ export class TermController {
         version: createData.version,
       });
 
-      const termDto = termResponseSchema.parse(term);
+      // Prisma 객체를 response 스키마에 맞게 변환
+      const termDto = termResponseSchema.parse({
+        id: term.id,
+        type: term.type,
+        title: term.title,
+        content: term.content,
+        isRequired: term.isRequired,
+        version: term.version,
+        createdAt: term.createdAt.toISOString(),
+      });
       logger.info('✅ 약관 생성 성공', {
         termId: term.id,
         adminId,
@@ -114,7 +142,16 @@ export class TermController {
         version: updateData.version,
       });
 
-      const termDto = termResponseSchema.parse(term);
+      // Prisma 객체를 response 스키마에 맞게 변환
+      const termDto = termResponseSchema.parse({
+        id: term.id,
+        type: term.type,
+        title: term.title,
+        content: term.content,
+        isRequired: term.isRequired,
+        version: term.version,
+        createdAt: term.createdAt.toISOString(),
+      });
       logger.info('✅ 약관 수정 성공', {
         termId: id,
         adminId,
@@ -171,7 +208,13 @@ export class TermController {
         userId,
         agreeData.termId
       );
-      const agreementDto = userTermAgreementResponseSchema.parse(agreement);
+      // Prisma 객체를 response 스키마에 맞게 변환
+      const agreementDto = userTermAgreementResponseSchema.parse({
+        id: agreement.id,
+        userId: agreement.userId,
+        termId: agreement.termId,
+        agreedAt: agreement.agreedAt.toISOString(),
+      });
       logger.info('✅ 사용자 약관 동의 성공', {
         userId,
         termId: agreeData.termId,
@@ -200,7 +243,12 @@ export class TermController {
 
       const agreements = await this.termService.getUserAgreements(userId);
       const agreementDtos = agreements.map(agreement =>
-        userTermAgreementResponseSchema.parse(agreement)
+        userTermAgreementResponseSchema.parse({
+          id: agreement.id,
+          userId: agreement.userId,
+          termId: agreement.termId,
+          agreedAt: agreement.agreedAt.toISOString(),
+        })
       );
       logger.info('✅ 사용자 약관 동의 목록 응답 성공', {
         userId,
