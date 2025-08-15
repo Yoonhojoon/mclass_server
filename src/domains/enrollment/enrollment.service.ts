@@ -112,11 +112,8 @@ export class EnrollmentService {
           }
         }
 
-        // 2) 클래스 정보 조회 및 검증
-        const mclass = await tx.mClass.findUnique({
-          where: { id: mclassId },
-          include: { enrollmentForm: true },
-        });
+        // 2) 클래스 정보 조회 및 검증 (FOR UPDATE로 잠금)
+        const mclass = await this.repository.findMclassWithLock(mclassId);
 
         if (!mclass) {
           throw new EnrollmentError('존재하지 않는 클래스입니다.');
@@ -442,15 +439,22 @@ export class EnrollmentService {
             throw new EnrollmentError('존재하지 않는 신청입니다.');
           }
 
-          // 승인 시 정원 체크
+          // 승인 시 정원 체크 (클래스 정보 잠금)
           if (data.status === 'APPROVED') {
+            const mclass = await this.repository.findMclassBasicWithLock(
+              enrollment.mclassId
+            );
+            if (!mclass) {
+              throw new EnrollmentError('클래스 정보를 찾을 수 없습니다.');
+            }
+
             const approvedCount = await tx.enrollment.count({
               where: { mclassId: enrollment.mclassId, status: 'APPROVED' },
             });
 
             if (
               enrollment.status !== 'APPROVED' &&
-              approvedCount >= (enrollment.mclass.capacity || 0)
+              approvedCount >= (mclass.capacity || 0)
             ) {
               throw new EnrollmentError('정원이 초과되었습니다.');
             }
