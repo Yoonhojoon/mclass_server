@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AdminService } from './admin.service.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import logger from '../../config/logger.config.js';
+import { EmailService } from '../../services/email/email.service.js';
 // UpdateRoleDto 타입 정의
 type UpdateRoleDto = {
   role: 'USER' | 'ADMIN';
@@ -10,7 +11,10 @@ type UpdateRoleDto = {
 };
 
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly emailService?: EmailService
+  ) {}
 
   /**
    * 사용자 권한 조회
@@ -138,6 +142,72 @@ export class AdminController {
     } catch (error) {
       logger.error('관리자 수 조회 중 오류:', error);
       const validationError = ValidationError.internalServerError();
+      res.status(validationError.statusCode).json(validationError.toResponse());
+    }
+  }
+
+  /**
+   * 이메일 테스트 발송
+   */
+  async testEmail(req: Request, res: Response): Promise<void> {
+    try {
+      if (!this.emailService) {
+        const error = ValidationError.internalServerError(
+          '이메일 서비스가 초기화되지 않았습니다.'
+        );
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      const { to, template = 'enrollment-status' } = req.body;
+
+      if (!to) {
+        const error =
+          ValidationError.badRequest('수신자 이메일 주소가 필요합니다.');
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // 테스트 데이터
+      const testData = {
+        mclassTitle: '테스트 클래스',
+        userName: '테스트 사용자',
+        enrollmentDate: new Date().toLocaleDateString('ko-KR'),
+        reason: '테스트 이메일 발송',
+      };
+
+      logger.info('📧 이메일 테스트 발송 시작', {
+        to,
+        template,
+        testData,
+      });
+
+      await this.emailService.sendTemplateEmail({
+        to,
+        template,
+        data: testData,
+        subject: '[테스트] MClass 이메일 발송 테스트',
+      });
+
+      logger.info('✅ 이메일 테스트 발송 완료', { to });
+
+      res.json({
+        success: true,
+        message: '테스트 이메일이 성공적으로 발송되었습니다.',
+        data: {
+          to,
+          template,
+          sentAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      logger.error('이메일 테스트 발송 중 오류:', error);
+
+      const errorMessage =
+        error instanceof Error ? error.message : '알 수 없는 오류';
+      const validationError = ValidationError.internalServerError(
+        `이메일 발송 실패: ${errorMessage}`
+      );
       res.status(validationError.statusCode).json(validationError.toResponse());
     }
   }

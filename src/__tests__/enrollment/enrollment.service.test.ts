@@ -10,6 +10,8 @@ import {
   EnrollmentQuery,
   AdminEnrollmentQuery,
 } from '../../domains/enrollment/enrollment.schemas.js';
+import { EnrollmentEmailService } from '../../services/email/enrollment.email.service.js';
+import { EmailOutboxWorker } from '../../services/email/email-outbox.worker.js';
 
 // Repository 모킹
 const mockRepository = {
@@ -45,6 +47,18 @@ const mockUserService = {
   findById: jest.fn(),
 } as any;
 
+// Email Service 모킹
+const mockEnrollmentEmailService = {
+  sendEnrollmentConfirmation: jest.fn(),
+  sendStatusChangeNotification: jest.fn(),
+  sendWaitlistApproval: jest.fn(),
+  sendEnrollmentCancellation: jest.fn(),
+} as any;
+
+const mockEmailOutboxWorker = {
+  addToOutbox: jest.fn(),
+} as any;
+
 // Prisma 모킹 - 완전한 모킹으로 수정
 const mockPrisma = {
   $transaction: jest.fn(),
@@ -76,7 +90,9 @@ describe('EnrollmentService', () => {
       mockRepository,
       mockMClassRepository,
       mockEnrollmentFormService,
-      mockUserService
+      mockUserService,
+      mockEnrollmentEmailService,
+      mockEmailOutboxWorker
     );
   });
 
