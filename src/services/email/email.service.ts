@@ -5,7 +5,7 @@ import { emailTemplates } from './email.templates';
 export interface EmailOptions {
   to: string;
   template: string;
-  data: Record<string, string | number | boolean | undefined>;
+  data: Record<string, string | number | boolean | undefined | null>;
   subject?: string;
 }
 
@@ -121,7 +121,7 @@ export class EmailService {
 
   private async renderTemplate(
     template: string,
-    data: Record<string, string | number | boolean | undefined>
+    data: Record<string, string | number | boolean | undefined | null>
   ): Promise<string> {
     const templateHtml =
       emailTemplates[template as keyof typeof emailTemplates];
@@ -136,7 +136,7 @@ export class EmailService {
     // 변수 치환
     Object.entries(data).forEach(([key, value]) => {
       const regex = new RegExp(`\\[${key}\\]`, 'g');
-      html = html.replace(regex, String(value));
+      html = html.replace(regex, value != null ? String(value) : '');
     });
 
     // 사유가 있는 경우에만 표시
@@ -154,7 +154,7 @@ export class EmailService {
 
   private getDefaultSubject(
     template: string,
-    data: Record<string, string | number | boolean | undefined>
+    data: Record<string, string | number | boolean | undefined | null>
   ): string {
     const subjects: Record<string, string> = {
       'enrollment-status': `[${data.mclassTitle}] 신청이 완료되었습니다.`,
