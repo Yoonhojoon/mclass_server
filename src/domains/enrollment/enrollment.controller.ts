@@ -115,11 +115,14 @@ export class EnrollmentController {
         throw new EnrollmentError('로그인이 필요합니다.');
       }
 
-      await this.service.getMyEnrollment(enrollmentId, userId);
+      const enrollment = await this.service.getMyEnrollment(
+        enrollmentId,
+        userId
+      );
 
       logger.info('내 신청 상세 조회 성공', { userId, enrollmentId });
 
-      res.json(EnrollmentSuccess.enrollmentDetailsGetSuccess());
+      res.json(EnrollmentSuccess.enrollmentDetailsGetSuccess(enrollment));
     } catch (error) {
       logger.error('내 신청 상세 조회 실패', {
         error: error instanceof Error ? error.message : error,

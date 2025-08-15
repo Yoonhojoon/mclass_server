@@ -591,6 +591,8 @@ export const createEnrollmentRoutes = (prisma: PrismaClient): Router => {
   // 클래스 신청
   router.post(
     '/mclasses/:mclassId/enrollments',
+    authenticateToken,
+    requireAuth,
     validateParams(mclassIdParamSchema),
     validateBody(CreateEnrollmentSchema),
     enrollmentController.enrollToClass.bind(enrollmentController)
