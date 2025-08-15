@@ -1,9 +1,6 @@
 import { PrismaClient, EnrollmentStatus } from '@prisma/client';
 import { setTimeout } from 'timers/promises';
-import {
-  EnrollmentRepository,
-  CreateEnrollmentData,
-} from './enrollment.repository.js';
+import { EnrollmentRepository } from './enrollment.repository.js';
 import {
   CreateEnrollmentRequest,
   UpdateEnrollmentRequest,
@@ -15,7 +12,7 @@ import {
   EnrollmentStats,
 } from './enrollment.schemas.js';
 import { EnrollmentError } from '../../common/exception/enrollment/EnrollmentError.js';
-import { MClassService } from '../mclass/mclass.service.js';
+import { MClassRepository } from '../mclass/mclass.repository.js';
 import { EnrollmentFormService } from '../enrollmentForm/enrollmentForm.service.js';
 import { UserService } from '../user/user.service.js';
 import logger from '../../config/logger.config.js';
@@ -24,7 +21,7 @@ export class EnrollmentService {
   constructor(
     private prisma: PrismaClient,
     private repository: EnrollmentRepository,
-    private mclassService: MClassService,
+    private mclassRepository: MClassRepository,
     private enrollmentFormService: EnrollmentFormService,
     private userService: UserService
   ) {}
@@ -72,6 +69,15 @@ export class EnrollmentService {
 
   /**
    * 클래스 신청 (동시성 처리 포함)
+   *
+   * 신청 처리 흐름:
+   * 1. 멱등성 체크 (중복 신청 방지)
+   * 2. 클래스 정보 조회 및 검증
+   * 3. 기존 신청 확인 (중복 신청 방지)
+   * 4. 모집 기간 및 정원 체크
+   * 5. 답변 검증
+   * 6. 상태 결정 (APPLIED/APPROVED/WAITLISTED)
+   * 7. 신청 생성
    */
   async enrollToClass(
     mclassId: string,
@@ -80,7 +86,7 @@ export class EnrollmentService {
   ): Promise<EnrollmentResponse> {
     return await this.withRetry(async () => {
       return await this.prisma.$transaction(async tx => {
-        // 1) 멱등성 체크
+        // 1) 멱등성 체크 (중복 신청 방지)
         if (data.idempotencyKey) {
           const existing = await tx.enrollment.findFirst({
             where: { idempotencyKey: data.idempotencyKey },
@@ -127,21 +133,26 @@ export class EnrollmentService {
         }
 
         // 6) 답변 검증 (기본 검증만, 상세 검증은 별도 메서드로)
-        this.validateAnswers(data.answers, mclass.enrollmentForm.questions);
+        this.validateAnswers(
+          data.answers,
+          mclass.enrollmentForm.questions as any
+        );
 
         // 7) 현재 승인 수 집계
         const approvedCount = await tx.enrollment.count({
           where: { mclassId, status: 'APPROVED' },
         });
 
-        // 8) 상태 결정
+        // 8) 상태 결정 (선착순 또는 대기열)
         let status: EnrollmentStatus = 'APPLIED';
         if (
           mclass.selectionType === 'FIRST_COME' &&
           approvedCount < (mclass.capacity || 0)
         ) {
+          // 선착순: 정원 내면 즉시 승인
           status = 'APPROVED';
         } else if (mclass.allowWaitlist && mclass.waitlistCapacity) {
+          // 대기열: 대기열 정원 내면 대기 상태
           const waitlistCount = await tx.enrollment.count({
             where: { mclassId, status: 'WAITLISTED' },
           });
@@ -150,17 +161,16 @@ export class EnrollmentService {
           }
         }
 
-        // 9) 신청 생성
-        const enrollmentData: CreateEnrollmentData = {
-          userId,
-          mclassId,
-          enrollmentFormId: mclass.enrollmentForm.id,
-          answers: data.answers,
-          idempotencyKey: data.idempotencyKey,
-        };
-
+        // 9) 신청 생성 (결정된 상태로 저장)
         const enrollment = await tx.enrollment.create({
-          data: enrollmentData,
+          data: {
+            userId,
+            mclassId,
+            enrollmentFormId: mclass.enrollmentForm.id,
+            answers: data.answers,
+            idempotencyKey: data.idempotencyKey,
+            status, // 결정된 상태를 명시적으로 저장
+          },
           include: {
             mclass: true,
             enrollmentForm: true,
@@ -246,6 +256,9 @@ export class EnrollmentService {
 
   /**
    * 신청 취소
+   *
+   * 취소 가능한 상태: APPLIED, WAITLISTED, APPROVED
+   * 대기자 승격: 승인 상태에서 취소된 경우에만 실행 (APPROVED → CANCELED)
    */
   async cancelEnrollment(
     enrollmentId: string,
@@ -267,12 +280,18 @@ export class EnrollmentService {
           throw new EnrollmentError('접근 권한이 없습니다.');
         }
 
-        if (
-          enrollment.status !== 'APPLIED' &&
-          enrollment.status !== 'WAITLISTED'
-        ) {
+        // 취소 가능한 상태인지 확인 (승인 상태도 취소 가능)
+        const cancellableStatuses = [
+          'APPLIED',
+          'WAITLISTED',
+          'APPROVED',
+        ] as const;
+        if (!cancellableStatuses.includes(enrollment.status as any)) {
           throw new EnrollmentError('취소할 수 없는 상태입니다.');
         }
+
+        // 취소 전 상태 저장 (대기자 승격 로직에서 사용)
+        const previousStatus = enrollment.status;
 
         // 신청 취소
         const updatedEnrollment = await tx.enrollment.update({
@@ -291,11 +310,9 @@ export class EnrollmentService {
           },
         });
 
-        // 대기자 승격 처리 (취소된 신청이 승인된 상태였다면)
-        if (
-          enrollment.status === 'APPROVED' &&
-          enrollment.mclass.allowWaitlist
-        ) {
+        // 대기자 승격 처리: 승인 상태에서 취소된 경우에만 실행
+        // (승인 건이 줄어드는 전이: APPROVED → CANCELED)
+        if (previousStatus === 'APPROVED' && enrollment.mclass.allowWaitlist) {
           await this.promoteWaitlist(enrollment.mclassId);
         }
 
@@ -332,8 +349,13 @@ export class EnrollmentService {
       throw new EnrollmentError('수정할 수 없는 상태입니다.');
     }
 
-    // 답변 검증
-    this.validateAnswers(data.answers, enrollment.enrollmentForm.questions);
+    // 답변 검증 - enrollmentForm 정보를 별도로 조회
+    const enrollmentForm = await this.enrollmentFormService.findByMClassId(
+      enrollment.mclassId
+    );
+    if (enrollmentForm?.questions) {
+      this.validateAnswers(data.answers, enrollmentForm.questions as any);
+    }
 
     // 낙관적 락으로 업데이트
     const updatedEnrollment = await this.repository.updateWithVersion(
@@ -349,6 +371,10 @@ export class EnrollmentService {
 
   /**
    * 관리자: 신청 상태 변경
+   *
+   * 대기자 승격: 승인 건이 줄어드는 전이에서만 실행
+   * (예: APPROVED → REJECTED, APPROVED → CANCELED)
+   * 승인할 때(WAITLISTED → APPROVED)는 승격하지 않음
    */
   async updateEnrollmentStatus(
     enrollmentId: string,
@@ -397,8 +423,14 @@ export class EnrollmentService {
           },
         });
 
-        // 대기자 승격 처리
-        if (data.status === 'APPROVED' && enrollment.status === 'WAITLISTED') {
+        // 대기자 승격 처리: 승인 건이 줄어드는 전이에서만 실행
+        // (예: APPROVED → REJECTED, APPROVED → CANCELED)
+        // 승인할 때(WAITLISTED → APPROVED)는 승격하지 않음
+        if (
+          enrollment.status === 'APPROVED' &&
+          (data.status === 'REJECTED' || data.status === 'CANCELED') &&
+          enrollment.mclass.allowWaitlist
+        ) {
           await this.promoteWaitlist(enrollment.mclassId);
         }
 
@@ -471,7 +503,7 @@ export class EnrollmentService {
    */
   async getEnrollmentStats(mclassId: string): Promise<EnrollmentStats> {
     const stats = await this.repository.getEnrollmentStats(mclassId);
-    const mclass = await this.mclassService.findById(mclassId);
+    const mclass = await this.mclassRepository.findById(mclassId);
 
     return {
       ...stats,

@@ -10,7 +10,7 @@ export interface CreateEnrollmentData {
   userId: string;
   mclassId: string;
   enrollmentFormId: string;
-  answers: Prisma.JsonValue;
+  answers: Prisma.InputJsonValue;
   idempotencyKey?: string;
 }
 
@@ -42,15 +42,17 @@ export class EnrollmentRepository {
 
   async findByUserId(
     userId: string,
-    options?: QueryOptions
+    options: QueryOptions = {}
   ): Promise<Enrollment[]> {
+    const { where: optWhere, ...rest } = options;
+
     return this.prisma.enrollment.findMany({
-      where: { userId },
+      where: { ...optWhere, userId }, // userId 강제 포함
       include: {
         mclass: true,
         enrollmentForm: true,
       },
-      ...options,
+      ...rest,
     });
   }
 

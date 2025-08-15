@@ -9,7 +9,7 @@ import {
   AdminEnrollmentQuerySchema,
 } from './enrollment.schemas.js';
 import { EnrollmentError } from '../../common/exception/enrollment/EnrollmentError.js';
-import { BaseSuccess } from '../../common/exception/BaseSuccess.js';
+import { EnrollmentSuccess } from '../../common/exception/enrollment/EnrollmentSuccess.js';
 import logger from '../../config/logger.config.js';
 
 export class EnrollmentController {
@@ -22,7 +22,7 @@ export class EnrollmentController {
   async enrollToClass(req: Request, res: Response): Promise<void> {
     try {
       const mclassId = req.params.mclassId;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         throw new EnrollmentError('로그인이 필요합니다.');
@@ -51,7 +51,13 @@ export class EnrollmentController {
 
       res
         .status(201)
-        .json(new BaseSuccess('신청이 완료되었습니다.', enrollment));
+        .json(
+          EnrollmentSuccess.enrollmentSuccess(
+            '클래스',
+            enrollment.id,
+            enrollment
+          )
+        );
     } catch (error) {
       logger.error('클래스 신청 실패', {
         error: error instanceof Error ? error.message : error,
@@ -66,7 +72,7 @@ export class EnrollmentController {
    */
   async getMyEnrollments(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         throw new EnrollmentError('로그인이 필요합니다.');
@@ -83,10 +89,9 @@ export class EnrollmentController {
       });
 
       res.json(
-        new BaseSuccess(
-          '신청 목록을 조회했습니다.',
-          result.enrollments,
-          result.pagination
+        EnrollmentSuccess.enrollmentListGetSuccess(
+          result.enrollments.length,
+          result.enrollments
         )
       );
     } catch (error) {
@@ -104,20 +109,17 @@ export class EnrollmentController {
   async getMyEnrollment(req: Request, res: Response): Promise<void> {
     try {
       const enrollmentId = req.params.enrollmentId;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         throw new EnrollmentError('로그인이 필요합니다.');
       }
 
-      const enrollment = await this.service.getMyEnrollment(
-        enrollmentId,
-        userId
-      );
+      await this.service.getMyEnrollment(enrollmentId, userId);
 
       logger.info('내 신청 상세 조회 성공', { userId, enrollmentId });
 
-      res.json(new BaseSuccess('신청 상세 정보를 조회했습니다.', enrollment));
+      res.json(EnrollmentSuccess.enrollmentDetailsGetSuccess());
     } catch (error) {
       logger.error('내 신청 상세 조회 실패', {
         error: error instanceof Error ? error.message : error,
@@ -133,7 +135,7 @@ export class EnrollmentController {
   async cancelEnrollment(req: Request, res: Response): Promise<void> {
     try {
       const enrollmentId = req.params.enrollmentId;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         throw new EnrollmentError('로그인이 필요합니다.');
@@ -142,11 +144,7 @@ export class EnrollmentController {
       // 요청 데이터 검증
       const validatedData = CancelEnrollmentSchema.parse(req.body);
 
-      const enrollment = await this.service.cancelEnrollment(
-        enrollmentId,
-        userId,
-        validatedData
-      );
+      await this.service.cancelEnrollment(enrollmentId, userId, validatedData);
 
       logger.info('신청 취소 성공', {
         userId,
@@ -154,7 +152,7 @@ export class EnrollmentController {
         reason: validatedData.reason,
       });
 
-      res.json(new BaseSuccess('신청이 취소되었습니다.', enrollment));
+      res.json(EnrollmentSuccess.enrollmentCancellationSuccess('클래스'));
     } catch (error) {
       logger.error('신청 취소 실패', {
         error: error instanceof Error ? error.message : error,
@@ -170,7 +168,7 @@ export class EnrollmentController {
   async updateEnrollment(req: Request, res: Response): Promise<void> {
     try {
       const enrollmentId = req.params.enrollmentId;
-      const userId = req.user?.id;
+      const userId = req.user?.userId;
 
       if (!userId) {
         throw new EnrollmentError('로그인이 필요합니다.');
@@ -187,7 +185,7 @@ export class EnrollmentController {
 
       logger.info('신청 수정 성공', { userId, enrollmentId });
 
-      res.json(new BaseSuccess('신청이 수정되었습니다.', enrollment));
+      res.json(EnrollmentSuccess.enrollmentUpdateSuccess(enrollment));
     } catch (error) {
       logger.error('신청 수정 실패', {
         error: error instanceof Error ? error.message : error,
@@ -203,7 +201,7 @@ export class EnrollmentController {
   async getEnrollmentsByMclass(req: Request, res: Response): Promise<void> {
     try {
       const mclassId = req.params.mclassId;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       if (!adminId || !req.user?.isAdmin) {
         throw new EnrollmentError('관리자 권한이 필요합니다.');
@@ -221,10 +219,9 @@ export class EnrollmentController {
       });
 
       res.json(
-        new BaseSuccess(
-          '신청 목록을 조회했습니다.',
-          result.enrollments,
-          result.pagination
+        EnrollmentSuccess.enrollmentListGetSuccess(
+          result.enrollments.length,
+          result.enrollments
         )
       );
     } catch (error) {
@@ -242,7 +239,7 @@ export class EnrollmentController {
   async updateEnrollmentStatus(req: Request, res: Response): Promise<void> {
     try {
       const enrollmentId = req.params.enrollmentId;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       if (!adminId || !req.user?.isAdmin) {
         throw new EnrollmentError('관리자 권한이 필요합니다.');
@@ -251,7 +248,7 @@ export class EnrollmentController {
       // 요청 데이터 검증
       const validatedData = UpdateEnrollmentStatusSchema.parse(req.body);
 
-      const enrollment = await this.service.updateEnrollmentStatus(
+      await this.service.updateEnrollmentStatus(
         enrollmentId,
         validatedData,
         adminId
@@ -263,7 +260,9 @@ export class EnrollmentController {
         newStatus: validatedData.status,
       });
 
-      res.json(new BaseSuccess('신청 상태가 변경되었습니다.', enrollment));
+      res.json(
+        EnrollmentSuccess.enrollmentStatusUpdateSuccess(validatedData.status)
+      );
     } catch (error) {
       logger.error('관리자 신청 상태 변경 실패', {
         error: error instanceof Error ? error.message : error,
@@ -279,7 +278,7 @@ export class EnrollmentController {
   async getEnrollmentStats(req: Request, res: Response): Promise<void> {
     try {
       const mclassId = req.params.mclassId;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       if (!adminId || !req.user?.isAdmin) {
         throw new EnrollmentError('관리자 권한이 필요합니다.');
@@ -289,7 +288,13 @@ export class EnrollmentController {
 
       logger.info('관리자 신청 통계 조회 성공', { adminId, mclassId });
 
-      res.json(new BaseSuccess('신청 통계를 조회했습니다.', stats));
+      res.json(
+        EnrollmentSuccess.enrollmentStatsGetSuccess(
+          stats.totalEnrollments,
+          stats.approved,
+          stats
+        )
+      );
     } catch (error) {
       logger.error('관리자 신청 통계 조회 실패', {
         error: error instanceof Error ? error.message : error,
@@ -305,7 +310,7 @@ export class EnrollmentController {
   async getEnrollmentDetail(req: Request, res: Response): Promise<void> {
     try {
       const enrollmentId = req.params.enrollmentId;
-      const adminId = req.user?.id;
+      const adminId = req.user?.userId;
 
       if (!adminId || !req.user?.isAdmin) {
         throw new EnrollmentError('관리자 권한이 필요합니다.');
@@ -319,7 +324,7 @@ export class EnrollmentController {
 
       logger.info('관리자 신청 상세 조회 성공', { adminId, enrollmentId });
 
-      res.json(new BaseSuccess('신청 상세 정보를 조회했습니다.', enrollment));
+      res.json(EnrollmentSuccess.enrollmentDetailsGetSuccess(enrollment));
     } catch (error) {
       logger.error('관리자 신청 상세 조회 실패', {
         error: error instanceof Error ? error.message : error,
