@@ -1,10 +1,10 @@
-export { EmailService } from './email.service';
-export { EmailOutboxWorker } from './email-outbox.worker';
-export { EnrollmentEmailService } from './enrollment.email.service';
-export { emailTemplates } from './email.templates';
+export { EmailService } from './email.service.js';
+export { EmailOutboxWorker } from './email-outbox.worker.js';
+export { EnrollmentEmailService } from './enrollment.email.service.js';
+export { emailTemplates } from './email.templates.js';
 
 import { Logger } from 'winston';
-import { EmailService } from './email.service';
+import { EmailService } from './email.service.js';
 
 /**
  * 서비스 컨테이너 - 싱글톤 인스턴스들을 관리
@@ -35,4 +35,4 @@ class ServiceContainer {
 
 export { ServiceContainer };
 
-export type { EmailOptions } from './email.service';
+export type { EmailOptions } from './email.service.js';
