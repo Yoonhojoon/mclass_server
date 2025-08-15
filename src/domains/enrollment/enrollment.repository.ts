@@ -263,12 +263,15 @@ export class EnrollmentRepository {
   /**
    * 클래스 정보만 잠그고 조회 (상태 변경용)
    */
-  async findMclassBasicWithLock(mclassId: string): Promise<{
+  async findMclassBasicWithLock(
+    mclassId: string,
+    client: PrismaClient | Prisma.TransactionClient = this.prisma
+  ): Promise<{
     id: string;
     capacity: number | null;
     allowWaitlist: boolean;
   } | null> {
-    const result = await this.prisma.$queryRaw<
+    const result = await client.$queryRaw<
       Array<{
         id: string;
         capacity: number | null;
@@ -276,11 +279,10 @@ export class EnrollmentRepository {
       }>
     >`
       SELECT id, capacity, allow_waitlist
-      FROM mclasses
-      WHERE id = ${mclassId}
-      FOR UPDATE
+      FROM mclasses m
+      WHERE m.id = ${mclassId}
+      FOR UPDATE OF m
     `;
-
     if (result.length === 0) {
       return null;
     }
