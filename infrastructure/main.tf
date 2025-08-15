@@ -418,6 +418,22 @@ resource "aws_ecs_task_definition" "main" {
         {
           name      = "METRICS_TOKEN"
           valueFrom = aws_ssm_parameter.metrics_token.arn
+        },
+        {
+          name      = "EMAIL_HOST"
+          valueFrom = aws_ssm_parameter.email_host.arn
+        },
+        {
+          name      = "EMAIL_USER"
+          valueFrom = aws_ssm_parameter.email_user.arn
+        },
+        {
+          name      = "EMAIL_PASS"
+          valueFrom = aws_ssm_parameter.email_pass.arn
+        },
+        {
+          name      = "EMAIL_FROM"
+          valueFrom = aws_ssm_parameter.email_from.arn
         }
       ]
       logConfiguration = {
@@ -884,6 +900,51 @@ resource "aws_ssm_parameter" "naver_client_secret" {
 
   tags = {
     Name = "mclass-naver-client-secret"
+  }
+}
+
+# 이메일 관련 SSM 파라미터들 추가
+resource "aws_ssm_parameter" "email_host" {
+  name      = "/mclass/email_host"
+  type      = "SecureString"
+  value     = var.email_host
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-host"
+  }
+}
+
+resource "aws_ssm_parameter" "email_user" {
+  name      = "/mclass/email_user"
+  type      = "SecureString"
+  value     = var.email_user
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-user"
+  }
+}
+
+resource "aws_ssm_parameter" "email_pass" {
+  name      = "/mclass/email_pass"
+  type      = "SecureString"
+  value     = var.email_pass
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-pass"
+  }
+}
+
+resource "aws_ssm_parameter" "email_from" {
+  name      = "/mclass/email_from"
+  type      = "SecureString"
+  value     = var.email_from
+  overwrite = true
+
+  tags = {
+    Name = "mclass-email-from"
   }
 }
 

@@ -1,6 +1,6 @@
 import { createTransport, Transporter } from 'nodemailer';
 import { Logger } from 'winston';
-import { emailTemplates } from './email.templates';
+import { emailTemplates } from './email.templates.js';
 
 export interface EmailOptions {
   to: string;

@@ -1,6 +1,6 @@
 import { Logger } from 'winston';
-import { prisma } from '../../config/prisma.config';
-import { EmailService } from './email.service';
+import { prisma } from '../../config/prisma.config.js';
+import { EmailService } from './email.service.js';
 import { EmailOutbox } from '@prisma/client';
 
 export class EmailOutboxWorker {
