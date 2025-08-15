@@ -319,6 +319,7 @@ resource "aws_ecs_service" "main" {
   task_definition = aws_ecs_task_definition.main.arn
   desired_count   = 2
   launch_type     = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
@@ -484,11 +485,11 @@ resource "aws_ecs_task_definition" "prometheus" {
         }
       ]
       essential = true
-      command = [
-        "--config.file=/etc/prometheus/prometheus.yml",
-        "--storage.tsdb.path=/prometheus",
-        "--web.console.libraries=/etc/prometheus/console_libraries",
-        "--web.console.templates=/etc/prometheus/consoles"
+      # 컨테이너 시작 시 설정 파일 생성 후 Prometheus 실행
+      entryPoint = [
+        "/bin/sh",
+        "-c",
+        "cat > /etc/prometheus/prometheus.yml << 'EOF'\nglobal:\n  scrape_interval: 15s\n  evaluation_interval: 15s\n\nscrape_configs:\n  - job_name: 'mclass-server'\n    static_configs:\n      - targets:\n          - 'mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com:80'\n    scheme: http\n    metrics_path: /metrics\n    scrape_interval: 5s\n\n    relabel_configs:\n      - source_labels: [__address__]\n        target_label: instance\n        replacement: mclass-server-alb\n\n  - job_name: 'prometheus'\n    static_configs:\n      - targets: ['localhost:9090']\nEOF\n\nexec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --web.console.libraries=/etc/prometheus/console_libraries --web.console.templates=/etc/prometheus/consoles"
       ]
       logConfiguration = {
         logDriver = "awslogs"
@@ -509,6 +510,7 @@ resource "aws_ecs_service" "prometheus" {
   task_definition = aws_ecs_task_definition.prometheus.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
@@ -592,6 +594,7 @@ resource "aws_ecs_service" "grafana" {
   task_definition = aws_ecs_task_definition.grafana.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  enable_execute_command = true
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
@@ -674,58 +677,7 @@ output "prometheus_security_group_id" {
   value = aws_security_group.prometheus.id
 }
 
-# EFS 출력 제거 (EFS 사용하지 않음)
 
-# output "prometheus_workspace_id" {
-#   value = aws_prometheus_workspace.main.id
-# }
-
-# output "prometheus_endpoint" {
-#   value = aws_prometheus_workspace.main.prometheus_endpoint
-# }
-
-# output "grafana_workspace_url" {
-#   value = aws_grafana_workspace.main.endpoint
-# }
-
-# AWS Managed Prometheus 워크스페이스 (비용 발생 - 주석 처리)
-# resource "aws_prometheus_workspace" "main" {
-#   alias = "mclass-prometheus"
-
-#   tags = {
-#     Name = "mclass-prometheus-workspace"
-#   }
-# }
-
-# AWS Managed Grafana 워크스페이스 (비용 발생 - 주석 처리)
-# resource "aws_grafana_workspace" "main" {
-#   account_access_type      = "CURRENT_ACCOUNT"
-#   authentication_providers = ["AWS_SSO"]
-#   permission_type         = "SERVICE_MANAGED"
-#   role_arn                = aws_iam_role.grafana_role.arn
-
-#   tags = {
-#     Name = "mclass-grafana-workspace"
-#   }
-# }
-
-# Grafana IAM Role (비용 발생 - 주석 처리)
-# resource "aws_iam_role" "grafana_role" {
-#   name = "grafana-role"
-
-#   assume_role_policy = jsonencode({
-#     Version = "2012-10-17"
-#     Statement = [
-#       {
-#         Action = "sts:AssumeRole"
-#         Effect = "Allow"
-#         Principal = {
-#           Service = "grafana.amazonaws.com"
-#         }
-#       }
-#     ]
-#   })
-# }
 
 # Parameter Store for Environment Variables
 resource "aws_ssm_parameter" "database_url" {
@@ -933,6 +885,28 @@ resource "aws_iam_role_policy" "ecs_task_parameter_store" {
           "ssm:GetParameter"
         ]
         Resource = "arn:aws:ssm:ap-northeast-2:664418970959:parameter/mclass/*"
+      }
+    ]
+  })
+}
+
+# ECS Task Role Policy for SSM Session Manager (ECS Execute Command)
+resource "aws_iam_role_policy" "ecs_task_ssm_session" {
+  name = "ecs-task-ssm-session"
+  role = aws_iam_role.ecs_task_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ]
+        Resource = "*"
       }
     ]
   })

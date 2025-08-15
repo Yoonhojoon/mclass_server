@@ -179,3 +179,8 @@ jobs:
           echo "🛡️ ALB 리스너 규칙: VPC 내부 IP 제한 적용됨"
           echo "🔒 HTTP: 포트 80으로 간단한 구성"
           echo "✅ 간소화된 모니터링 구성 완료!"
+          echo ""
+          echo "🔧 ECS 접속 명령어:"
+          echo "Prometheus 접속: aws ecs execute-command --cluster mclass-cluster --task [TASK_ID] --container prometheus --interactive --command \"/bin/sh\" --region ap-northeast-2"
+          echo "Grafana 접속: aws ecs execute-command --cluster mclass-cluster --task [TASK_ID] --container grafana --interactive --command \"/bin/sh\" --region ap-northeast-2"
+          echo "앱 접속: aws ecs execute-command --cluster mclass-cluster --task [TASK_ID] --container mclass-server --interactive --command \"/bin/sh\" --region ap-northeast-2"
