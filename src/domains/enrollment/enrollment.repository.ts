@@ -181,7 +181,10 @@ export class EnrollmentRepository {
   /**
    * 클래스 정보를 FOR UPDATE로 잠그고 조회
    */
-  async findMclassWithLock(mclassId: string): Promise<{
+  async findMclassWithLock(
+    mclassId: string,
+    client: PrismaClient | Prisma.TransactionClient = this.prisma
+  ): Promise<{
     id: string;
     title: string;
     capacity: number | null;
@@ -197,7 +200,7 @@ export class EnrollmentRepository {
       questions: unknown;
     } | null;
   } | null> {
-    const result = await this.prisma.$queryRaw<
+    const result = await client.$queryRaw<
       Array<{
         id: string;
         title: string;
