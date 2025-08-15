@@ -314,11 +314,11 @@ resource "aws_lb_listener_rule" "allow_metrics_internal" {
 
 # ECS Service
 resource "aws_ecs_service" "main" {
-  name            = "mclass-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.main.arn
-  desired_count   = 2
-  launch_type     = "FARGATE"
+  name                   = "mclass-service"
+  cluster                = aws_ecs_cluster.main.id
+  task_definition        = aws_ecs_task_definition.main.arn
+  desired_count          = 2
+  launch_type            = "FARGATE"
   enable_execute_command = true
 
   network_configuration {
@@ -505,11 +505,11 @@ resource "aws_ecs_task_definition" "prometheus" {
 
 # Prometheus ECS Service
 resource "aws_ecs_service" "prometheus" {
-  name            = "mclass-prometheus-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.prometheus.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                   = "mclass-prometheus-service"
+  cluster                = aws_ecs_cluster.main.id
+  task_definition        = aws_ecs_task_definition.prometheus.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
   enable_execute_command = true
 
   network_configuration {
@@ -589,11 +589,11 @@ resource "aws_ecs_task_definition" "grafana" {
 
 # Grafana ECS Service
 resource "aws_ecs_service" "grafana" {
-  name            = "mclass-grafana-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.grafana.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+  name                   = "mclass-grafana-service"
+  cluster                = aws_ecs_cluster.main.id
+  task_definition        = aws_ecs_task_definition.grafana.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
   enable_execute_command = true
 
   network_configuration {
