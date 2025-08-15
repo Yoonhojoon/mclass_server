@@ -494,17 +494,16 @@ resource "aws_ecs_task_definition" "prometheus" {
         {
           name  = "ALB_DNS_NAME"
           value = aws_lb.main.dns_name
+        },
+        {
+          name  = "METRICS_TOKEN"
+          value = var.metrics_token
         }
       ]
       mountPoints = [
         {
           sourceVolume  = "prometheus-config"
           containerPath = "/etc/prometheus"
-          readOnly      = true
-        },
-        {
-          sourceVolume  = "metrics-token"
-          containerPath = "/etc/prometheus/secrets"
           readOnly      = true
         }
       ]
@@ -524,14 +523,6 @@ resource "aws_ecs_task_definition" "prometheus" {
     efs_volume_configuration {
       file_system_id = aws_efs_file_system.prometheus_config.id
       root_directory = "/"
-    }
-  }
-
-  volume {
-    name = "metrics-token"
-    efs_volume_configuration {
-      file_system_id = aws_efs_file_system.prometheus_config.id
-      root_directory = "/secrets"
     }
   }
 }
@@ -671,7 +662,7 @@ resource "aws_cloudwatch_log_group" "grafana" {
   retention_in_days = 7
 }
 
-# EFS File System for Prometheus Configuration
+# EFS File System for Prometheus Configuration (간소화된 구성)
 resource "aws_efs_file_system" "prometheus_config" {
   creation_token = "mclass-prometheus-config"
   encrypted      = true

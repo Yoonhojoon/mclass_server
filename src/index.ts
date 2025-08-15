@@ -17,7 +17,6 @@ import healthRoutes from './routes/health.routes.js';
 import {
   prometheusMiddleware,
   metricsEndpoint,
-  requireMetricsToken,
 } from './middleware/monitoring.js';
 import { ErrorHandler } from './common/exception/ErrorHandler.js';
 import { prisma } from './config/prisma.config.js';
@@ -121,8 +120,8 @@ app.get('/api-docs.json', (req: Request, res: Response) => {
   res.json(openApiSpec);
 });
 
-// Prometheus 메트릭 엔드포인트 (토큰 보호)
-app.get('/metrics', requireMetricsToken, metricsEndpoint);
+// Prometheus 메트릭 엔드포인트 (VPC 내부 보안에만 의존)
+app.get('/metrics', metricsEndpoint);
 
 // 기본 라우트
 app.get('/', (req: Request, res: Response) => {
