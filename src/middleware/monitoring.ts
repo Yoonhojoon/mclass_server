@@ -95,7 +95,8 @@ export const requireMetricsToken = (
 
   if (!METRICS_TOKEN) {
     logger.error('METRICS_TOKEN 환경변수가 설정되지 않았습니다.');
-    return res.status(500).send('Internal Server Error');
+    res.status(500).send('Internal Server Error');
+    return;
   }
 
   if (!token || token !== METRICS_TOKEN) {
@@ -104,7 +105,8 @@ export const requireMetricsToken = (
       userAgent: req.get('User-Agent'),
       path: req.path,
     });
-    return res.status(401).send('Unauthorized');
+    res.status(401).send('Unauthorized');
+    return;
   }
 
   logger.debug('유효한 metrics 토큰으로 접근', {
@@ -112,7 +114,7 @@ export const requireMetricsToken = (
     path: req.path,
   });
 
-  return next();
+  next();
 };
 
 // 메트릭 엔드포인트
