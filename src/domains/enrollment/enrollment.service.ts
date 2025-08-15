@@ -1,4 +1,4 @@
-import { PrismaClient, EnrollmentStatus } from '@prisma/client';
+import { PrismaClient, EnrollmentStatus, Prisma } from '@prisma/client';
 import { setTimeout } from 'timers/promises';
 import { EnrollmentRepository } from './enrollment.repository.js';
 import {
@@ -41,16 +41,25 @@ export class EnrollmentService {
       } catch (error: unknown) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
-        // Prisma의 직렬화 충돌이나 데드락 에러인 경우에만 재시도
+        const err = (error ?? {}) as {
+          code?: string;
+          meta?: { code?: string };
+          message?: string;
+        };
+        // Postgres SQLSTATE: 40001 = serialization_failure, 40P01 = deadlock_detected
         if (
-          error &&
-          typeof error === 'object' &&
-          'code' in error &&
-          (error.code === 'P2034' || error.code === 'P2035')
+          err.code === 'P2034' ||
+          err.code === 'P2035' ||
+          err.meta?.code === '40001' ||
+          err.meta?.code === '40P01'
         ) {
           logger.warn(
             `동시성 충돌 발생, 재시도 중... (${attempt}/${maxRetries})`,
-            { error: lastError.message }
+            {
+              error: lastError.message,
+              prismaCode: err.code,
+              dbCode: err.meta?.code,
+            }
           );
 
           if (attempt < maxRetries) {
@@ -95,7 +104,7 @@ export class EnrollmentService {
             logger.info('멱등성 키로 인한 중복 요청 감지', {
               idempotencyKey: data.idempotencyKey,
             });
-            return existing as EnrollmentResponse;
+            return existing as unknown as EnrollmentResponse;
           }
         }
 
@@ -135,7 +144,7 @@ export class EnrollmentService {
         // 6) 답변 검증 (기본 검증만, 상세 검증은 별도 메서드로)
         this.validateAnswers(
           data.answers,
-          mclass.enrollmentForm.questions as any
+          mclass.enrollmentForm.questions as unknown as Record<string, unknown>
         );
 
         // 7) 현재 승인 수 집계
@@ -185,7 +194,7 @@ export class EnrollmentService {
           mclassId,
         });
 
-        return enrollment as EnrollmentResponse;
+        return enrollment as unknown as EnrollmentResponse;
       });
     });
   }
@@ -251,7 +260,20 @@ export class EnrollmentService {
       throw new EnrollmentError('접근 권한이 없습니다.');
     }
 
-    return enrollment as EnrollmentResponse;
+    return enrollment as unknown as EnrollmentResponse;
+  }
+
+  /**
+   * 관리자용 신청 상세 조회 (소유권 검사 없음)
+   */
+  async getEnrollmentByIdForAdmin(
+    enrollmentId: string
+  ): Promise<EnrollmentResponse> {
+    const enrollment = await this.repository.findById(enrollmentId);
+    if (!enrollment) {
+      throw new EnrollmentError('존재하지 않는 신청입니다.');
+    }
+    return enrollment as unknown as EnrollmentResponse;
   }
 
   /**
@@ -281,12 +303,12 @@ export class EnrollmentService {
         }
 
         // 취소 가능한 상태인지 확인 (승인 상태도 취소 가능)
-        const cancellableStatuses = [
+        const cancellableStatuses: EnrollmentStatus[] = [
           'APPLIED',
           'WAITLISTED',
           'APPROVED',
-        ] as const;
-        if (!cancellableStatuses.includes(enrollment.status as any)) {
+        ];
+        if (!cancellableStatuses.includes(enrollment.status)) {
           throw new EnrollmentError('취소할 수 없는 상태입니다.');
         }
 
@@ -313,7 +335,7 @@ export class EnrollmentService {
         // 대기자 승격 처리: 승인 상태에서 취소된 경우에만 실행
         // (승인 건이 줄어드는 전이: APPROVED → CANCELED)
         if (previousStatus === 'APPROVED' && enrollment.mclass.allowWaitlist) {
-          await this.promoteWaitlist(enrollment.mclassId);
+          await this.promoteWaitlistInTransaction(tx, enrollment.mclassId);
         }
 
         logger.info('Enrollment 취소 완료', {
@@ -322,7 +344,7 @@ export class EnrollmentService {
           reason: data.reason,
         });
 
-        return updatedEnrollment as EnrollmentResponse;
+        return updatedEnrollment as unknown as EnrollmentResponse;
       });
     });
   }
@@ -354,7 +376,10 @@ export class EnrollmentService {
       enrollment.mclassId
     );
     if (enrollmentForm?.questions) {
-      this.validateAnswers(data.answers, enrollmentForm.questions as any);
+      this.validateAnswers(
+        data.answers,
+        enrollmentForm.questions as unknown as Record<string, unknown>
+      );
     }
 
     // 낙관적 락으로 업데이트
@@ -366,7 +391,7 @@ export class EnrollmentService {
 
     logger.info('Enrollment 수정 완료', { enrollmentId, userId });
 
-    return updatedEnrollment as EnrollmentResponse;
+    return updatedEnrollment as unknown as EnrollmentResponse;
   }
 
   /**
@@ -431,7 +456,7 @@ export class EnrollmentService {
           (data.status === 'REJECTED' || data.status === 'CANCELED') &&
           enrollment.mclass.allowWaitlist
         ) {
-          await this.promoteWaitlist(enrollment.mclassId);
+          await this.promoteWaitlistInTransaction(tx, enrollment.mclassId);
         }
 
         logger.info('Enrollment 상태 변경 완료', {
@@ -441,7 +466,7 @@ export class EnrollmentService {
           adminId,
         });
 
-        return updatedEnrollment as EnrollmentResponse;
+        return updatedEnrollment as unknown as EnrollmentResponse;
       });
     });
   }
@@ -517,30 +542,53 @@ export class EnrollmentService {
    */
   private validateAnswers(
     answers: Record<string, unknown>,
-    questions: Record<string, unknown>
+    questions:
+      | Record<string, unknown>
+      | Array<{ id: string; required?: boolean; label?: string }>
   ): void {
-    // 기본 검증: 필수 질문 답변 여부
+    const isEmptyAnswer = (val: unknown): boolean => {
+      if (val === null || val === undefined) return true;
+      if (typeof val === 'string') return val.trim().length === 0;
+      return false; // 숫자 0, 불리언 false 등은 유효 응답으로 간주
+    };
+
+    // 객체 형태(qId -> question) 또는 배열 형태([{id, ...}]) 모두 지원
+    if (Array.isArray(questions)) {
+      for (const q of questions) {
+        if (q?.required) {
+          const a = answers[q.id];
+          if (isEmptyAnswer(a)) {
+            throw new EnrollmentError(
+              `필수 질문 '${q.label ?? q.id}'에 답변해주세요.`
+            );
+          }
+        }
+      }
+      return;
+    }
+
     for (const [questionId, question] of Object.entries(questions)) {
       if (
         question &&
         typeof question === 'object' &&
         'required' in question &&
-        question.required &&
-        !answers[questionId]
+        (question as { required: boolean }).required
       ) {
-        const label =
-          question && typeof question === 'object' && 'label' in question
-            ? String(question.label)
-            : questionId;
-        throw new EnrollmentError(`필수 질문 '${label}'에 답변해주세요.`);
+        const a = answers[questionId];
+        if (isEmptyAnswer(a)) {
+          const label =
+            question && typeof question === 'object' && 'label' in question
+              ? String((question as { label: string }).label)
+              : questionId;
+          throw new EnrollmentError(`필수 질문 '${label}'에 답변해주세요.`);
+        }
       }
     }
-
     // TODO: 상세 검증 로직 추가 (타입, 길이, 패턴 등)
   }
 
   /**
-   * 대기자 승격 처리
+   * 대기자 승격 처리 (트랜잭션 외부용)
    */
   private async promoteWaitlist(mclassId: string): Promise<void> {
     const oldestWaitlist = await this.repository.findOldestWaitlist(mclassId);
@@ -549,10 +597,46 @@ export class EnrollmentService {
       await this.repository.updateStatus(
         oldestWaitlist.id,
         'APPROVED',
-        new Date()
+        new Date(),
+        'system', // 자동 승격이므로 시스템 식별자 사용
+        '대기자 자동 승격'
       );
 
       logger.info('대기자 승격 완료', {
+        enrollmentId: oldestWaitlist.id,
+        mclassId,
+      });
+    }
+  }
+
+  /**
+   * 대기자 승격 처리 (트랜잭션 내부용)
+   */
+  private async promoteWaitlistInTransaction(
+    tx: Prisma.TransactionClient,
+    mclassId: string
+  ): Promise<void> {
+    const oldestWaitlist = await tx.enrollment.findFirst({
+      where: {
+        mclassId,
+        status: 'WAITLISTED',
+      },
+      orderBy: { appliedAt: 'asc' },
+    });
+
+    if (oldestWaitlist) {
+      await tx.enrollment.update({
+        where: { id: oldestWaitlist.id },
+        data: {
+          status: 'APPROVED',
+          decidedAt: new Date(),
+          decidedByAdminId: 'system', // 자동 승격이므로 시스템 식별자 사용
+          reason: '대기자 자동 승격',
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info('대기자 승격 완료 (트랜잭션 내부)', {
         enrollmentId: oldestWaitlist.id,
         mclassId,
       });

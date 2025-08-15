@@ -319,11 +319,9 @@ export class EnrollmentController {
         throw new EnrollmentError('관리자 권한이 필요합니다.');
       }
 
-      // 관리자는 모든 신청을 조회할 수 있음
-      const enrollment = await this.service.getMyEnrollment(
-        enrollmentId,
-        'admin'
-      );
+      // 관리자는 소유권 검사 없이 상세 조회 가능
+      const enrollment =
+        await this.service.getEnrollmentByIdForAdmin(enrollmentId);
 
       logger.info('관리자 신청 상세 조회 성공', { adminId, enrollmentId });
 

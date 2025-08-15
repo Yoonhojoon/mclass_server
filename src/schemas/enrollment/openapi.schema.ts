@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { registry } from '../../config/swagger-zod.js';
+import { enrollmentFormResponseSchema } from '../enrollmentForm/response.schema.js';
 
 // 기본 답변 스키마
 export const AnswerSchema = z
@@ -161,18 +162,7 @@ export const EnrollmentResponseSchema = z
       })
       .optional()
       .openapi({ description: '사용자 정보' }),
-    enrollmentForm: z
-      .object({
-        id: z.string().uuid().openapi({ description: '신청서 양식 ID' }),
-        title: z.string().openapi({ description: '신청서 제목' }),
-        description: z
-          .string()
-          .nullable()
-          .openapi({ description: '신청서 설명' }),
-        questions: z
-          .record(z.string(), z.any())
-          .openapi({ description: '질문 구조' }),
-      })
+    enrollmentForm: enrollmentFormResponseSchema
       .optional()
       .openapi({ description: '신청서 양식 정보' }),
   })

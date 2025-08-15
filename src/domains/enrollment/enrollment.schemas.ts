@@ -85,14 +85,7 @@ export const EnrollmentResponseSchema = z.object({
       email: z.string(),
     })
     .optional(),
-  enrollmentForm: z
-    .object({
-      id: z.string(),
-      title: z.string(),
-      description: z.string().nullable(),
-      questions: z.record(z.string(), z.any()),
-    })
-    .optional(),
+  // enrollmentForm은 필요시 enrollmentFormService.findByMClassId()로 별도 조회
 });
 
 export const EnrollmentStatsSchema = z.object({
