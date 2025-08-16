@@ -314,6 +314,141 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
     },
   });
 
+  // 세션 관리 라우트들
+  registry.registerPath({
+    method: 'get',
+    path: '/api/auth/sessions',
+    tags: ['인증'],
+    summary: '사용자 세션 조회',
+    description: '현재 사용자의 모든 활성 세션을 조회합니다.',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: '세션 조회 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/auth/logout-device',
+    tags: ['인증'],
+    summary: '특정 기기 로그아웃',
+    description: '특정 기기에서만 로그아웃합니다.',
+    security: [{ bearerAuth: [] }],
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                token: {
+                  type: 'string',
+                  description: '로그아웃할 토큰',
+                },
+              },
+              required: ['token'],
+            },
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: '특정 기기 로그아웃 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      400: {
+        description: '잘못된 요청',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/auth/logout-all-devices',
+    tags: ['인증'],
+    summary: '모든 기기 로그아웃',
+    description: '모든 기기에서 로그아웃합니다.',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: '모든 기기 로그아웃 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/auth/active-session-count',
+    tags: ['인증'],
+    summary: '활성 세션 수 조회',
+    description: '현재 사용자의 활성 세션 수를 조회합니다.',
+    security: [{ bearerAuth: [] }],
+    responses: {
+      200: {
+        description: '활성 세션 수 조회 성공',
+        content: {
+          'application/json': {
+            schema: SuccessResponseSchema,
+          },
+        },
+      },
+      401: {
+        description: '인증 실패',
+        content: {
+          'application/json': {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  });
+
   // 실제 라우트 정의
   router.post('/login', validateBody(loginSchema), authController.login);
   router.post(
@@ -343,6 +478,20 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
     authenticateToken,
     validateBody(changePasswordSchema),
     authController.changePassword
+  );
+
+  // 세션 관리 라우트들
+  router.get('/sessions', authenticateToken, authController.getUserSessions);
+  router.post('/logout-device', authenticateToken, authController.logoutDevice);
+  router.post(
+    '/logout-all-devices',
+    authenticateToken,
+    authController.logoutAllDevices
+  );
+  router.get(
+    '/active-session-count',
+    authenticateToken,
+    authController.getActiveSessionCount
   );
 
   return router;

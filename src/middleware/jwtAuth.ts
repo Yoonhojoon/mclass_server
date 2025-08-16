@@ -13,7 +13,7 @@ export const jwtAuth: RequestHandler = async (req, _res, next) => {
       return next();
     }
 
-    const decoded = TokenService.verifyAccessToken(token);
+    const decoded = await TokenService.verifyAccessTokenWithBlacklist(token);
     const user: AuthenticatedUser = {
       userId: decoded.userId,
       email: decoded.email,

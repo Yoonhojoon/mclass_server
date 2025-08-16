@@ -13,16 +13,16 @@ model User {
   password           String?
   name               String?
   role               UserRole            @default(USER)
-  isAdmin            Boolean             @default(false) @map("is_admin")
   provider           Provider            @default(LOCAL)
-  socialId           String?             @map("social_id")
-  isSignUpCompleted  Boolean             @default(false) @map("is_sign_up_completed")
   createdAt          DateTime            @default(now()) @map("created_at")
+  isAdmin            Boolean             @default(false) @map("is_admin")
+  isSignUpCompleted  Boolean             @default(false) @map("is_sign_up_completed")
+  socialId           String?             @map("social_id")
   updatedAt          DateTime            @updatedAt @map("updated_at")
+  decidedByAdmin     Enrollment[]        @relation("AdminDecisions")
   enrollments        Enrollment[]
   mclasses           MClass[]
   userTermAgreements UserTermAgreement[]
-  decidedByAdmin     Enrollment[]        @relation("AdminDecisions")
 
   @@unique([provider, socialId])
   @@map("users")
@@ -32,24 +32,24 @@ model MClass {
   id               String          @id @default(uuid())
   title            String
   description      String?
-  recruitStartAt   DateTime        @map("recruit_start_at")
-  recruitEndAt     DateTime        @map("recruit_end_at")
-  startAt          DateTime        @map("start_at")
-  endAt            DateTime        @map("end_at")
-  selectionType    SelectionType   @default(FIRST_COME) @map("selection_type")
   capacity         Int?
-  allowWaitlist    Boolean         @default(false) @map("allow_waitlist")
-  waitlistCapacity Int?            @map("waitlist_capacity")
   visibility       Visibility      @default(PUBLIC)
-  isOnline         Boolean         @default(true) @map("is_online")
   location         String?
   fee              Int?
-  createdBy        String          @map("created_by")
+  allowWaitlist    Boolean         @default(false) @map("allow_waitlist")
   createdAt        DateTime        @default(now()) @map("created_at")
+  createdBy        String          @map("created_by")
+  endAt            DateTime        @map("end_at")
+  isOnline         Boolean         @default(true) @map("is_online")
+  recruitEndAt     DateTime        @map("recruit_end_at")
+  recruitStartAt   DateTime        @map("recruit_start_at")
+  selectionType    SelectionType   @default(FIRST_COME) @map("selection_type")
+  startAt          DateTime        @map("start_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
+  waitlistCapacity Int?            @map("waitlist_capacity")
   enrollmentForm   EnrollmentForm?
   enrollments      Enrollment[]
-  creator          User            @relation(fields: [createdBy], references: [id])
+  creator          User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@index([visibility, recruitStartAt, recruitEndAt])
   @@index([startAt])
@@ -71,11 +71,11 @@ model Term {
 
 model UserTermAgreement {
   id       String   @id @default(uuid())
-  userId   String   @map("user_id")
-  termId   String   @map("term_id")
   agreedAt DateTime @default(now()) @map("agreed_at")
+  termId   String   @map("term_id")
+  userId   String   @map("user_id")
   term     Term     @relation(fields: [termId], references: [id])
-  user     User     @relation(fields: [userId], references: [id])
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, termId])
   @@map("user_term_agreements")
@@ -83,52 +83,43 @@ model UserTermAgreement {
 
 model Enrollment {
   id               String           @id @default(uuid())
-  userId           String           @map("user_id")
-  mclassId         String           @map("mclass_id")
-  enrollmentFormId String           @map("enrollment_form_id")
   answers          Json
   status           EnrollmentStatus @default(APPLIED)
-  appliedAt        DateTime         @default(now()) @map("applied_at")
-  decidedAt        DateTime?        @map("decided_at")
-  canceledAt       DateTime?        @map("canceled_at")
   reason           String?
-  
-  // 버전 관리 필드
-  formVersion      Int              @default(1) @map("form_version")
-  formSnapshot     Json?            @map("form_snapshot") // 폼 수정 시 히스토리 보존용
-  
-  // 감사 추적 필드
-  decidedByAdminId String?          @map("decided_by_admin_id") // 승인/거절/대기 결정한 관리자
-  reasonType       ReasonType?      @map("reason_type") // 사유 타입 구분
-  
-  // 멱등성 필드
-  idempotencyKey   String?          @unique @map("idempotency_key") // 중복 요청 방지
-  
-  // 낙관적 락
-  version          Int              @default(1) @map("version") // rowVersion
-  
+  version          Int              @default(1) @map("version")
+  appliedAt        DateTime         @default(now()) @map("applied_at")
+  canceledAt       DateTime?        @map("canceled_at")
   createdAt        DateTime         @default(now()) @map("created_at")
+  decidedAt        DateTime?        @map("decided_at")
+  decidedByAdminId String?          @map("decided_by_admin_id")
+  enrollmentFormId String           @map("enrollment_form_id")
+  formSnapshot     Json?            @map("form_snapshot")
+  formVersion      Int              @default(1) @map("form_version")
+  idempotencyKey   String?          @unique @map("idempotency_key")
+  mclassId         String           @map("mclass_id")
+  reasonType       ReasonType?      @map("reason_type")
   updatedAt        DateTime         @updatedAt @map("updated_at")
+  userId           String           @map("user_id")
+  decidedByAdmin   User?            @relation("AdminDecisions", fields: [decidedByAdminId], references: [id], onDelete: SetNull)
   enrollmentForm   EnrollmentForm   @relation(fields: [enrollmentFormId], references: [id], onDelete: Cascade)
   mclass           MClass           @relation(fields: [mclassId], references: [id], onDelete: Cascade)
-  user             User             @relation(fields: [userId], references: [id])
-  decidedByAdmin   User?            @relation("AdminDecisions", fields: [decidedByAdminId], references: [id])
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, mclassId])
   @@index([mclassId, status])
   @@index([userId])
-  @@index([mclassId, status, appliedAt]) // 대기열 FIFO 처리용 인덱스
+  @@index([mclassId, status, appliedAt])
   @@map("enrollments")
 }
 
 model EnrollmentForm {
   id          String       @id @default(uuid())
-  mclassId    String       @unique @map("mclass_id")
   title       String
   description String?
   questions   Json
-  isActive    Boolean      @default(true) @map("is_active")
   createdAt   DateTime     @default(now()) @map("created_at")
+  isActive    Boolean      @default(true) @map("is_active")
+  mclassId    String       @unique @map("mclass_id")
   updatedAt   DateTime     @updatedAt @map("updated_at")
   mclass      MClass       @relation(fields: [mclassId], references: [id], onDelete: Cascade)
   enrollments Enrollment[]
@@ -136,20 +127,19 @@ model EnrollmentForm {
   @@map("enrollment_forms")
 }
 
-// 이메일 아웃박스 패턴
 model EmailOutbox {
-  id          String           @id @default(uuid())
-  type        EmailType        // 이메일 타입
-  to          String           // 수신자 이메일
-  subject     String?          // 제목 (템플릿에서 생성)
-  payload     Json             // 이메일 데이터
-  template    String           // 템플릿 이름
-  attempts    Int              @default(0) // 재시도 횟수
-  nextTryAt   DateTime?        @map("next_try_at") // 다음 재시도 시간
-  processedAt DateTime?        @map("processed_at") // 발송 완료 시간
-  error       String?          // 마지막 에러 메시지
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  type        EmailType
+  to          String
+  subject     String?
+  payload     Json
+  template    String
+  attempts    Int       @default(0)
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  nextTryAt   DateTime? @map("next_try_at")
+  processedAt DateTime? @map("processed_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   @@index([type, processedAt])
   @@index([nextTryAt, attempts])

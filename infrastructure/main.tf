@@ -677,6 +677,14 @@ output "prometheus_security_group_id" {
   value = aws_security_group.prometheus.id
 }
 
+output "redis_endpoint" {
+  value = aws_elasticache_cluster.redis.cache_nodes.0.address
+}
+
+output "redis_port" {
+  value = aws_elasticache_cluster.redis.cache_nodes.0.port
+}
+
 
 
 # Parameter Store for Environment Variables
@@ -705,7 +713,7 @@ resource "aws_ssm_parameter" "jwt_secret" {
 resource "aws_ssm_parameter" "redis_url" {
   name      = "/mclass/redis_url"
   type      = "SecureString"
-  value     = var.redis_url != "" ? var.redis_url : "redis://redis:6379"
+  value     = var.redis_url != "" ? var.redis_url : "redis://${aws_elasticache_cluster.redis.cache_nodes.0.address}:${aws_elasticache_cluster.redis.cache_nodes.0.port}"
   overwrite = true
 
   tags = {
@@ -949,16 +957,67 @@ resource "aws_db_subnet_group" "main" {
   }
 }
 
+# ElastiCache Redis 서브넷 그룹
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "mclass-redis-subnet-group"
+  subnet_ids = aws_subnet.public[*].id
+
+  tags = {
+    Name = "mclass-redis-subnet-group"
+  }
+}
+
+# ElastiCache Redis 보안 그룹
+resource "aws_security_group" "redis" {
+  name        = "mclass-redis-sg"
+  description = "Security group for ElastiCache Redis"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "mclass-redis-sg"
+  }
+}
+
+# ElastiCache Redis 클러스터
+resource "aws_elasticache_cluster" "redis" {
+  cluster_id           = "mclass-redis"
+  engine               = "redis"
+  node_type            = "cache.t3.micro"  # 프리티어
+  num_cache_nodes      = 1
+  parameter_group_name = "default.redis7"
+  port                 = 6379
+  subnet_group_name    = aws_elasticache_subnet_group.redis.name
+  security_group_ids   = [aws_security_group.redis.id]
+
+  tags = {
+    Name = "mclass-redis"
+  }
+}
+
 resource "aws_security_group" "rds" {
   name        = "mclass-rds-sg"
   description = "Security group for RDS PostgreSQL"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id]
   }
 
   egress {

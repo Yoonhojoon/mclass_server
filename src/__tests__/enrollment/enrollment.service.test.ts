@@ -29,6 +29,8 @@ const mockRepository = {
   findByUserAndMclassWithForm: jest.fn(),
   getEnrollmentStats: jest.fn(),
   findOldestWaitlist: jest.fn(),
+  findMclassWithLock: jest.fn(),
+  findMclassBasicWithLock: jest.fn(),
 } as any;
 
 // MClass Repository 모킹
@@ -185,7 +187,7 @@ describe('EnrollmentService', () => {
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
       mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
       mockPrisma.enrollment.create.mockResolvedValue(mockEnrollment);
-      mockPrisma.mClass.findUnique.mockResolvedValue(mockMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
       mockEnrollmentFormService.findByMClassId.mockResolvedValue(
         mockEnrollmentForm
       );
@@ -254,7 +256,7 @@ describe('EnrollmentService', () => {
 
       mockPrisma.enrollment.findFirst.mockResolvedValue(null);
       mockPrisma.enrollment.findUnique.mockResolvedValue(existingEnrollment);
-      mockPrisma.mClass.findUnique.mockResolvedValue(mockMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
 
       await expect(
         service.enrollToClass('mclass-1', mockEnrollmentData, 'user-1')
@@ -273,7 +275,7 @@ describe('EnrollmentService', () => {
 
       mockPrisma.enrollment.findFirst.mockResolvedValue(null);
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
-      mockPrisma.mClass.findUnique.mockResolvedValue(expiredMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(expiredMClass);
 
       await expect(
         service.enrollToClass('mclass-1', mockEnrollmentData, 'user-1')
@@ -300,7 +302,7 @@ describe('EnrollmentService', () => {
         .mockResolvedValueOnce(60) // APPROVED count (정원 초과)
         .mockResolvedValueOnce(15); // WAITLISTED count (대기자 명단 여유)
       mockPrisma.enrollment.create.mockResolvedValue(waitlistedEnrollment);
-      mockPrisma.mClass.findUnique.mockResolvedValue(mockMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
       mockEnrollmentFormService.findByMClassId.mockResolvedValue(
         mockEnrollmentForm
       );
@@ -595,6 +597,11 @@ describe('EnrollmentService', () => {
       mockPrisma.enrollment.findUnique.mockResolvedValue(mockEnrollment);
       mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
       mockPrisma.enrollment.update.mockResolvedValue(updatedEnrollment);
+      mockRepository.findMclassBasicWithLock.mockResolvedValue({
+        id: 'mclass-1',
+        capacity: 60,
+        allowWaitlist: false,
+      });
 
       const result = await service.updateEnrollmentStatus(
         'enrollment-1',
@@ -691,7 +698,7 @@ describe('EnrollmentService', () => {
       mockUserService.findById.mockResolvedValue(mockEnrollment.user);
       mockMClassRepository.findById.mockResolvedValue(mockEnrollment.mclass);
 
-      mockPrisma.mClass.findUnique.mockResolvedValue({
+      mockRepository.findMclassWithLock.mockResolvedValue({
         ...mockEnrollment.mclass,
         visibility: 'PUBLIC',
         recruitStartAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1일 전

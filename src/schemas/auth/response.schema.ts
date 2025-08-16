@@ -28,7 +28,8 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>;
 // 회원가입 응답 스키마
 export const registerResponseSchema = z.object({
   user: userResponseSchema,
-  message: z.string(),
+  accessToken: z.string(),
+  refreshToken: z.string(),
 });
 
 export type RegisterResponse = z.infer<typeof registerResponseSchema>;

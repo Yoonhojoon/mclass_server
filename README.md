@@ -7,6 +7,7 @@ TypeScript와 Express를 사용한 Node.js 서버 애플리케이션입니다.
 - **TypeScript** 기반 Express 서버
 - **PostgreSQL** 데이터베이스 연동
 - **JWT** 기반 인증 (Access Token + Refresh Token)
+- **Redis 기반 토큰 저장소** (사용자별 세션 관리)
 - **소셜 로그인** (Google, Kakao, Naver OAuth)
 - **Swagger** API 문서 자동 생성
 - **Prometheus** 메트릭 수집
@@ -75,6 +76,12 @@ PORT=3000
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_EXPIRES_IN=24h
 JWT_REFRESH_EXPIRES_IN=7d
+
+# Redis 설정
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
 
 # 소셜 로그인 설정
 GOOGLE_CLIENT_ID=your-google-client-id
@@ -285,6 +292,66 @@ npm run build
    NAVER_CLIENT_ID=your-naver-client-id
    NAVER_CLIENT_SECRET=your-naver-client-secret
    ```
+
+## 🔐 토큰 관리 시스템
+
+### Redis 기반 토큰 저장소
+
+JWT 토큰을 Redis에 저장하여 사용자별 세션을 관리합니다.
+
+#### 주요 기능
+
+- **사용자별 토큰 목록 관리**: 한 사용자가 여러 기기에서 동시 로그인 가능
+- **선택적 로그아웃**: 특정 기기만 로그아웃 가능
+- **세션 모니터링**: 활성 세션 수 및 세션 정보 조회
+- **자동 정리**: 만료된 토큰 자동 삭제
+
+#### API 엔드포인트
+
+```bash
+# 사용자 세션 조회
+GET /api/auth/sessions
+Authorization: Bearer <access_token>
+
+# 특정 기기 로그아웃
+POST /api/auth/logout-device
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+  "token": "로그아웃할_토큰"
+}
+
+# 모든 기기 로그아웃
+POST /api/auth/logout-all-devices
+Authorization: Bearer <access_token>
+
+# 활성 세션 수 조회
+GET /api/auth/active-session-count
+Authorization: Bearer <access_token>
+```
+
+#### 응답 예시
+
+```json
+{
+  "success": true,
+  "message": "사용자 세션 조회 성공",
+  "data": {
+    "sessions": [
+      {
+        "device": "Chrome on Windows",
+        "ip": "192.168.1.100",
+        "userAgent": "Mozilla/5.0...",
+        "createdAt": "2024-01-15T10:30:00Z",
+        "expiresAt": "2024-01-22T10:30:00Z",
+        "tokenType": "access"
+      }
+    ],
+    "totalCount": 1
+  }
+}
+```
 
 ### 프론트엔드 없이 테스트하기
 

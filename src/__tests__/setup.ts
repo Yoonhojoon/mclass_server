@@ -38,9 +38,31 @@ if (typeof jest !== 'undefined') {
     console.warn = jest.fn();
   });
 
-  afterAll(() => {
+  afterAll(async () => {
+    // Redis 연결 정리
+    if ((globalThis as any).redis) {
+      try {
+        await (globalThis as any).redis.quit();
+      } catch {
+        // 무시
+      }
+    }
+
+    // 원래 console 함수들 복원
     console.log = originalConsoleLog;
     console.error = originalConsoleError;
     console.warn = originalConsoleWarn;
+
+    // 모든 타이머 정리
+    jest.clearAllTimers();
+  });
+
+  // 각 테스트 후 정리
+  afterEach(async () => {
+    // Mock 정리
+    jest.clearAllMocks();
+
+    // 타이머 정리
+    jest.clearAllTimers();
   });
 }
