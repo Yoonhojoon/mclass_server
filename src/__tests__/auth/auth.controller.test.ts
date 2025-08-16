@@ -215,10 +215,10 @@ describe('AuthController', () => {
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockRegisterResult,
-        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: 550e8400-e29b-41d4-a716-446655440002, 역할: USER)`,
-        code: 'LOGIN_SUCCESS',
+        message: `회원가입이 성공적으로 완료되었습니다. (사용자 ID: 550e8400-e29b-41d4-a716-446655440002, 역할: USER)`,
+        code: 'REGISTER_SUCCESS',
       });
-      expect(mockStatus).toHaveBeenCalledWith(200);
+      expect(mockStatus).toHaveBeenCalledWith(201);
     });
 
     it('❌ AuthError 발생 시 400 상태와 에러 메시지를 반환해야 함', async () => {

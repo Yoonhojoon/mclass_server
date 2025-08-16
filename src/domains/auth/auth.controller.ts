@@ -66,7 +66,7 @@ export class AuthController {
       const result = await this.authService.register(registerData);
       const userResponse = userResponseSchema.parse(result.user);
 
-      return AuthSuccess.loginSuccess(result.user.userId, result.user.role, {
+      return AuthSuccess.registerSuccess(result.user.userId, result.user.role, {
         ...result,
         user: userResponse,
       }).send(res);
