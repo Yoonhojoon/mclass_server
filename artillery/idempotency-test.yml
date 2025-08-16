@@ -1,0 +1,121 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 30
+      arrivalRate: 50
+      name: "멱등성 테스트"
+  variables:
+    mclassId: "test-class-id"
+    idempotencyKey: "fixed-key-123"
+  http:
+    timeout: 30
+    pool: 10
+  plugins:
+    metrics-by-endpoint: {}
+    expect: {}
+
+scenarios:
+  - name: "동일한 idempotencyKey로 반복 요청"
+    weight: 100
+    flow:
+      # 1. 회원가입
+      - post:
+          url: "/auth/register"
+          json:
+            email: "user1@test.com"
+            password: "password123"
+            name: "Test User"
+            provider: "LOCAL"
+          capture:
+            - json: "$.data.accessToken"
+              as: "tempToken"
+            - json: "$.data.user.email"
+              as: "userEmail"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+      
+      # 2. 회원가입 완료
+      - post:
+          url: "/auth/complete-signup"
+          headers:
+            Authorization: "Bearer {{ tempToken }}"
+          json:
+            termIds: ["term-1", "term-2"]
+          capture:
+            - json: "$.data.accessToken"
+              as: "finalToken"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+      
+      # 3. 로그인
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ userEmail }}"
+            password: "password123"
+          capture:
+            - json: "$.data.accessToken"
+              as: "loginToken"
+          expect:
+            - statusCode: 200
+            - contentType: json
+      
+      # 4. 첫 번째 신청 (idempotencyKey 사용)
+      - post:
+          url: "/enrollments"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          json:
+            mclassId: "{{ mclassId }}"
+            answers:
+              name: "Test User"
+              phone: "010-1234-5678"
+            idempotencyKey: "{{ idempotencyKey }}"
+          capture:
+            - json: "$.data.id"
+              as: "enrollmentId1"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+      
+      # 5. 두 번째 신청 (동일한 idempotencyKey)
+      - post:
+          url: "/enrollments"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          json:
+            mclassId: "{{ mclassId }}"
+            answers:
+              name: "Test User"
+              phone: "010-1234-5678"
+            idempotencyKey: "{{ idempotencyKey }}"
+          capture:
+            - json: "$.data.id"
+              as: "enrollmentId2"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+      
+      # 6. 세 번째 신청 (동일한 idempotencyKey)
+      - post:
+          url: "/enrollments"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          json:
+            mclassId: "{{ mclassId }}"
+            answers:
+              name: "Test User"
+              phone: "010-1234-5678"
+            idempotencyKey: "{{ idempotencyKey }}"
+          capture:
+            - json: "$.data.id"
+              as: "enrollmentId3"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+      
+      - function: "validateIdempotency"
+      
+      - think: 1

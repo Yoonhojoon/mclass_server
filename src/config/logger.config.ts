@@ -78,7 +78,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // 로거 생성
 const logger = winston.createLogger({
-  level: 'debug', // 항상 debug 레벨까지 출력
+  level: process.env.LOG_LEVEL || 'debug', // 환경 변수에서 로그 레벨 읽기
   levels,
   format,
   transports,

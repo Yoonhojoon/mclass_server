@@ -230,9 +230,9 @@ export class EnrollmentRepository {
         ef.is_active as enrollment_form_is_active,
         ef.questions as enrollment_form_questions
       FROM mclasses m
-      LEFT JOIN enrollment_forms ef ON m.enrollment_form_id = ef.id
+      LEFT JOIN enrollment_forms ef ON ef.mclass_id = m.id
       WHERE m.id = ${mclassId}
-      FOR UPDATE
+      FOR UPDATE OF m
     `;
 
     if (result.length === 0) {

@@ -1,0 +1,158 @@
+config:
+  target: 'http://localhost:3000'  # 프로덕션에선 ALB 엔드포인트로 교체
+  phases:
+    - duration: 10
+      arrivalRate: 1
+      name: "Warm up"
+    - duration: 15
+      arrivalRate: 2
+      name: "Peak 2 rps"
+    - duration: 10
+      arrivalRate: 1
+      name: "Sustain 1 rps"
+  variables:
+    mclassId: "8fe5b47f-7ee1-4c56-8617-6048fb4bf449"
+    capacity: 50
+    waitlistCapacity: 30
+  processor: "./load-test-processor.mjs"   # ✅ ESM 파일로 교체
+  http:
+    timeout: 30
+    pool: 10
+  plugins:
+    metrics-by-endpoint: {}
+    expect: {}
+
+scenarios:
+  - name: "동시 신청 테스트"
+    weight: 100
+    flow:
+      # 0) 각 VU별 계정/비밀번호 생성
+      - function: "initUser"
+
+      # 1) 회원가입
+      - post:
+          url: "/api/auth/register"
+          json:
+            email: "{{ email }}"           # ✅ VU마다 고정
+            password: "{{ password }}"
+            name: "{{ displayName }}"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+
+       # 3) 로그인 (동일 이메일/비밀번호로)
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"           # ✅ 동일 계정 사용
+            password: "{{ password }}"
+          capture:
+            - json: "$.data.accessToken"
+              as: "tempToken"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      # 2) 약관 동의 -> 회원가입 완료
+      - post:
+          url: "/api/auth/complete-signup"
+          headers:
+            Authorization: "Bearer {{ tempToken }}"
+          json:
+            termIds: ["b10cdac2-5c46-4b6c-a355-127331901de4"]
+          capture:
+            - json: "$.data.accessToken"
+              as: "finalToken"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      # 3) 로그인 (동일 이메일/비밀번호로)
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "{{ email }}"           # ✅ 동일 계정 사용
+            password: "{{ password }}"
+          capture:
+            - json: "$.data.accessToken"
+              as: "loginToken"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      # 4) 클래스 조회
+      - get:
+          url: "/api/mclass/{{ mclassId }}"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      # 5) 신청서 양식 조회
+      - get:
+          url: "/api/mclasses/{{ mclassId }}/enrollment-form"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          capture:
+            - json: "$.data.questions"
+              as: "enrollmentQuestions"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      # 6) 동적 답변 생성
+      - function: "generateAnswers"
+
+      # 7) 클래스 신청 (동적 답변 사용)
+      - post:
+          url: "/api/mclasses/{{ mclassId }}/enrollments"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          json:
+            answers: "{{ dynamicAnswers }}"
+            idempotencyKey: "{{ $uuid }}"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+            - "validateDataConsistency"
+
+      # 8) 신청 내역 확인
+      - get:
+          url: "/api/enrollments/my"
+          headers:
+            Authorization: "Bearer {{ loginToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      - think: 2
+
+after:
+  flow:
+    - function: "generateTestSummary"
