@@ -6,6 +6,7 @@ import logger from '../../config/logger.config.js';
 import { PrismaClient, User } from '@prisma/client';
 import { AuthRepository } from './auth.repository.js';
 import { LoginDto, RegisterDto, SocialLoginDto } from './auth.schemas.js';
+import { TokenStorageService } from '../../services/redis/token-storage.service.js';
 
 export class AuthService {
   private userService: UserService;
@@ -55,8 +56,22 @@ export class AuthService {
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
-      const accessToken = TokenService.generateAccessToken(tokenPayload);
-      const refreshToken = TokenService.generateRefreshToken(tokenPayload);
+      const accessToken = await TokenService.generateAndStoreAccessToken(
+        tokenPayload,
+        {
+          device: loginData.device,
+          ip: loginData.ip,
+          userAgent: loginData.userAgent,
+        }
+      );
+      const refreshToken = await TokenService.generateAndStoreRefreshToken(
+        tokenPayload,
+        {
+          device: loginData.device,
+          ip: loginData.ip,
+          userAgent: loginData.userAgent,
+        }
+      );
 
       logger.info('✅ 로그인 성공', {
         userId: user.id,
@@ -140,8 +155,22 @@ export class AuthService {
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
-      const accessToken = TokenService.generateAccessToken(tokenPayload);
-      const refreshToken = TokenService.generateRefreshToken(tokenPayload);
+      const accessToken = await TokenService.generateAndStoreAccessToken(
+        tokenPayload,
+        {
+          device: registerData.device,
+          ip: registerData.ip,
+          userAgent: registerData.userAgent,
+        }
+      );
+      const refreshToken = await TokenService.generateAndStoreRefreshToken(
+        tokenPayload,
+        {
+          device: registerData.device,
+          ip: registerData.ip,
+          userAgent: registerData.userAgent,
+        }
+      );
 
       logger.info('✅ 회원가입 성공', {
         userId: user.id,
@@ -269,8 +298,26 @@ export class AuthService {
         signUpCompleted: user.isSignUpCompleted || false,
       };
 
-      const newAccessToken = TokenService.generateAccessToken(tokenPayload);
-      const newRefreshToken = TokenService.generateRefreshToken(tokenPayload);
+      // 기존 리프레시 토큰의 메타데이터를 가져와서 재사용
+      const tokenMetadata =
+        await TokenStorageService.getTokenMetadata(refreshToken);
+
+      const newAccessToken = await TokenService.generateAndStoreAccessToken(
+        tokenPayload,
+        {
+          device: tokenMetadata?.device,
+          ip: tokenMetadata?.ip,
+          userAgent: tokenMetadata?.userAgent,
+        }
+      );
+      const newRefreshToken = await TokenService.generateAndStoreRefreshToken(
+        tokenPayload,
+        {
+          device: tokenMetadata?.device,
+          ip: tokenMetadata?.ip,
+          userAgent: tokenMetadata?.userAgent,
+        }
+      );
 
       logger.info('✅ 토큰 갱신 성공', { userId: user.id });
       return {
@@ -351,8 +398,22 @@ export class AuthService {
         provider: user.provider,
       };
 
-      const accessToken = TokenService.generateAccessToken(tokenPayload);
-      const refreshToken = TokenService.generateRefreshToken(tokenPayload);
+      const accessToken = await TokenService.generateAndStoreAccessToken(
+        tokenPayload,
+        {
+          device: profile.device,
+          ip: profile.ip,
+          userAgent: profile.userAgent,
+        }
+      );
+      const refreshToken = await TokenService.generateAndStoreRefreshToken(
+        tokenPayload,
+        {
+          device: profile.device,
+          ip: profile.ip,
+          userAgent: profile.userAgent,
+        }
+      );
 
       logger.info('✅ 소셜 로그인 성공', {
         userId: user.id,
@@ -437,8 +498,26 @@ export class AuthService {
         provider: user.provider,
       };
 
-      const accessToken = TokenService.generateAccessToken(tokenPayload);
-      const refreshToken = TokenService.generateRefreshToken(tokenPayload);
+      // 기존 토큰의 메타데이터를 가져와서 재사용 (회원가입 완료는 기존 세션에서 진행)
+      const userTokens = await TokenStorageService.getUserTokens(userId);
+      const latestToken = userTokens[0]; // 가장 최근 토큰 사용
+
+      const accessToken = await TokenService.generateAndStoreAccessToken(
+        tokenPayload,
+        {
+          device: latestToken?.device,
+          ip: latestToken?.ip,
+          userAgent: latestToken?.userAgent,
+        }
+      );
+      const refreshToken = await TokenService.generateAndStoreRefreshToken(
+        tokenPayload,
+        {
+          device: latestToken?.device,
+          ip: latestToken?.ip,
+          userAgent: latestToken?.userAgent,
+        }
+      );
 
       logger.info('✅ 회원가입 완료', {
         userId: user.id,
@@ -630,5 +709,82 @@ export class AuthService {
     const { TermService } = await import('../term/term.service.js');
     const termService = new TermService(this.authRepository.getPrisma());
     await termService.agreeToTerm(userId, termId);
+  }
+
+  /**
+   * 사용자의 모든 활성 세션 조회
+   */
+  async getUserSessions(userId: string): Promise<any[]> {
+    try {
+      const tokens = await TokenStorageService.getUserTokens(userId);
+      return tokens.map(token => ({
+        device: token.device || '알 수 없음',
+        ip: token.ip || '알 수 없음',
+        userAgent: token.userAgent || '알 수 없음',
+        createdAt: token.createdAt,
+        expiresAt: token.expiresAt,
+        tokenType: token.tokenType,
+      }));
+    } catch (error) {
+      logger.error('❌ 사용자 세션 조회 실패', {
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw AuthError.authenticationFailed('세션 조회에 실패했습니다.');
+    }
+  }
+
+  /**
+   * 특정 기기 로그아웃
+   */
+  async logoutDevice(userId: string, token: string): Promise<boolean> {
+    try {
+      const success = await TokenStorageService.removeToken(token);
+      if (success) {
+        logger.info('✅ 특정 기기 로그아웃 완료', { userId });
+      }
+      return success;
+    } catch (error) {
+      logger.error('❌ 특정 기기 로그아웃 실패', {
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw AuthError.authenticationFailed('기기 로그아웃에 실패했습니다.');
+    }
+  }
+
+  /**
+   * 모든 기기 로그아웃
+   */
+  async logoutAllDevices(userId: string): Promise<number> {
+    try {
+      const removedCount =
+        await TokenStorageService.removeAllUserTokens(userId);
+      logger.info('✅ 모든 기기 로그아웃 완료', { userId, removedCount });
+      return removedCount;
+    } catch (error) {
+      logger.error('❌ 모든 기기 로그아웃 실패', {
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      throw AuthError.authenticationFailed(
+        '모든 기기 로그아웃에 실패했습니다.'
+      );
+    }
+  }
+
+  /**
+   * 사용자 활성 세션 수 조회
+   */
+  async getActiveSessionCount(userId: string): Promise<number> {
+    try {
+      return await TokenStorageService.getUserActiveSessionCount(userId);
+    } catch (error) {
+      logger.error('❌ 활성 세션 수 조회 실패', {
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return 0;
+    }
   }
 }

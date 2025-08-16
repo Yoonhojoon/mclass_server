@@ -15,6 +15,9 @@ export const loginSchema = z
   .object({
     email: emailSchema,
     password: passwordSchema,
+    device: z.string().optional(),
+    ip: z.string().optional(),
+    userAgent: z.string().optional(),
   })
   .strict();
 
@@ -30,6 +33,9 @@ export const registerSchema = z
       .max(50, '이름은 50자 이하여야 합니다.')
       .trim(),
     password: passwordSchema,
+    device: z.string().optional(),
+    ip: z.string().optional(),
+    userAgent: z.string().optional(),
   })
   .strict();
 
@@ -42,6 +48,9 @@ const kakaoProfileSchema = z
     email: emailSchema,
     kakaoId: z.string().min(1, '카카오 ID는 필수입니다.'),
     name: z.string().optional(),
+    device: z.string().optional(),
+    ip: z.string().optional(),
+    userAgent: z.string().optional(),
   })
   .strict();
 
@@ -51,6 +60,9 @@ const googleProfileSchema = z
     email: emailSchema,
     sub: z.string().min(1, 'Google ID는 필수입니다.'),
     name: z.string().optional(),
+    device: z.string().optional(),
+    ip: z.string().optional(),
+    userAgent: z.string().optional(),
   })
   .strict();
 

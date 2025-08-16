@@ -27,9 +27,27 @@ export class AuthController {
   async login(req: Request, res: Response): Promise<void> {
     try {
       const loginData: LoginRequest = req.body;
-      logger.info('🔐 로그인 컨트롤러 호출', { email: loginData.email });
 
-      const result = await this.authService.login(loginData);
+      // 요청 정보 추출
+      const device = this.extractDeviceInfo(req);
+      const ip = this.extractClientIP(req);
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+
+      // 로그인 데이터에 요청 정보 추가
+      const enhancedLoginData = {
+        ...loginData,
+        device,
+        ip,
+        userAgent,
+      };
+
+      logger.info('🔐 로그인 컨트롤러 호출', {
+        email: loginData.email,
+        device,
+        ip,
+      });
+
+      const result = await this.authService.login(enhancedLoginData);
       const userResponse = userResponseSchema.parse(result.user);
 
       return AuthSuccess.loginSuccess(result.user.userId, result.user.role, {
@@ -58,12 +76,28 @@ export class AuthController {
   async register(req: Request, res: Response): Promise<void> {
     try {
       const registerData: RegisterRequest = req.body;
+
+      // 요청 정보 추출
+      const device = this.extractDeviceInfo(req);
+      const ip = this.extractClientIP(req);
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+
+      // 회원가입 데이터에 요청 정보 추가
+      const enhancedRegisterData = {
+        ...registerData,
+        device,
+        ip,
+        userAgent,
+      };
+
       logger.info('📝 회원가입 컨트롤러 호출', {
         email: registerData.email,
         name: registerData.name,
+        device,
+        ip,
       });
 
-      const result = await this.authService.register(registerData);
+      const result = await this.authService.register(enhancedRegisterData);
       const userResponse = userResponseSchema.parse(result.user);
 
       return AuthSuccess.registerSuccess(result.user.userId, result.user.role, {
@@ -92,12 +126,28 @@ export class AuthController {
   async socialLogin(req: Request, res: Response): Promise<void> {
     try {
       const profile: SocialLoginDto = req.body;
+
+      // 요청 정보 추출
+      const device = this.extractDeviceInfo(req);
+      const ip = this.extractClientIP(req);
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+
+      // 소셜 로그인 데이터에 요청 정보 추가
+      const enhancedProfile = {
+        ...profile,
+        device,
+        ip,
+        userAgent,
+      };
+
       logger.info('🔗 소셜 로그인 컨트롤러 호출', {
         provider: profile.provider,
         email: profile.email,
+        device,
+        ip,
       });
 
-      const result = await this.authService.handleSocialLogin(profile);
+      const result = await this.authService.handleSocialLogin(enhancedProfile);
 
       return AuthSuccess.loginSuccess(
         result.user.userId,
@@ -261,5 +311,226 @@ export class AuthController {
         res.status(authError.statusCode).json(authError.toResponse());
       }
     }
+  }
+
+  /**
+   * 사용자 세션 조회
+   */
+  async getUserSessions(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        const error = ValidationError.unauthorized();
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      logger.info('📱 사용자 세션 조회 컨트롤러 호출', { userId });
+
+      const sessions = await this.authService.getUserSessions(userId);
+
+      res.status(200).json({
+        success: true,
+        message: '사용자 세션 조회 성공',
+        data: {
+          sessions,
+          totalCount: sessions.length,
+        },
+      });
+    } catch (error) {
+      logger.error('❌ 사용자 세션 조회 컨트롤러 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof AuthError) {
+        res.status(error.statusCode).json(error.toResponse());
+      } else {
+        const authError = AuthError.internalError(
+          '사용자 세션 조회 중 오류가 발생했습니다.'
+        );
+        res.status(authError.statusCode).json(authError.toResponse());
+      }
+    }
+  }
+
+  /**
+   * 특정 기기 로그아웃
+   */
+  async logoutDevice(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      const { token } = req.body;
+
+      if (!userId) {
+        const error = ValidationError.unauthorized();
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      if (!token) {
+        const error = ValidationError.badRequest('토큰이 필요합니다.');
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      logger.info('🚪 특정 기기 로그아웃 컨트롤러 호출', { userId });
+
+      const success = await this.authService.logoutDevice(userId, token);
+
+      if (success) {
+        res.status(200).json({
+          success: true,
+          message: '특정 기기 로그아웃 성공',
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: '토큰을 찾을 수 없습니다.',
+        });
+      }
+    } catch (error) {
+      logger.error('❌ 특정 기기 로그아웃 컨트롤러 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof AuthError) {
+        res.status(error.statusCode).json(error.toResponse());
+      } else {
+        const authError = AuthError.internalError(
+          '특정 기기 로그아웃 중 오류가 발생했습니다.'
+        );
+        res.status(authError.statusCode).json(authError.toResponse());
+      }
+    }
+  }
+
+  /**
+   * 모든 기기 로그아웃
+   */
+  async logoutAllDevices(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        const error = ValidationError.unauthorized();
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      logger.info('🚪 모든 기기 로그아웃 컨트롤러 호출', { userId });
+
+      const removedCount = await this.authService.logoutAllDevices(userId);
+
+      res.status(200).json({
+        success: true,
+        message: '모든 기기 로그아웃 성공',
+        data: {
+          removedCount,
+        },
+      });
+    } catch (error) {
+      logger.error('❌ 모든 기기 로그아웃 컨트롤러 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof AuthError) {
+        res.status(error.statusCode).json(error.toResponse());
+      } else {
+        const authError = AuthError.internalError(
+          '모든 기기 로그아웃 중 오류가 발생했습니다.'
+        );
+        res.status(authError.statusCode).json(authError.toResponse());
+      }
+    }
+  }
+
+  /**
+   * 활성 세션 수 조회
+   */
+  async getActiveSessionCount(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        const error = ValidationError.unauthorized();
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      logger.info('📊 활성 세션 수 조회 컨트롤러 호출', { userId });
+
+      const count = await this.authService.getActiveSessionCount(userId);
+
+      res.status(200).json({
+        success: true,
+        message: '활성 세션 수 조회 성공',
+        data: {
+          activeSessionCount: count,
+        },
+      });
+    } catch (error) {
+      logger.error('❌ 활성 세션 수 조회 컨트롤러 오류', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof AuthError) {
+        res.status(error.statusCode).json(error.toResponse());
+      } else {
+        const authError = AuthError.internalError(
+          '활성 세션 수 조회 중 오류가 발생했습니다.'
+        );
+        res.status(authError.statusCode).json(authError.toResponse());
+      }
+    }
+  }
+
+  /**
+   * 클라이언트 IP 주소 추출
+   */
+  private extractClientIP(req: Request): string {
+    // X-Forwarded-For 헤더 확인 (프록시 환경)
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      const ips = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
+      return ips.split(',')[0].trim();
+    }
+
+    // X-Real-IP 헤더 확인
+    const realIP = req.headers['x-real-ip'];
+    if (realIP) {
+      return Array.isArray(realIP) ? realIP[0] : realIP;
+    }
+
+    // 기본 IP 주소
+    return req.ip || req.connection.remoteAddress || 'Unknown';
+  }
+
+  /**
+   * 디바이스 정보 추출
+   */
+  private extractDeviceInfo(req: Request): string {
+    const userAgent = req.headers['user-agent'] || '';
+
+    // 모바일 디바이스 확인
+    if (
+      /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        userAgent
+      )
+    ) {
+      return 'Mobile';
+    }
+
+    // 데스크톱 브라우저 확인
+    if (/Chrome|Firefox|Safari|Edge|MSIE|Trident/i.test(userAgent)) {
+      return 'Desktop';
+    }
+
+    // API 클라이언트 확인
+    if (/Postman|curl|axios|fetch/i.test(userAgent)) {
+      return 'API Client';
+    }
+
+    return 'Unknown';
   }
 }

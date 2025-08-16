@@ -74,10 +74,29 @@ describe('AuthController', () => {
     authController = new AuthController(mockPrisma);
   });
 
+  // 테스트 완료 후 Redis 연결 정리
+  afterAll(async () => {
+    // Redis 연결이 있다면 정리
+    if ((globalThis as any).redis) {
+      try {
+        await (globalThis as any).redis.quit();
+      } catch {
+        // 무시
+      }
+    }
+  });
+
   describe('login', () => {
     const mockLoginData = {
       email: 'test@example.com',
       password: 'password123',
+    };
+
+    const mockEnhancedLoginData = {
+      ...mockLoginData,
+      device: 'Unknown',
+      ip: '127.0.0.1',
+      userAgent: 'Unknown',
     };
 
     const mockLoginResult = {
@@ -97,6 +116,10 @@ describe('AuthController', () => {
     beforeEach(() => {
       mockRequest = {
         body: mockLoginData,
+        headers: {
+          'user-agent': 'Unknown',
+        },
+        ip: '127.0.0.1',
       };
     });
 
@@ -111,7 +134,7 @@ describe('AuthController', () => {
       );
 
       // Assert
-      expect(mockAuthService.login).toHaveBeenCalledWith(mockLoginData);
+      expect(mockAuthService.login).toHaveBeenCalledWith(mockEnhancedLoginData);
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockLoginResult,
@@ -137,7 +160,7 @@ describe('AuthController', () => {
       );
 
       // Assert
-      expect(mockAuthService.login).toHaveBeenCalledWith(mockLoginData);
+      expect(mockAuthService.login).toHaveBeenCalledWith(mockEnhancedLoginData);
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
@@ -160,7 +183,7 @@ describe('AuthController', () => {
       );
 
       // Assert
-      expect(mockAuthService.login).toHaveBeenCalledWith(mockLoginData);
+      expect(mockAuthService.login).toHaveBeenCalledWith(mockEnhancedLoginData);
       expect(mockStatus).toHaveBeenCalledWith(500);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
@@ -180,6 +203,13 @@ describe('AuthController', () => {
       role: 'USER',
     };
 
+    const mockEnhancedRegisterData = {
+      ...mockRegisterData,
+      device: 'Unknown',
+      ip: '127.0.0.1',
+      userAgent: 'Unknown',
+    };
+
     const mockRegisterResult = {
       user: {
         userId: '550e8400-e29b-41d4-a716-446655440002',
@@ -197,6 +227,10 @@ describe('AuthController', () => {
     beforeEach(() => {
       mockRequest = {
         body: mockRegisterData,
+        headers: {
+          'user-agent': 'Unknown',
+        },
+        ip: '127.0.0.1',
       };
     });
 
@@ -211,7 +245,9 @@ describe('AuthController', () => {
       );
 
       // Assert
-      expect(mockAuthService.register).toHaveBeenCalledWith(mockRegisterData);
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        mockEnhancedRegisterData
+      );
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockRegisterResult,
@@ -226,7 +262,7 @@ describe('AuthController', () => {
       const authError = new AuthError(
         '이미 존재하는 이메일입니다.',
         400,
-        'EMAIL_EXISTS'
+        'EMAIL_ALREADY_EXISTS'
       );
       mockAuthService.register.mockRejectedValue(authError);
 
@@ -237,12 +273,14 @@ describe('AuthController', () => {
       );
 
       // Assert
-      expect(mockAuthService.register).toHaveBeenCalledWith(mockRegisterData);
+      expect(mockAuthService.register).toHaveBeenCalledWith(
+        mockEnhancedRegisterData
+      );
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'EMAIL_EXISTS',
+          code: 'EMAIL_ALREADY_EXISTS',
           message: '이미 존재하는 이메일입니다.',
         },
       });
@@ -251,23 +289,28 @@ describe('AuthController', () => {
 
   describe('socialLogin', () => {
     const mockSocialData = {
-      profile: {
-        id: 'social-123',
-        email: 'social@example.com',
-        name: 'Social User',
-        provider: 'GOOGLE',
-      },
+      email: 'social@example.com',
+      id: 'social-123',
+      name: 'Social User',
+      provider: 'GOOGLE',
+    };
+
+    const mockEnhancedSocialData = {
+      ...mockSocialData,
+      device: 'Unknown',
+      ip: '127.0.0.1',
+      userAgent: 'Unknown',
     };
 
     const mockSocialResult = {
       user: {
-        userId: 'user-789',
+        userId: '550e8400-e29b-41d4-a716-446655440003',
         email: 'social@example.com',
         name: 'Social User',
         role: 'USER',
         isAdmin: false,
+        isSignUpCompleted: true,
         provider: 'GOOGLE',
-        isSignUpCompleted: false,
       },
       accessToken: 'mock-access-token',
       refreshToken: 'mock-refresh-token',
@@ -276,12 +319,18 @@ describe('AuthController', () => {
     beforeEach(() => {
       mockRequest = {
         body: mockSocialData,
+        headers: {
+          'user-agent': 'Unknown',
+        },
+        ip: '127.0.0.1',
       };
     });
 
     it('✅ 소셜 로그인 성공 시 200 상태와 결과를 반환해야 함', async () => {
       // Arrange
-      mockAuthService.handleSocialLogin.mockResolvedValue(mockSocialResult);
+      mockAuthService.handleSocialLogin.mockResolvedValue(
+        mockSocialResult as any
+      );
 
       // Act
       await authController.socialLogin(
@@ -291,12 +340,12 @@ describe('AuthController', () => {
 
       // Assert
       expect(mockAuthService.handleSocialLogin).toHaveBeenCalledWith(
-        mockSocialData
+        mockEnhancedSocialData
       );
       expect(mockJson).toHaveBeenCalledWith({
         success: true,
         data: mockSocialResult,
-        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: user-789, 역할: USER)`,
+        message: `로그인이 성공적으로 완료되었습니다. (사용자 ID: 550e8400-e29b-41d4-a716-446655440003, 역할: USER)`,
         code: 'LOGIN_SUCCESS',
       });
       expect(mockStatus).toHaveBeenCalledWith(200);
@@ -307,7 +356,7 @@ describe('AuthController', () => {
       const authError = new AuthError(
         '소셜 로그인 처리 중 오류가 발생했습니다.',
         400,
-        'SOCIAL_LOGIN_FAILED'
+        'SOCIAL_LOGIN_ERROR'
       );
       mockAuthService.handleSocialLogin.mockRejectedValue(authError);
 
@@ -319,13 +368,13 @@ describe('AuthController', () => {
 
       // Assert
       expect(mockAuthService.handleSocialLogin).toHaveBeenCalledWith(
-        mockSocialData
+        mockEnhancedSocialData
       );
       expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'SOCIAL_LOGIN_FAILED',
+          code: 'SOCIAL_LOGIN_ERROR',
           message: '소셜 로그인 처리 중 오류가 발생했습니다.',
         },
       });
