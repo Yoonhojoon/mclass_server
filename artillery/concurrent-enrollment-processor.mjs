@@ -131,7 +131,7 @@ export function generateTestSummary(context, events, done) {
   console.log('\n📊 동시 Enrollment 테스트 요약');
   console.log('================================');
   console.log(`총 요청 수: ${responseTimes.length}`);
-  console.log(`성공 (2xx): ${statusCodes[200] || 0 + statusCodes[201] || 0}`);
+  console.log(`성공 (2xx): ${(statusCodes[200] || 0) + (statusCodes[201] || 0)}`);
   console.log(`실패 (5xx): ${statusCodes[500] || 0}`);
   console.log(`에러 수: ${errors.length}`);
 
