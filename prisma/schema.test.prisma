@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  password           String?
+  name               String?
+  role               UserRole            @default(USER)
+  provider           Provider            @default(LOCAL)
+  createdAt          DateTime            @default(now()) @map("created_at")
+  isAdmin            Boolean             @default(false) @map("is_admin")
+  isSignUpCompleted  Boolean             @default(false) @map("is_sign_up_completed")
+  socialId           String?             @map("social_id")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  decidedByAdmin     Enrollment[]        @relation("AdminDecisions")
+  enrollments        Enrollment[]
+  mclasses           MClass[]
+  userTermAgreements UserTermAgreement[]
+
+  @@unique([provider, socialId])
+  @@map("users")
+}
+
+model MClass {
+  id               String          @id @default(uuid())
+  title            String
+  description      String?
+  capacity         Int?
+  visibility       Visibility      @default(PUBLIC)
+  location         String?
+  fee              Int?
+  allowWaitlist    Boolean         @default(false) @map("allow_waitlist")
+  createdAt        DateTime        @default(now()) @map("created_at")
+  createdBy        String?         @map("created_by")
+  endAt            DateTime        @map("end_at")
+  isOnline         Boolean         @default(true) @map("is_online")
+  recruitEndAt     DateTime        @map("recruit_end_at")
+  recruitStartAt   DateTime        @map("recruit_start_at")
+  selectionType    SelectionType   @default(FIRST_COME) @map("selection_type")
+  startAt          DateTime        @map("start_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  waitlistCapacity Int?            @map("waitlist_capacity")
+  enrollmentForm   EnrollmentForm?
+  enrollments      Enrollment[]
+  creator          User?           @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([visibility, recruitStartAt, recruitEndAt])
+  @@index([startAt])
+  @@map("mclasses")
+}
+
+model Term {
+  id                 String              @id @default(uuid())
+  type               TermType
+  title              String
+  content            String
+  isRequired         Boolean             @default(false) @map("isRequired")
+  version            String
+  createdAt          DateTime            @default(now()) @map("createdAt")
+  userTermAgreements UserTermAgreement[]
+
+  @@map("terms")
+}
+
+model UserTermAgreement {
+  id       String   @id @default(uuid())
+  agreedAt DateTime @default(now()) @map("agreed_at")
+  termId   String   @map("term_id")
+  userId   String   @map("user_id")
+  term     Term     @relation(fields: [termId], references: [id])
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, termId])
+  @@map("user_term_agreements")
+}
+
+model Enrollment {
+  id               String           @id @default(uuid())
+  answers          Json
+  status           EnrollmentStatus @default(APPLIED)
+  reason           String?
+  version          Int              @default(1) @map("version")
+  appliedAt        DateTime         @default(now()) @map("applied_at")
+  canceledAt       DateTime?        @map("canceled_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  decidedAt        DateTime?        @map("decided_at")
+  decidedByAdminId String?          @map("decided_by_admin_id")
+  enrollmentFormId String           @map("enrollment_form_id")
+  formSnapshot     Json?            @map("form_snapshot")
+  formVersion      Int              @default(1) @map("form_version")
+  idempotencyKey   String?          @unique @map("idempotency_key")
+  mclassId         String           @map("mclass_id")
+  reasonType       ReasonType?      @map("reason_type")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  enrollmentForm   EnrollmentForm  @relation(fields: [enrollmentFormId], references: [id])
+  mclass           MClass          @relation(fields: [mclassId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
+  userId           String          @map("user_id")
+  decidedByAdmin   User?           @relation("AdminDecisions", fields: [decidedByAdminId], references: [id])
+
+  @@index([mclassId])
+  @@index([userId])
+  @@index([enrollmentFormId])
+  @@index([idempotencyKey])
+  @@map("enrollments")
+}
+
+model EnrollmentForm {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  questions   Json
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  mclass      MClass?
+  enrollments Enrollment[]
+
+  @@map("enrollment_forms")
+}
+
+enum EnrollmentStatus {
+  APPLIED
+  APPROVED
+  REJECTED
+  CANCELLED
+  WAITLISTED
+}
+
+enum EnrollmentFormQuestionType {
+  TEXT
+  TEXTAREA
+  SELECT
+  MULTISELECT
+  CHECKBOX
+  RADIO
+  DATE
+  NUMBER
+}
+
+enum ReasonType {
+  CAPACITY_FULL
+  DEADLINE_PASSED
+  NOT_ELIGIBLE
+  DUPLICATE_APPLICATION
+  OTHER
+}
+
+enum Provider {
+  LOCAL
+  GOOGLE
+  KAKAO
+  NAVER
+}
+
+enum SelectionType {
+  FIRST_COME
+  LOTTERY
+  MANUAL
+}
+
+enum TermType {
+  PRIVACY
+  SERVICE
+  ENROLLMENT
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  HIDDEN
+}

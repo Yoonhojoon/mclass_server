@@ -3,11 +3,10 @@ import { config } from 'dotenv';
 // 테스트 환경에서 .env 파일 로드
 config({ path: '.env', debug: false });
 
-// 테스트 환경 변수 설정
+// SQLite 테스트 환경 변수 설정
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL =
-  process.env.TEST_DATABASE_URL ||
-  'postgresql://postgres:mclass@localhost:5432/mclass_test_db';
+process.env.DATABASE_URL = 'file:./test.db';
+process.env.TEST_DATABASE_URL = 'file:./test.db';
 process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing-only';
 process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret-key-for-testing-only';
 process.env.REDIS_URL = 'redis://localhost:6379/1';
