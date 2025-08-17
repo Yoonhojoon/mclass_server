@@ -1,4 +1,9 @@
-import { PrismaClient, EnrollmentStatus, Prisma } from '@prisma/client';
+import {
+  PrismaClient,
+  EnrollmentStatus,
+  Prisma,
+  EmailType,
+} from '@prisma/client';
 import { setTimeout } from 'timers/promises';
 import { EnrollmentRepository } from './enrollment.repository.js';
 import {
@@ -825,7 +830,7 @@ export class EnrollmentService {
           reason,
           userName: user.name,
         },
-        type: emailType,
+        type: emailType as EmailType,
       });
 
       logger.info(`상태 변경 이메일 아웃박스에 추가됨: ${user.email}`, {

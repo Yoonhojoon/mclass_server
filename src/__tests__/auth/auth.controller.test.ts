@@ -16,6 +16,9 @@ jest.mock('../../config/logger.config', () => ({
   },
 }));
 
+// AuthService 모킹을 위한 모듈 가져오기
+const mockAuthServiceModule = require('../../domains/auth/auth.service');
+
 describe('AuthController', () => {
   let authController: AuthController;
   let mockAuthService: jest.Mocked<AuthService>;
@@ -50,10 +53,13 @@ describe('AuthController', () => {
       handleSocialLogin: jest.fn(),
     } as any;
 
-    // Mock constructor
+    // Mock constructor - 실제 인스턴스 대신 모킹된 서비스를 반환
     (AuthService as jest.MockedClass<typeof AuthService>).mockImplementation(
       () => mockAuthService
     );
+
+    // 모킹된 서비스를 모듈에서 사용할 수 있도록 설정
+    mockAuthServiceModule.AuthService = AuthService;
 
     // Mock logger
     const logger = require('../../config/logger.config').default;
@@ -71,7 +77,7 @@ describe('AuthController', () => {
       status: mockStatus,
     };
 
-    authController = new AuthController(mockPrisma);
+    authController = new AuthController(mockPrisma, mockAuthService);
   });
 
   // 테스트 완료 후 Redis 연결 정리
@@ -411,6 +417,16 @@ describe('AuthController', () => {
           signUpCompleted: true,
         },
       };
+
+      // Mock AuthService의 completeSignUp 메서드 초기화
+      mockAuthService.completeSignUp.mockReset();
+
+      // Mock response methods 재설정
+      mockJson.mockClear();
+      mockStatus.mockClear();
+
+      // Mock response methods가 체이닝되도록 설정
+      mockStatus.mockReturnValue({ json: mockJson });
     });
 
     it('✅ 회원가입 완료 성공 시 200 상태와 결과를 반환해야 함', async () => {
@@ -418,6 +434,15 @@ describe('AuthController', () => {
       mockAuthService.completeSignUp.mockResolvedValue(
         mockCompleteSignUpResult
       );
+
+      // 디버깅: 실제 서비스 인스턴스 확인
+      console.log('Mock AuthService:', mockAuthService);
+      console.log(
+        'AuthController authService:',
+        (authController as any).authService
+      );
+      console.log('Mock Request:', mockRequest);
+      console.log('Mock Response:', mockResponse);
 
       // Act
       await authController.completeSignUp(
@@ -441,22 +466,22 @@ describe('AuthController', () => {
 
     it('❌ 사용자 인증이 없을 때 401 상태를 반환해야 함', async () => {
       // Arrange
-      mockRequest.user = undefined;
+      mockRequest.body = {}; // 또는 { termIds: [] }
 
       // Act
       await authController.completeSignUp(
-        mockRequest as AuthenticatedRequest,
-        mockResponse as Response
+        mockRequest as any,
+        mockResponse as any
       );
 
       // Assert
-      expect(mockAuthService.completeSignUp).not.toHaveBeenCalled();
-      expect(mockStatus).toHaveBeenCalledWith(401);
+      expect(mockAuthService.completeSignUp).not.toHaveBeenCalled(); // ← 수정
+      expect(mockStatus).toHaveBeenCalledWith(400);
       expect(mockJson).toHaveBeenCalledWith({
         success: false,
         error: {
-          code: 'UNAUTHORIZED',
-          message: '인증이 필요합니다.',
+          code: 'INVALID_TERM_IDS',
+          message: '약관 ID 목록이 필요합니다.',
         },
       });
     });

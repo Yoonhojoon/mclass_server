@@ -248,10 +248,14 @@ async function ensureDatabaseConnection(): Promise<void> {
       }
 
       logger.info(`${retryDelay / 1000}초 후 재시도합니다...`);
-      // setTimeout을 안전하게 사용
+      // setTimeout을 안전하게 사용 (테스트 환경에서는 .unref() 적용)
       await new Promise(resolve => {
         const timer = globalThis.setTimeout(resolve, retryDelay);
-        return () => globalThis.clearTimeout(timer);
+        // 테스트 환경이 아닐 때만 .unref() 적용 (테스트에서는 타이머 추적 필요)
+        if (process.env.NODE_ENV !== 'test' && timer.unref) {
+          timer.unref();
+        }
+        return (): void => globalThis.clearTimeout(timer);
       });
     }
   }
@@ -360,14 +364,26 @@ const startServer = async (): Promise<void> => {
       logger.info('✅ 이메일 서버 연결 확인 완료');
     }
 
-    // 이메일 아웃박스 워커 시작
-    logger.info('📧 이메일 아웃박스 워커 시작 중...');
-    const emailCron = new EmailOutboxCron(emailOutboxWorker, logger);
-    emailCron.start();
+    // 이메일 아웃박스 워커 시작 (테스트 환경에서는 비활성화)
+    if (process.env.DISABLE_CRON_JOBS !== 'true') {
+      logger.info('📧 이메일 아웃박스 워커 시작 중...');
+      const emailCron = new EmailOutboxCron(emailOutboxWorker, logger);
+      emailCron.start();
+    } else {
+      logger.info(
+        '📧 이메일 아웃박스 워커가 테스트 환경에서 비활성화되었습니다.'
+      );
+    }
 
-    // 토큰 정리 크론 작업 시작
-    logger.info('🧹 토큰 정리 크론 작업 시작 중...');
-    startTokenCleanupJob();
+    // 토큰 정리 크론 작업 시작 (테스트 환경에서는 비활성화)
+    if (process.env.DISABLE_CRON_JOBS !== 'true') {
+      logger.info('🧹 토큰 정리 크론 작업 시작 중...');
+      startTokenCleanupJob();
+    } else {
+      logger.info(
+        '🧹 토큰 정리 크론 작업이 테스트 환경에서 비활성화되었습니다.'
+      );
+    }
 
     logger.info('🌐 HTTP 서버 시작 중...');
     app.listen(PORT, (): void => {

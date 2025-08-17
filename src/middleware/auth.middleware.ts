@@ -28,7 +28,12 @@ export const authenticateToken = async (
       tokenLength: token?.length,
       tokenPrefix: token ? token.substring(0, 20) + '...' : '없음',
       userAgent: req.headers['user-agent'],
-      ip: req.ip || req.connection.remoteAddress,
+      ip:
+        req.ip ??
+        (req as { socket?: { remoteAddress?: string } }).socket
+          ?.remoteAddress ??
+        (req as { connection?: { remoteAddress?: string } }).connection
+          ?.remoteAddress,
     });
 
     if (!token) {

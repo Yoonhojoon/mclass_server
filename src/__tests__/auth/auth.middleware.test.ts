@@ -5,6 +5,7 @@ import {
   requireSignUpCompleted,
 } from '../../middleware/auth.middleware';
 import { AuthenticatedRequest } from '../../types/express';
+import { TokenService } from '../../domains/token/token.service';
 
 // Mock dependencies
 jest.mock('../../config/logger.config', () => ({
@@ -17,7 +18,14 @@ jest.mock('../../config/logger.config', () => ({
   },
 }));
 
-jest.mock('../../domains/token/token.service');
+// ES 모듈 mock 설정
+jest.mock('../../domains/token/token.service.js');
+
+jest.mock('../../services/redis/token-storage.service', () => ({
+  TokenStorageService: {
+    isTokenValid: jest.fn(),
+  },
+}));
 
 jest.mock('../../config/passport.config', () => ({
   __esModule: true,
@@ -44,16 +52,23 @@ describe('Auth Middleware', () => {
     logger.error.mockImplementation(() => {});
     logger.debug.mockImplementation(() => {});
 
-    // Mock TokenService
-    const tokenService = require('../../domains/token/token.service');
-    tokenService.TokenService.verifyAccessTokenWithBlacklist = jest
+    // Mock TokenService - 동일 모듈 인스턴스 참조
+    (
+      TokenService.verifyAccessTokenWithBlacklist as jest.Mock
+    ).mockResolvedValue({
+      userId: 'user-123',
+      email: 'test@example.com',
+      role: 'USER',
+      isAdmin: false,
+      signUpCompleted: true,
+      provider: 'local',
+    });
+
+    // Mock TokenStorageService
+    const tokenStorageService = require('../../services/redis/token-storage.service');
+    tokenStorageService.TokenStorageService.isTokenValid = jest
       .fn()
-      .mockReturnValue({
-        userId: 'user-123',
-        email: 'test@example.com',
-        role: 'USER',
-        signUpCompleted: true,
-      });
+      .mockResolvedValue(true);
 
     mockRequest = {
       headers: {},
@@ -73,9 +88,10 @@ describe('Auth Middleware', () => {
       userId: 'user-123',
       email: 'test@example.com',
       role: 'USER',
+      isAdmin: false,
       signUpCompleted: true,
+      provider: 'local',
     };
-
     beforeEach(() => {
       mockRequest.headers = {
         authorization: `Bearer ${mockToken}`,
@@ -84,10 +100,9 @@ describe('Auth Middleware', () => {
 
     it('✅ 유효한 토큰으로 인증 성공 시 next()를 호출해야 함', async () => {
       // Arrange
-      const tokenService = require('../../domains/token/token.service');
-      tokenService.TokenService.verifyAccessTokenWithBlacklist = jest
-        .fn()
-        .mockReturnValue(mockDecodedToken);
+      (
+        TokenService.verifyAccessTokenWithBlacklist as jest.Mock
+      ).mockResolvedValue(mockDecodedToken);
 
       // Act
       await authenticateToken(
@@ -97,10 +112,10 @@ describe('Auth Middleware', () => {
       );
 
       // Assert
-      expect(
-        tokenService.TokenService.verifyAccessTokenWithBlacklist
-      ).toHaveBeenCalledWith(mockToken);
-      expect(mockRequest.user).toEqual(mockDecodedToken);
+      expect(TokenService.verifyAccessTokenWithBlacklist).toHaveBeenCalledWith(
+        mockToken
+      );
+      expect(mockRequest.user).toMatchObject(mockDecodedToken);
       expect(mockNext).toHaveBeenCalled();
       expect(mockResponse.status).not.toHaveBeenCalled();
       expect(mockResponse.json).not.toHaveBeenCalled();
@@ -146,12 +161,11 @@ describe('Auth Middleware', () => {
 
     it('❌ 토큰 검증 실패 시 401 상태를 반환해야 함', async () => {
       // Arrange
-      const tokenService = require('../../domains/token/token.service');
-      tokenService.TokenService.verifyAccessTokenWithBlacklist = jest
-        .fn()
-        .mockImplementation(() => {
-          throw new Error('Invalid token');
-        });
+      (
+        TokenService.verifyAccessTokenWithBlacklist as jest.Mock
+      ).mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
 
       // Act
       await authenticateToken(
@@ -169,14 +183,13 @@ describe('Auth Middleware', () => {
 
     it('❌ 만료된 토큰일 때 401 상태를 반환해야 함', async () => {
       // Arrange
-      const tokenService = require('../../domains/token/token.service');
-      tokenService.TokenService.verifyAccessTokenWithBlacklist = jest
-        .fn()
-        .mockImplementation(() => {
-          const error = new Error('jwt expired');
-          (error as any).name = 'TokenExpiredError';
-          throw error;
-        });
+      (
+        TokenService.verifyAccessTokenWithBlacklist as jest.Mock
+      ).mockImplementation(() => {
+        const error = new Error('jwt expired');
+        (error as any).name = 'TokenExpiredError';
+        throw error;
+      });
 
       // Act
       await authenticateToken(
@@ -272,17 +285,18 @@ describe('Auth Middleware', () => {
         userId: 'user-123',
         email: 'test@example.com',
         role: 'USER',
+        isAdmin: false,
         signUpCompleted: true,
+        provider: 'local',
       };
 
       mockRequest.headers = {
         authorization: `Bearer ${mockToken}`,
       };
 
-      const tokenService = require('../../domains/token/token.service');
-      tokenService.TokenService.verifyAccessTokenWithBlacklist = jest
-        .fn()
-        .mockReturnValue(mockDecodedToken);
+      (
+        TokenService.verifyAccessTokenWithBlacklist as jest.Mock
+      ).mockResolvedValue(mockDecodedToken);
 
       // Act - authenticateToken 실행
       await authenticateToken(
@@ -292,7 +306,7 @@ describe('Auth Middleware', () => {
       );
 
       // Assert - authenticateToken이 성공했는지 확인
-      expect(mockRequest.user).toEqual(mockDecodedToken);
+      expect(mockRequest.user).toMatchObject(mockDecodedToken);
       expect(mockNext).toHaveBeenCalled();
 
       // Reset mockNext
