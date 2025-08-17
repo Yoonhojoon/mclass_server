@@ -137,51 +137,37 @@ model EmailOutbox {
   attempts    Int       @default(0)
   error       String?
   createdAt   DateTime  @default(now()) @map("created_at")
+  nextTryAt   DateTime? @map("next_try_at")
+  processedAt DateTime? @map("processed_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  @@index([type, processedAt])
+  @@index([nextTryAt, attempts])
   @@map("email_outbox")
 }
 
 enum EmailType {
-  ENROLLMENT_CONFIRMATION
-  ENROLLMENT_REJECTION
-  ENROLLMENT_CANCELLATION
-  ENROLLMENT_WAITLIST
-  ENROLLMENT_APPROVAL
-  ENROLLMENT_REMINDER
-  ENROLLMENT_DEADLINE
-  ENROLLMENT_CAPACITY_FULL
-  ENROLLMENT_DEADLINE_PASSED
-  ENROLLMENT_NOT_ELIGIBLE
-  ENROLLMENT_DUPLICATE
-  ENROLLMENT_OTHER
+  ENROLLMENT_APPLIED
+  ENROLLMENT_APPROVED
+  ENROLLMENT_REJECTED
+  ENROLLMENT_WAITLISTED
+  ENROLLMENT_CANCELED
+  WAITLIST_PROMOTED
 }
 
 enum EnrollmentStatus {
   APPLIED
   APPROVED
   REJECTED
-  CANCELED
   WAITLISTED
+  CANCELED
 }
 
-enum EnrollmentFormQuestionType {
-  TEXT
-  TEXTAREA
-  SELECT
-  MULTISELECT
-  CHECKBOX
-  RADIO
-  DATE
-  NUMBER
-}
+
 
 enum ReasonType {
-  CAPACITY_FULL
-  DEADLINE_PASSED
-  NOT_ELIGIBLE
-  DUPLICATE_APPLICATION
-  OTHER
+  REJECT
+  CANCEL
 }
 
 enum Provider {
@@ -193,13 +179,12 @@ enum Provider {
 
 enum SelectionType {
   FIRST_COME
-  LOTTERY
-  MANUAL
+  REVIEW
 }
 
 enum TermType {
-  PRIVACY
   SERVICE
+  PRIVACY
   ENROLLMENT
 }
 
@@ -210,6 +195,5 @@ enum UserRole {
 
 enum Visibility {
   PUBLIC
-  PRIVATE
-  HIDDEN
+  UNLISTED
 }
