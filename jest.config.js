@@ -32,6 +32,4 @@ export default {
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
-  // 비동기 작업 누수 방지
-  detectOpenHandles: true,
 }; 
