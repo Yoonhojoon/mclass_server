@@ -114,6 +114,14 @@ export class TermController {
       return TermSuccess.termCreated(termDto).send(res);
     } catch (error) {
       logger.error('약관 생성 중 오류 발생:', error);
+
+      // TermError인 경우 원래 에러 그대로 반환
+      if (error instanceof TermError) {
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // 기타 에러는 일반적인 생성 실패 에러로 처리
       const termError = TermError.creationFailed('약관 생성에 실패했습니다.');
       res.status(termError.statusCode).json(termError.toResponse());
     }
@@ -160,6 +168,14 @@ export class TermController {
       return TermSuccess.termUpdated(termDto).send(res);
     } catch (error) {
       logger.error('약관 수정 중 오류 발생:', error);
+
+      // TermError인 경우 원래 에러 그대로 반환
+      if (error instanceof TermError) {
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // 기타 에러는 일반적인 수정 실패 에러로 처리
       const termError = TermError.updateFailed('약관 수정에 실패했습니다.');
       res.status(termError.statusCode).json(termError.toResponse());
     }
@@ -185,6 +201,14 @@ export class TermController {
       return TermSuccess.termDeleted().send(res);
     } catch (error) {
       logger.error('약관 삭제 중 오류 발생:', error);
+
+      // TermError인 경우 원래 에러 그대로 반환
+      if (error instanceof TermError) {
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // 기타 에러는 일반적인 삭제 실패 에러로 처리
       const termError = TermError.deletionFailed('약관 삭제에 실패했습니다.');
       res.status(termError.statusCode).json(termError.toResponse());
     }

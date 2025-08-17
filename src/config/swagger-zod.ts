@@ -115,6 +115,127 @@ export const ErrorResponseSchema = z.object({
   }),
 });
 
+// HTTP 상태 코드별 구체적인 에러 스키마들
+export const BadRequestErrorSchema = ErrorResponseSchema.extend({
+  error: z.object({
+    code: z.string().openapi({
+      example: 'VALIDATION_ERROR',
+      description: '에러 코드',
+    }),
+    message: z.string().openapi({
+      example: '입력 데이터가 유효하지 않습니다.',
+      description: '에러 메시지',
+    }),
+    details: z
+      .any()
+      .optional()
+      .openapi({
+        example: { field: 'email', issue: '이메일 형식이 올바르지 않습니다.' },
+        description: '상세 에러 정보',
+      }),
+  }),
+});
+
+export const UnauthorizedErrorSchema = ErrorResponseSchema.extend({
+  error: z.object({
+    code: z.string().openapi({
+      example: 'INVALID_CREDENTIALS',
+      description: '에러 코드',
+    }),
+    message: z.string().openapi({
+      example: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      description: '에러 메시지',
+    }),
+    details: z
+      .any()
+      .optional()
+      .openapi({
+        example: { reason: 'INVALID_PASSWORD' },
+        description: '상세 에러 정보',
+      }),
+  }),
+});
+
+export const ForbiddenErrorSchema = ErrorResponseSchema.extend({
+  error: z.object({
+    code: z.string().openapi({
+      example: 'INSUFFICIENT_PERMISSIONS',
+      description: '에러 코드',
+    }),
+    message: z.string().openapi({
+      example: '이 작업을 수행할 권한이 없습니다.',
+      description: '에러 메시지',
+    }),
+    details: z
+      .any()
+      .optional()
+      .openapi({
+        example: { requiredRole: 'ADMIN', currentRole: 'USER' },
+        description: '상세 에러 정보',
+      }),
+  }),
+});
+
+export const NotFoundErrorSchema = ErrorResponseSchema.extend({
+  error: z.object({
+    code: z.string().openapi({
+      example: 'RESOURCE_NOT_FOUND',
+      description: '에러 코드',
+    }),
+    message: z.string().openapi({
+      example: '요청한 리소스를 찾을 수 없습니다.',
+      description: '에러 메시지',
+    }),
+    details: z
+      .any()
+      .optional()
+      .openapi({
+        example: { resource: 'user', id: '123' },
+        description: '상세 에러 정보',
+      }),
+  }),
+});
+
+export const ConflictErrorSchema = ErrorResponseSchema.extend({
+  error: z.object({
+    code: z.string().openapi({
+      example: 'RESOURCE_ALREADY_EXISTS',
+      description: '에러 코드',
+    }),
+    message: z.string().openapi({
+      example: '이미 존재하는 리소스입니다.',
+      description: '에러 메시지',
+    }),
+    details: z
+      .any()
+      .optional()
+      .openapi({
+        example: { field: 'email', value: 'user@example.com' },
+        description: '상세 에러 정보',
+      }),
+  }),
+});
+
+export const InternalServerErrorSchema = ErrorResponseSchema.extend({
+  error: z.object({
+    code: z.string().openapi({
+      example: 'INTERNAL_SERVER_ERROR',
+      description: '에러 코드',
+    }),
+    message: z.string().openapi({
+      example: '서버 내부 오류가 발생했습니다.',
+      description: '에러 메시지',
+    }),
+    details: z
+      .any()
+      .optional()
+      .openapi({
+        example: { timestamp: '2025-01-15T10:00:00.000Z' },
+        description: '상세 에러 정보',
+      }),
+  }),
+});
+
 // 페이지네이션 메타 스키마
 export const PaginationMetaSchema = z.object({
   page: z.number().openapi({ example: 1, description: '현재 페이지' }),
@@ -136,4 +257,10 @@ export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(
 // 스키마들을 레지스트리에 등록
 registry.register('SuccessResponse', SuccessResponseSchema);
 registry.register('ErrorResponse', ErrorResponseSchema);
+registry.register('BadRequestError', BadRequestErrorSchema);
+registry.register('UnauthorizedError', UnauthorizedErrorSchema);
+registry.register('ForbiddenError', ForbiddenErrorSchema);
+registry.register('NotFoundError', NotFoundErrorSchema);
+registry.register('ConflictError', ConflictErrorSchema);
+registry.register('InternalServerError', InternalServerErrorSchema);
 registry.register('PaginationMeta', PaginationMetaSchema);

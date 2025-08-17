@@ -12,7 +12,10 @@ import { requireAdmin } from '../middleware/auth.middleware.js';
 import { registry } from '../config/swagger-zod.js';
 import {
   SuccessResponseSchema,
-  ErrorResponseSchema,
+  BadRequestErrorSchema,
+  UnauthorizedErrorSchema,
+  ForbiddenErrorSchema,
+  NotFoundErrorSchema,
 } from '../config/swagger-zod.js';
 
 /**
@@ -44,7 +47,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -52,7 +55,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '사용자를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -89,7 +92,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -97,7 +100,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -105,7 +108,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '사용자를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -141,7 +144,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -149,7 +152,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -157,7 +160,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '권한 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ForbiddenErrorSchema,
           },
         },
       },
@@ -165,7 +168,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '사용자를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -192,7 +195,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -200,7 +203,7 @@ export const createUserRoutes = (prisma: PrismaClient): Router => {
         description: '사용자를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
