@@ -72,13 +72,22 @@ describe('Auth E2E Tests', () => {
     // Setup Express app
     app = express();
     app.use(express.json());
-    app.use('/api/auth', createAuthRoutes(prisma));
 
-    // Setup Prisma - 기존 .env 설정 사용
-    prisma = new PrismaClient();
-
-    // Test database connection
+    // Setup Prisma with test schema
     try {
+      // 테스트용 스키마로 Prisma 클라이언트 생성
+      const { PrismaClient } = await import('@prisma/client');
+      prisma = new PrismaClient({
+        datasources: {
+          db: {
+            url: 'file:./test.db',
+          },
+        },
+      });
+
+      app.use('/api/auth', createAuthRoutes(prisma));
+
+      // Test database connection
       await prisma.$connect();
       await prisma.userTermAgreement.deleteMany();
       await prisma.user.deleteMany();

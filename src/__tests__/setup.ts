@@ -23,3 +23,6 @@ jest.setTimeout(30000);
 
 // 테스트 실행 전 로그 레벨 조정
 process.env.LOG_LEVEL = 'error';
+
+// Prisma 스키마 경로 설정 (테스트용 스키마 사용)
+process.env.PRISMA_SCHEMA_PATH = './prisma/schema.test.prisma';
