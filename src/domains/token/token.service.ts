@@ -135,11 +135,20 @@ export class TokenService {
   static async verifyAccessTokenWithStorage(
     token: string
   ): Promise<TokenPayload> {
-    // 먼저 Redis 저장소에서 토큰 유효성 확인
-    const isValid = await TokenStorageService.isTokenValid(token);
-    if (!isValid) {
-      logger.warn(`[TokenService] Redis에서 토큰 무효 확인`);
-      throw TokenError.invalidToken('토큰이 무효화되었습니다');
+    try {
+      // 먼저 Redis 저장소에서 토큰 유효성 확인
+      const isValid = await TokenStorageService.isTokenValid(token);
+      if (!isValid) {
+        logger.warn(`[TokenService] Redis에서 토큰 무효 확인`);
+        throw TokenError.invalidToken('토큰이 무효화되었습니다');
+      }
+    } catch (redisError) {
+      logger.warn(`[TokenService] Redis 토큰 검증 실패, JWT 검증만으로 진행`, {
+        error: redisError instanceof Error ? redisError.message : redisError,
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + '...',
+      });
+      // Redis 오류 시 JWT 검증만으로 진행
     }
 
     // JWT 검증
@@ -318,7 +327,36 @@ export class TokenService {
   static async verifyAccessTokenWithBlacklist(
     token: string
   ): Promise<TokenPayload> {
-    // TokenStorageService를 사용하여 토큰 검증
-    return this.verifyAccessTokenWithStorage(token);
+    try {
+      // 먼저 JWT 검증 수행
+      const payload = this.verifyAccessToken(token);
+
+      // JWT 검증이 성공하면 Redis 검증 시도
+      try {
+        const isValid = await TokenStorageService.isTokenValid(token);
+        if (!isValid) {
+          logger.warn(`[TokenService] Redis에서 토큰 무효 확인`, {
+            userId: payload.userId,
+            tokenLength: token.length,
+          });
+          throw TokenError.invalidToken('토큰이 무효화되었습니다');
+        }
+      } catch (redisError) {
+        logger.warn(`[TokenService] Redis 토큰 검증 실패, JWT 검증 결과 사용`, {
+          error: redisError instanceof Error ? redisError.message : redisError,
+          userId: payload.userId,
+          tokenLength: token.length,
+        });
+        // Redis 오류 시 JWT 검증 결과만 사용
+      }
+
+      return payload;
+    } catch (error) {
+      // JWT 검증 실패 시
+      if (error instanceof TokenError) {
+        throw error;
+      }
+      throw TokenError.tokenVerificationFailed('토큰 검증에 실패했습니다');
+    }
   }
 }

@@ -18,20 +18,60 @@ export const authenticateToken = async (
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
+    // 디버깅을 위한 상세 로그 추가
+    logger.info('🔍 인증 미들웨어 시작', {
+      method: req.method,
+      path: req.path,
+      hasAuthHeader: !!authHeader,
+      authHeaderPrefix: authHeader?.substring(0, 10) + '...',
+      hasToken: !!token,
+      tokenLength: token?.length,
+      tokenPrefix: token ? token.substring(0, 20) + '...' : '없음',
+      userAgent: req.headers['user-agent'],
+      ip: req.ip || req.connection.remoteAddress,
+    });
+
     if (!token) {
-      logger.warn(`[AuthMiddleware] 인증 토큰 없음: ${req.method} ${req.path}`);
+      logger.warn(
+        `[AuthMiddleware] 인증 토큰 없음: ${req.method} ${req.path}`,
+        {
+          headers: req.headers,
+        }
+      );
       throw AuthError.authenticationFailed('인증 토큰이 필요합니다.');
     }
 
     if (!authHeader.startsWith('Bearer ')) {
       logger.warn(
-        `[AuthMiddleware] 잘못된 토큰 형식: ${req.method} ${req.path}`
+        `[AuthMiddleware] 잘못된 토큰 형식: ${req.method} ${req.path}`,
+        {
+          authHeader: authHeader,
+        }
       );
       throw AuthError.authenticationFailed('인증 토큰이 필요합니다.');
     }
 
     try {
+      logger.info('🔍 토큰 검증 시작', {
+        method: req.method,
+        path: req.path,
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + '...',
+      });
+
       const decoded = await TokenService.verifyAccessTokenWithBlacklist(token);
+
+      logger.info('✅ 토큰 검증 성공', {
+        method: req.method,
+        path: req.path,
+        userId: decoded.userId,
+        email: decoded.email,
+        role: decoded.role,
+        isAdmin: decoded.isAdmin,
+        signUpCompleted: decoded.signUpCompleted,
+        provider: decoded.provider,
+      });
+
       req.user = {
         userId: decoded.userId,
         email: decoded.email,
@@ -50,6 +90,16 @@ export const authenticateToken = async (
         `[AuthMiddleware] 토큰 검증 실패: ${req.method} ${req.path}`,
         {
           error: tokenError instanceof Error ? tokenError.message : tokenError,
+          stack: tokenError instanceof Error ? tokenError.stack : undefined,
+          tokenLength: token.length,
+          tokenPrefix: token.substring(0, 20) + '...',
+          errorType:
+            tokenError instanceof Error
+              ? tokenError.constructor.name
+              : 'Unknown',
+          isAuthError: tokenError instanceof AuthError,
+          isTokenError:
+            tokenError instanceof Error && tokenError.message.includes('토큰'),
         }
       );
 
@@ -63,6 +113,10 @@ export const authenticateToken = async (
   } catch (error) {
     logger.warn(`[AuthMiddleware] 토큰 인증 실패: ${req.method} ${req.path}`, {
       error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      headers: req.headers,
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      isAuthError: error instanceof AuthError,
     });
 
     // 일관된 에러 처리를 위해 AuthError로 래핑

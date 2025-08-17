@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../domains/auth/auth.controller.js';
-import { authenticateToken } from '../middleware/auth.middleware.js';
+import { jwtAuth } from '../middleware/jwtAuth.js';
+import { requireAuth } from '../middleware/requireAuth.js';
 import { validateBody } from '../middleware/validate.middleware.js';
 import {
   loginSchema,
@@ -333,7 +334,8 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
 
   router.post(
     '/complete-signup',
-    authenticateToken,
+    jwtAuth,
+    requireAuth,
     validateBody(completeSignUpSchema),
     authController.completeSignUp
   );
@@ -346,12 +348,13 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
 
   router.post(
     '/change-password',
-    authenticateToken,
+    jwtAuth,
+    requireAuth,
     validateBody(changePasswordSchema),
     authController.changePassword
   );
 
-  router.post('/logout', authenticateToken, authController.logout);
+  router.post('/logout', jwtAuth, requireAuth, authController.logout);
 
   return router;
 };
