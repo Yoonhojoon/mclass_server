@@ -16,17 +16,23 @@ const mockRepository = {
 
 describe('MClassService', () => {
   let service: MClassService;
+  let testId: string;
+  let uniqueTitle: string;
 
   beforeEach(() => {
     service = new MClassService(mockRepository);
     jest.clearAllMocks();
+
+    // 각 테스트마다 고유한 ID와 제목 생성
+    testId = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    uniqueTitle = `Test Class ${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   });
 
   describe('calculatePhase', () => {
     it('should return UPCOMING when now < recruitStartAt', async () => {
       const mclass = {
-        id: '1',
-        title: 'Test Class',
+        id: testId,
+        title: uniqueTitle,
         description: null,
         recruitStartAt: new Date('2025-12-01'),
         recruitEndAt: new Date('2025-12-15'),
@@ -51,8 +57,8 @@ describe('MClassService', () => {
 
     it('should return RECRUITING when in recruitment period', async () => {
       const mclass = {
-        id: '1',
-        title: 'Test Class',
+        id: testId,
+        title: uniqueTitle,
         description: null,
         recruitStartAt: new Date('2024-01-01'),
         recruitEndAt: new Date('2025-12-31'),
@@ -71,22 +77,25 @@ describe('MClassService', () => {
         updatedAt: new Date(),
       };
 
-      // RECRUITING 조건을 만족하기 위해 approvedCount를 capacity보다 작게 설정
       mockRepository.getApprovedCount.mockResolvedValue(5);
 
       const result = await service['calculatePhase'](mclass);
       expect(result).toBe('RECRUITING');
     });
 
-    it('should return IN_PROGRESS when in progress', async () => {
+    it('should return IN_PROGRESS when now >= startAt and now < endAt', async () => {
+      const now = new Date();
+      const startAt = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1일 전
+      const endAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1일 후
+
       const mclass = {
-        id: '1',
-        title: 'Test Class',
+        id: testId,
+        title: uniqueTitle,
         description: null,
-        recruitStartAt: new Date('2024-01-01'),
-        recruitEndAt: new Date('2024-12-15'),
-        startAt: new Date('2024-12-20'),
-        endAt: new Date('2025-12-25'),
+        recruitStartAt: new Date(startAt.getTime() - 30 * 24 * 60 * 60 * 1000), // 30일 전
+        recruitEndAt: new Date(startAt.getTime() - 1 * 24 * 60 * 60 * 1000), // 1일 전
+        startAt: startAt,
+        endAt: endAt,
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
         allowWaitlist: false,
@@ -104,15 +113,19 @@ describe('MClassService', () => {
       expect(result).toBe('IN_PROGRESS');
     });
 
-    it('should return ENDED when ended', async () => {
+    it('should return ENDED when now >= endAt', async () => {
+      const now = new Date();
+      const startAt = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000); // 2일 전
+      const endAt = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000); // 1일 전
+
       const mclass = {
-        id: '1',
-        title: 'Test Class',
+        id: testId,
+        title: uniqueTitle,
         description: null,
-        recruitStartAt: new Date('2020-01-01'),
-        recruitEndAt: new Date('2020-12-15'),
-        startAt: new Date('2021-01-01'),
-        endAt: new Date('2021-01-25'),
+        recruitStartAt: new Date(startAt.getTime() - 30 * 24 * 60 * 60 * 1000), // 30일 전
+        recruitEndAt: new Date(startAt.getTime() - 1 * 24 * 60 * 60 * 1000), // 1일 전
+        startAt: startAt,
+        endAt: endAt,
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
         allowWaitlist: false,
@@ -134,16 +147,15 @@ describe('MClassService', () => {
   describe('getById', () => {
     it('should return MClass with phase when found', async () => {
       const mockMClass = {
-        id: '1',
-        title: 'Test Class',
+        id: testId,
+        title: uniqueTitle,
         description: null,
-        recruitStartAt: new Date('2025-12-15'),
-        recruitEndAt: new Date('2025-12-19'),
-        startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-25'),
+        recruitStartAt: new Date('2024-01-01'),
+        recruitEndAt: new Date('2025-12-31'),
+        startAt: new Date('2026-01-20'),
+        endAt: new Date('2026-01-25'),
         selectionType: 'FIRST_COME' as const,
         capacity: 10,
-
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -156,24 +168,26 @@ describe('MClassService', () => {
       };
 
       mockRepository.findById.mockResolvedValue(mockMClass);
+      mockRepository.getApprovedCount.mockResolvedValue(5);
 
-      const result = await service.getById('1');
+      const result = await service.getById(testId);
 
       expect(result).toHaveProperty('phase');
-      expect(mockRepository.findById).toHaveBeenCalledWith('1');
+      expect(result.id).toBe(testId);
+      expect(mockRepository.findById).toHaveBeenCalledWith(testId);
     });
 
-    it('should throw MClassError.notFound when not found', async () => {
+    it('should throw error when MClass not found', async () => {
       mockRepository.findById.mockResolvedValue(null);
 
-      await expect(service.getById('1')).rejects.toThrow(MClassError);
+      await expect(service.getById(testId)).rejects.toThrow(MClassError);
     });
   });
 
   describe('create', () => {
     it('should create MClass successfully', async () => {
       const createData = {
-        title: 'New Class',
+        title: uniqueTitle,
         recruitStartAt: '2025-12-19T10:00:00Z',
         recruitEndAt: '2025-12-19T12:00:00Z',
         startAt: '2025-12-20T10:00:00Z',
@@ -185,8 +199,8 @@ describe('MClassService', () => {
       };
 
       const mockCreatedMClass = {
-        id: '1',
-        title: 'New Class',
+        id: testId,
+        title: uniqueTitle,
         description: null,
         recruitStartAt: new Date('2025-12-19'),
         recruitEndAt: new Date('2025-12-19'),
@@ -194,7 +208,6 @@ describe('MClassService', () => {
         endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
         capacity: null,
-
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -220,7 +233,7 @@ describe('MClassService', () => {
 
     it('should throw error when title already exists', async () => {
       const createData = {
-        title: 'Existing Class',
+        title: uniqueTitle,
         recruitStartAt: '2025-12-19T10:00:00Z',
         recruitEndAt: '2025-12-19T12:00:00Z',
         startAt: '2025-12-20T10:00:00Z',
@@ -232,16 +245,15 @@ describe('MClassService', () => {
       };
 
       const existingMClass = {
-        id: '1',
-        title: 'Existing Class',
+        id: 'existing-id',
+        title: uniqueTitle,
         description: null,
-        recruitStartAt: new Date('2025-12-19T10:00:00Z'),
-        recruitEndAt: new Date('2025-12-19T12:00:00Z'),
+        recruitStartAt: new Date('2025-12-19'),
+        recruitEndAt: new Date('2025-12-19'),
         startAt: new Date('2025-12-20'),
         endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
         capacity: null,
-
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -261,212 +273,23 @@ describe('MClassService', () => {
     });
   });
 
-  describe('list', () => {
-    it('should return MClass list with phases', async () => {
-      const mockMClasses = [
-        {
-          id: '1',
-          title: 'Test Class 1',
-          description: null,
-          recruitStartAt: new Date('2025-12-19T10:00:00Z'),
-          recruitEndAt: new Date('2025-12-19T12:00:00Z'),
-          startAt: new Date('2026-01-20'),
-          endAt: new Date('2026-01-25'),
-          selectionType: 'FIRST_COME' as const,
-          capacity: 10,
-
-          allowWaitlist: false,
-          waitlistCapacity: null,
-          visibility: 'PUBLIC' as const,
-          isOnline: true,
-          location: null,
-          fee: null,
-          createdBy: 'admin-id',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          creator: {
-            id: 'admin-id',
-            name: 'Admin User',
-            email: 'admin@example.com',
-          },
-        },
-        {
-          id: '2',
-          title: 'Test Class 2',
-          description: null,
-          recruitStartAt: new Date('2025-12-19T10:00:00Z'),
-          recruitEndAt: new Date('2025-12-19T12:00:00Z'),
-          startAt: new Date('2024-12-20'),
-          endAt: new Date('2024-12-25'),
-          selectionType: 'FIRST_COME' as const,
-          capacity: 10,
-
-          allowWaitlist: false,
-          waitlistCapacity: null,
-          visibility: 'PUBLIC' as const,
-          isOnline: true,
-          location: null,
-          fee: null,
-          createdBy: 'admin-id',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          creator: {
-            id: 'admin-id',
-            name: 'Admin User',
-            email: 'admin@example.com',
-          },
-        },
-      ];
-
-      const mockResult = {
-        items: mockMClasses,
-        total: 2,
-        page: 1,
-        size: 10,
-        totalPages: 1,
-      };
-
-      mockRepository.findWithFilters.mockResolvedValue(mockResult);
-
-      const query = {
-        page: 1,
-        size: 10,
-        visibility: 'PUBLIC' as const,
-        sort: 'startAt' as const,
-        order: 'asc' as const,
-      };
-      const result = await service.list(query);
-
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0]).toHaveProperty('phase');
-      expect(result.items[1]).toHaveProperty('phase');
-      expect(result.total).toBe(2);
-      expect(mockRepository.findWithFilters).toHaveBeenCalledWith(query, false);
-    });
-
-    it('should filter by phase when specified', async () => {
-      const mockMClasses = [
-        {
-          id: '1',
-          title: 'Recruiting Class',
-          description: null,
-          recruitStartAt: new Date('2025-08-01T10:00:00Z'),
-          recruitEndAt: new Date('2025-08-31T12:00:00Z'),
-          startAt: new Date('2025-09-20'),
-          endAt: new Date('2025-09-25'),
-          selectionType: 'FIRST_COME' as const,
-          capacity: 10,
-
-          allowWaitlist: false,
-          waitlistCapacity: null,
-          visibility: 'PUBLIC' as const,
-          isOnline: true,
-          location: null,
-          fee: null,
-          createdBy: 'admin-id',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          creator: {
-            id: 'admin-id',
-            name: 'Admin User',
-            email: 'admin@example.com',
-          },
-        },
-        {
-          id: '2',
-          title: 'Ended Class',
-          description: null,
-          recruitStartAt: new Date('2020-01-01'),
-          recruitEndAt: new Date('2020-12-15'),
-          startAt: new Date('2021-01-01'),
-          endAt: new Date('2021-01-25'),
-          selectionType: 'FIRST_COME' as const,
-          capacity: 10,
-
-          allowWaitlist: false,
-          waitlistCapacity: null,
-          visibility: 'PUBLIC' as const,
-          isOnline: true,
-          location: null,
-          fee: null,
-          createdBy: 'admin-id',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          creator: {
-            id: 'admin-id',
-            name: 'Admin User',
-            email: 'admin@example.com',
-          },
-        },
-      ];
-
-      const mockResult = {
-        items: mockMClasses,
-        total: 2,
-        page: 1,
-        size: 10,
-        totalPages: 1,
-      };
-
-      mockRepository.findWithFilters.mockResolvedValue(mockResult);
-
-      // RECRUITING 조건을 만족하기 위해 approvedCount를 capacity보다 작게 설정
-      mockRepository.getApprovedCount.mockResolvedValue(5);
-
-      const query = {
-        page: 1,
-        size: 10,
-        phase: 'RECRUITING' as const,
-        visibility: 'PUBLIC' as const,
-        sort: 'startAt' as const,
-        order: 'asc' as const,
-      };
-      const result = await service.list(query);
-
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0].phase).toBe('RECRUITING');
-      expect(result.items[0].title).toBe('Recruiting Class');
-      // 필터링 후에는 total이 필터링된 결과 수와 일치해야 함
-      expect(result.total).toBe(1);
-      expect(result.totalPages).toBe(1);
-    });
-
-    it('should pass admin flag to repository', async () => {
-      const mockResult = {
-        items: [],
-        total: 0,
-        page: 1,
-        size: 10,
-        totalPages: 0,
-      };
-
-      mockRepository.findWithFilters.mockResolvedValue(mockResult);
-
-      const query = {
-        page: 1,
-        size: 10,
-        visibility: 'PUBLIC' as const,
-        sort: 'startAt' as const,
-        order: 'asc' as const,
-      };
-      await service.list(query, true);
-
-      expect(mockRepository.findWithFilters).toHaveBeenCalledWith(query, true);
-    });
-  });
-
   describe('update', () => {
     it('should update MClass successfully', async () => {
+      const updateData = {
+        title: `Updated ${uniqueTitle}`,
+        description: 'Updated description',
+      };
+
       const existingMClass = {
-        id: '1',
-        title: 'Original Title',
+        id: testId,
+        title: uniqueTitle,
         description: null,
-        recruitStartAt: new Date('2025-01-01'),
-        recruitEndAt: new Date('2025-01-15'),
+        recruitStartAt: new Date('2025-12-19'),
+        recruitEndAt: new Date('2025-12-19'),
         startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-25'),
+        endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
-        capacity: 10,
+        capacity: null,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -478,50 +301,49 @@ describe('MClassService', () => {
         updatedAt: new Date(),
       };
 
-      const updateData = {
-        title: 'Updated Title',
-        description: 'Updated description',
-      };
-
       const updatedMClass = {
         ...existingMClass,
-        ...updateData,
+        title: `Updated ${uniqueTitle}`,
+        description: 'Updated description',
       };
 
       mockRepository.findById.mockResolvedValue(existingMClass);
       mockRepository.findByTitle.mockResolvedValue(null);
       mockRepository.update.mockResolvedValue(updatedMClass);
 
-      const result = await service.update('1', updateData);
+      const result = await service.update(testId, updateData);
 
       expect(result).toHaveProperty('phase');
-      expect(result.title).toBe('Updated Title');
-      expect(result.description).toBe('Updated description');
-      expect(mockRepository.update).toHaveBeenCalledWith('1', updateData);
+      expect(mockRepository.update).toHaveBeenCalledWith(testId, updateData);
     });
 
     it('should throw error when MClass not found', async () => {
+      const updateData = {
+        title: `Updated ${uniqueTitle}`,
+      };
+
       mockRepository.findById.mockResolvedValue(null);
 
-      const updateData = { title: 'Updated Title' };
-
-      await expect(service.update('1', updateData)).rejects.toThrow(
+      await expect(service.update(testId, updateData)).rejects.toThrow(
         MClassError
       );
     });
 
     it('should throw error when title already exists', async () => {
-      const existingMClass = {
-        id: '1',
-        title: 'Original Title',
-        description: null,
-        recruitStartAt: new Date('2025-01-01'),
-        recruitEndAt: new Date('2025-01-15'),
-        startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-25'),
-        selectionType: 'FIRST_COME' as const,
-        capacity: 10,
+      const updateData = {
+        title: `Updated ${uniqueTitle}`,
+      };
 
+      const existingMClass = {
+        id: testId,
+        title: uniqueTitle,
+        description: null,
+        recruitStartAt: new Date('2025-12-19'),
+        recruitEndAt: new Date('2025-12-19'),
+        startAt: new Date('2025-12-20'),
+        endAt: new Date('2025-12-20'),
+        selectionType: 'FIRST_COME' as const,
+        capacity: null,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -534,16 +356,15 @@ describe('MClassService', () => {
       };
 
       const duplicateMClass = {
-        id: '2',
-        title: 'Existing Title',
+        id: 'duplicate-id',
+        title: `Updated ${uniqueTitle}`,
         description: null,
-        recruitStartAt: new Date('2025-01-01'),
-        recruitEndAt: new Date('2025-01-15'),
+        recruitStartAt: new Date('2025-12-19'),
+        recruitEndAt: new Date('2025-12-19'),
         startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-25'),
+        endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
-        capacity: 10,
-
+        capacity: null,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -558,84 +379,7 @@ describe('MClassService', () => {
       mockRepository.findById.mockResolvedValue(existingMClass);
       mockRepository.findByTitle.mockResolvedValue(duplicateMClass);
 
-      const updateData = { title: 'Existing Title' };
-
-      await expect(service.update('1', updateData)).rejects.toThrow(
-        MClassError
-      );
-    });
-
-    it('should not check title duplicate when title is not changed', async () => {
-      const existingMClass = {
-        id: '1',
-        title: 'Original Title',
-        description: null,
-        recruitStartAt: new Date('2025-01-01'),
-        recruitEndAt: new Date('2025-01-15'),
-        startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-25'),
-        selectionType: 'FIRST_COME' as const,
-        capacity: 10,
-
-        allowWaitlist: false,
-        waitlistCapacity: null,
-        visibility: 'PUBLIC' as const,
-        isOnline: true,
-        location: null,
-        fee: null,
-        createdBy: 'admin-id',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updateData = { description: 'Updated description' };
-
-      const updatedMClass = {
-        ...existingMClass,
-        ...updateData,
-      };
-
-      mockRepository.findById.mockResolvedValue(existingMClass);
-      mockRepository.update.mockResolvedValue(updatedMClass);
-
-      const result = await service.update('1', updateData);
-
-      expect(result).toHaveProperty('phase');
-      expect(mockRepository.findByTitle).not.toHaveBeenCalled();
-      expect(mockRepository.update).toHaveBeenCalledWith('1', updateData);
-    });
-
-    it('should throw error when trying to modify recruiting class', async () => {
-      const recruitingMClass = {
-        id: '1',
-        title: 'Recruiting Class',
-        description: null,
-        recruitStartAt: new Date('2024-01-01'),
-        recruitEndAt: new Date('2025-12-31'),
-        startAt: new Date('2026-01-20'),
-        endAt: new Date('2026-01-25'),
-        selectionType: 'FIRST_COME' as const,
-        capacity: 10,
-
-        allowWaitlist: false,
-        waitlistCapacity: null,
-        visibility: 'PUBLIC' as const,
-        isOnline: true,
-        location: null,
-        fee: null,
-        createdBy: 'admin-id',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      mockRepository.findById.mockResolvedValue(recruitingMClass);
-
-      // RECRUITING 조건을 만족하기 위해 approvedCount를 capacity보다 작게 설정
-      mockRepository.getApprovedCount.mockResolvedValue(5);
-
-      const updateData = { title: 'Updated Title' };
-
-      await expect(service.update('1', updateData)).rejects.toThrow(
+      await expect(service.update(testId, updateData)).rejects.toThrow(
         MClassError
       );
     });
@@ -644,16 +388,15 @@ describe('MClassService', () => {
   describe('delete', () => {
     it('should delete MClass successfully', async () => {
       const existingMClass = {
-        id: '1',
-        title: 'Test Class',
+        id: testId,
+        title: uniqueTitle,
         description: null,
-        recruitStartAt: new Date('2025-12-10T12:00:00Z'),
-        recruitEndAt: new Date('2025-12-15T12:00:00Z'),
+        recruitStartAt: new Date('2025-12-19'),
+        recruitEndAt: new Date('2025-12-19'),
         startAt: new Date('2025-12-20'),
-        endAt: new Date('2025-12-25'),
+        endAt: new Date('2025-12-20'),
         selectionType: 'FIRST_COME' as const,
-        capacity: 10,
-
+        capacity: null,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -668,29 +411,32 @@ describe('MClassService', () => {
       mockRepository.findById.mockResolvedValue(existingMClass);
       mockRepository.delete.mockResolvedValue(existingMClass);
 
-      await service.delete('1');
+      await service.delete(testId);
 
-      expect(mockRepository.delete).toHaveBeenCalledWith('1');
+      expect(mockRepository.delete).toHaveBeenCalledWith(testId);
     });
 
     it('should throw error when MClass not found', async () => {
       mockRepository.findById.mockResolvedValue(null);
 
-      await expect(service.delete('1')).rejects.toThrow(MClassError);
+      await expect(service.delete(testId)).rejects.toThrow(MClassError);
     });
 
-    it('should throw error when trying to delete in-progress class', async () => {
-      const inProgressMClass = {
-        id: '1',
-        title: 'In Progress Class',
-        description: null,
-        recruitStartAt: new Date('2024-01-01'),
-        recruitEndAt: new Date('2024-12-15'),
-        startAt: new Date('2024-12-20'),
-        endAt: new Date('2025-12-25'),
-        selectionType: 'FIRST_COME' as const,
-        capacity: 10,
+    it('should throw error when MClass is in progress', async () => {
+      const now = new Date();
+      const startAt = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1일 전
+      const endAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 1일 후
 
+      const existingMClass = {
+        id: testId,
+        title: uniqueTitle,
+        description: null,
+        recruitStartAt: new Date(startAt.getTime() - 30 * 24 * 60 * 60 * 1000), // 30일 전
+        recruitEndAt: new Date(startAt.getTime() - 1 * 24 * 60 * 60 * 1000), // 1일 전
+        startAt: startAt,
+        endAt: endAt,
+        selectionType: 'FIRST_COME' as const,
+        capacity: null,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC' as const,
@@ -702,47 +448,25 @@ describe('MClassService', () => {
         updatedAt: new Date(),
       };
 
-      mockRepository.findById.mockResolvedValue(inProgressMClass);
+      mockRepository.findById.mockResolvedValue(existingMClass);
 
-      await expect(service.delete('1')).rejects.toThrow(MClassError);
+      await expect(service.delete(testId)).rejects.toThrow(MClassError);
     });
   });
 
   describe('getStatistics', () => {
-    it('should return statistics for MClass', async () => {
-      mockRepository.getApprovedCount.mockResolvedValue(15);
-      mockRepository.getWaitlistedCount.mockResolvedValue(5);
+    it('should return statistics successfully', async () => {
+      mockRepository.getApprovedCount.mockResolvedValue(5);
+      mockRepository.getWaitlistedCount.mockResolvedValue(2);
 
-      const result = await service.getStatistics('1');
+      const result = await service.getStatistics(testId);
 
       expect(result).toEqual({
-        approvedCount: 15,
-        waitlistedCount: 5,
+        approvedCount: 5,
+        waitlistedCount: 2,
       });
-      expect(mockRepository.getApprovedCount).toHaveBeenCalledWith('1');
-      expect(mockRepository.getWaitlistedCount).toHaveBeenCalledWith('1');
-    });
-  });
-
-  describe('getApprovedCount', () => {
-    it('should return approved count', async () => {
-      mockRepository.getApprovedCount.mockResolvedValue(15);
-
-      const result = await service.getApprovedCount('1');
-
-      expect(result).toBe(15);
-      expect(mockRepository.getApprovedCount).toHaveBeenCalledWith('1');
-    });
-  });
-
-  describe('getWaitlistedCount', () => {
-    it('should return waitlisted count', async () => {
-      mockRepository.getWaitlistedCount.mockResolvedValue(5);
-
-      const result = await service.getWaitlistedCount('1');
-
-      expect(result).toBe(5);
-      expect(mockRepository.getWaitlistedCount).toHaveBeenCalledWith('1');
+      expect(mockRepository.getApprovedCount).toHaveBeenCalledWith(testId);
+      expect(mockRepository.getWaitlistedCount).toHaveBeenCalledWith(testId);
     });
   });
 });

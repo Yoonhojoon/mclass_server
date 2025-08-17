@@ -29,6 +29,13 @@ export const mClassResponseSchema = z.object({
   createdBy: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  creator: z
+    .object({
+      id: z.string().uuid(),
+      name: z.string(),
+      email: z.string(),
+    })
+    .optional(),
 });
 
 export type MClassResponse = z.infer<typeof mClassResponseSchema>;

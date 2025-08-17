@@ -34,4 +34,8 @@ export default {
   restoreMocks: true,
   // 메모리 누수 방지 설정 활성화
   detectOpenHandles: true,
+  // 테스트 환경 변수
+  testEnvironmentOptions: {
+    NODE_ENV: 'test',
+  },
 }; 

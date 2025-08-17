@@ -74,7 +74,6 @@ describe('MClass Response Schemas', () => {
         endAt: '2025-01-25T12:00:00.000Z',
         selectionType: 'FIRST_COME',
         capacity: 20,
-        approvedCount: 0,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC',
@@ -82,9 +81,14 @@ describe('MClass Response Schemas', () => {
         location: null,
         fee: 0,
         phase: 'UPCOMING',
-        createdBy: '123e4567-e89b-12d3-a456-426614174000',
+        createdBy: '123e4567-e89b-12d3-a456-426614174001',
         createdAt: '2025-01-15T10:00:00.000Z',
         updatedAt: '2025-01-15T10:00:00.000Z',
+        creator: {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          name: 'Test Creator',
+          email: 'creator@test.com',
+        },
       };
 
       const result = mClassResponseSchema.safeParse(validMClass);
@@ -102,7 +106,6 @@ describe('MClass Response Schemas', () => {
         endAt: '2025-01-25T12:00:00.000Z',
         selectionType: 'FIRST_COME',
         capacity: 20,
-        approvedCount: 0,
         allowWaitlist: false,
         waitlistCapacity: null,
         visibility: 'PUBLIC',
@@ -110,9 +113,14 @@ describe('MClass Response Schemas', () => {
         location: null,
         fee: 0,
         phase: 'INVALID_PHASE', // Invalid phase
-        createdBy: '123e4567-e89b-12d3-a456-426614174000',
+        createdBy: '123e4567-e89b-12d3-a456-426614174001',
         createdAt: '2025-01-15T10:00:00.000Z',
         updatedAt: '2025-01-15T10:00:00.000Z',
+        creator: {
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          name: 'Test Creator',
+          email: 'creator@test.com',
+        },
       };
 
       const result = mClassResponseSchema.safeParse(invalidMClass);

@@ -297,22 +297,36 @@ export class MClassController {
     next: NextFunction
   ): Promise<void> {
     const { id } = req.params;
-    logger.info(`[MClassController] MClass 통계 조회 요청: ${id}`);
+    const userId = req.user?.userId;
+    logger.info(
+      `[MClassController] MClass 통계 조회 요청: ${id}, 사용자 ID ${userId}`
+    );
 
     try {
+      // 관리자 권한 확인
+      if (!req.user?.isAdmin) {
+        logger.warn(
+          `[MClassController] 관리자 권한 없는 사용자 MClass 통계 조회 시도: ${id}, 사용자 ID ${userId}`
+        );
+        throw MClassError.permissionDenied('MClass 통계 조회', '접근');
+      }
+
       // 서비스 호출
       const statistics = await this.service.getStatistics(id);
 
       // 응답 전송
       const response = MClassSuccess.retrieved(statistics);
       logger.info(
-        `[MClassController] MClass 통계 조회 성공: ${id}, 승인: ${statistics.approvedCount}, 대기: ${statistics.waitlistedCount}`
+        `[MClassController] MClass 통계 조회 성공: ${id}, 승인: ${statistics.approvedCount}, 대기: ${statistics.waitlistedCount}, 사용자 ID ${userId}`
       );
       response.send(res);
     } catch (error) {
-      logger.error(`[MClassController] MClass 통계 조회 실패: ${id}`, {
-        error: error instanceof Error ? error.message : error,
-      });
+      logger.error(
+        `[MClassController] MClass 통계 조회 실패: ${id}, 사용자 ID ${userId}`,
+        {
+          error: error instanceof Error ? error.message : error,
+        }
+      );
       next(error);
     }
   }
