@@ -163,11 +163,11 @@ async function generateUsers(count = 300) {
   ).join('\n');
 
   const csvData = csvHeader + csvContent;
-  fs.writeFileSync('./users.csv', csvData);
+  fs.mkdirSync('./artillery', { recursive: true });
+  fs.writeFileSync('./artillery/users.csv', csvData);
 
   console.log(`🎉 ${users.length}명의 사용자 생성 완료!`);
   console.log(`📁 CSV 파일 저장: ./artillery/users.csv`);
-
   return users;
 }
 
