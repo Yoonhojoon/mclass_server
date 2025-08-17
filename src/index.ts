@@ -22,7 +22,7 @@ import { ErrorHandler } from './common/exception/ErrorHandler.js';
 import { prisma } from './config/prisma.config.js';
 import passport from './config/passport.config.js';
 import logger from './config/logger.config.js';
-import { redis } from './config/redis.config.js';
+import { redis, initializeRedis } from './config/redis.config.js';
 import {
   authenticateToken as authenticate,
   requireAdmin as authorizeAdmin,
@@ -328,17 +328,7 @@ const startServer = async (): Promise<void> => {
 
     // Redis 연결 확인
     logger.info('🔴 Redis 연결 확인 중...');
-    try {
-      await redis.ping();
-      logger.info('✅ Redis 연결 확인 완료');
-    } catch (error) {
-      logger.error('❌ Redis 연결 실패:', error);
-      logger.error('🔧 해결 방법:');
-      logger.error('  1. Redis 서버가 실행 중인지 확인');
-      logger.error('  2. REDIS_URL 또는 개별 설정 확인');
-      logger.error('  3. 방화벽/네트워크 설정 확인');
-      logger.warn('⚠️ 세션 저장소와 캐시 기능이 제한될 수 있습니다');
-    }
+    await initializeRedis();
 
     // 이메일 서비스 초기화
     logger.info('📧 이메일 서비스 초기화 중...');

@@ -1,5 +1,4 @@
 import Redis from 'ioredis';
-import { lookup } from 'dns';
 
 // 환경 변수 디버깅
 console.log('🔍 Redis 환경 변수 확인:');
@@ -17,49 +16,44 @@ const useRedisUrl =
   process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '';
 console.log('  - Redis URL 사용 여부:', useRedisUrl);
 
-const redisConfig = useRedisUrl
-  ? {
-      url: process.env.REDIS_URL,
-      // ElastiCache 최적화 설정
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: false, // 즉시 연결 시도
-      keepAlive: 30000,
-      connectTimeout: 10000,
-      commandTimeout: 5000,
-      // ElastiCache 특화 설정
-      enableReadyCheck: true,
-      maxLoadingTimeout: 10000,
-      retryDelayOnClusterDown: 300,
-      // 연결 풀 설정
-      family: 4, // IPv4 강제 사용
-      // DNS 해결 설정
-      lookup: (hostname: string, options: any, callback: any): void => {
-        console.log('🔍 DNS 조회:', hostname);
-        lookup(hostname, options, callback);
-      },
-    }
-  : {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB || '0'),
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: false, // 즉시 연결 시도
-      keepAlive: 30000,
-      connectTimeout: 10000,
-      commandTimeout: 5000,
-      enableReadyCheck: true,
-      maxLoadingTimeout: 10000,
-      retryDelayOnClusterDown: 300,
-      family: 4,
-    };
+// Redis 클라이언트 인스턴스 생성
+let redis: Redis;
 
-console.log('🔧 Redis 설정:', JSON.stringify(redisConfig, null, 2));
-
-// Redis 클라이언트 인스턴스
-const redis = new Redis(redisConfig);
+if (useRedisUrl && process.env.REDIS_URL) {
+  // REDIS_URL이 있으면 문자열로 직접 전달
+  console.log('🔗 Redis URL로 연결 시도:', process.env.REDIS_URL);
+  redis = new Redis(process.env.REDIS_URL, {
+    // ElastiCache 최적화 설정
+    maxRetriesPerRequest: 3,
+    lazyConnect: false, // 즉시 연결 시도
+    keepAlive: 30000,
+    connectTimeout: 10000,
+    commandTimeout: 5000,
+    // ElastiCache 특화 설정
+    enableReadyCheck: true,
+    // 연결 풀 설정
+    family: 4, // IPv4 강제 사용
+  });
+} else {
+  // REDIS_URL이 없으면 host/port 기반 옵션으로 연결
+  console.log(
+    '🔗 Host/Port로 연결 시도:',
+    `${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`
+  );
+  redis = new Redis({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD,
+    db: parseInt(process.env.REDIS_DB || '0'),
+    maxRetriesPerRequest: 3,
+    lazyConnect: false, // 즉시 연결 시도
+    keepAlive: 30000,
+    connectTimeout: 10000,
+    commandTimeout: 5000,
+    enableReadyCheck: true,
+    family: 4,
+  });
+}
 
 // Redis 연결 이벤트 처리
 redis.on('connect', () => {
@@ -93,6 +87,48 @@ redis.on('reconnecting', () => {
 redis.on('end', () => {
   console.log('🔚 Redis 연결 종료됨');
 });
+
+// Redis 연결 확인 함수
+export const checkRedisConnection = async (): Promise<boolean> => {
+  try {
+    console.log('🔍 Redis 연결 상태 확인 중...');
+
+    // 연결 상태 확인
+    if (redis.status !== 'ready') {
+      console.log('🔄 Redis 연결 중...');
+      await redis.connect();
+    }
+
+    // PING 명령으로 실제 연결 확인
+    const pong = await redis.ping();
+    if (pong === 'PONG') {
+      console.log('✅ Redis 연결 확인 완료 - PING 성공');
+      return true;
+    } else {
+      console.error('❌ Redis PING 실패 - 예상: PONG, 실제:', pong);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Redis 연결 확인 실패:', error);
+    return false;
+  }
+};
+
+// 서버 시작 시 Redis 연결 확인
+export const initializeRedis = async (): Promise<void> => {
+  try {
+    const isConnected = await checkRedisConnection();
+    if (isConnected) {
+      console.log('🚀 Redis 초기화 완료');
+    } else {
+      console.error('❌ Redis 초기화 실패');
+      process.exit(1);
+    }
+  } catch (error) {
+    console.error('❌ Redis 초기화 중 오류 발생:', error);
+    process.exit(1);
+  }
+};
 
 // Redis 클라이언트를 전역으로 관리 (개발 환경에서 핫 리로드 방지)
 declare global {
