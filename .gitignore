@@ -90,3 +90,8 @@ dev-debug.log
 
 docs/
 artillery/users.csv
+
+# k6 test results and reports
+k6/k6-results.json
+k6/k6-report-*.json
+k6/*.json
