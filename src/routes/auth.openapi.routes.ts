@@ -9,6 +9,9 @@ import {
 } from '../config/swagger-zod.js';
 import { AuthController } from '../domains/auth/auth.controller.js';
 import { PrismaClient } from '@prisma/client';
+import { jwtAuth } from '../middleware/jwtAuth.js';
+import { requireAuth } from '../middleware/requireAuth.js';
+import { validateBody } from '../middleware/validate.middleware.js';
 import {
   loginSchema,
   loginResponseSchema,
@@ -332,17 +335,44 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
   });
 
   // 라우트 정의
-  router.post('/login', authController.login.bind(authController));
-  router.post('/register', authController.register.bind(authController));
-  router.post('/social/login', authController.socialLogin.bind(authController));
+  router.post(
+    '/login',
+    validateBody(loginSchema),
+    authController.login.bind(authController)
+  );
+  router.post(
+    '/register',
+    validateBody(registerSchema),
+    authController.register.bind(authController)
+  );
+  router.post(
+    '/social/login',
+    validateBody(socialLoginSchema),
+    authController.socialLogin.bind(authController)
+  );
   router.post(
     '/complete-signup',
+    jwtAuth,
+    requireAuth,
+    validateBody(completeSignUpSchema),
     authController.completeSignUp.bind(authController)
   );
-  router.post('/refresh', authController.refreshToken.bind(authController));
-  router.post('/logout', authController.logout.bind(authController));
+  router.post(
+    '/refresh',
+    validateBody(refreshTokenSchema),
+    authController.refreshToken.bind(authController)
+  );
+  router.post(
+    '/logout',
+    jwtAuth,
+    requireAuth,
+    authController.logout.bind(authController)
+  );
   router.post(
     '/change-password',
+    jwtAuth,
+    requireAuth,
+    validateBody(changePasswordSchema),
     authController.changePassword.bind(authController)
   );
 
