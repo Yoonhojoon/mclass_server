@@ -1,0 +1,85 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 5
+      arrivalRate: 1
+      name: "Warm up"
+    - duration: 12
+      arrivalRate: 12
+      name: "Peak 12 rps - 동시 신청"
+    - duration: 8
+      arrivalRate: 6
+      name: "Sustain 6 rps"
+  variables:
+    mclassId: "b21c86a0-383a-4d46-9376-fcf246028d13"
+    capacity: 200
+    waitlistCapacity: 100
+  processor: "./concurrent-enrollment-processor.mjs"
+  http:
+    timeout: 30
+    pool: 100
+  plugins:
+    metrics-by-endpoint: {}
+    expect: {}
+  payload:
+    path: "./users.csv"
+    fields:
+      - email
+      - password
+      - accessToken
+
+scenarios:
+  - name: "동시 Enrollment 신청 테스트"
+    weight: 100
+    flow:
+      # 1) 클래스 조회
+      - get:
+          url: "/api/mclasses/{{ mclassId }}"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      # 2) 신청서 양식 조회
+      - get:
+          url: "/api/mclasses/{{ mclassId }}/enrollment-form"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          capture:
+            - json: "$.data.questions"
+              as: "enrollmentQuestions"
+          expect:
+            - statusCode: 200
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+
+      # 3) 동적 답변 생성
+      - function: "generateAnswers"
+
+      # 4) 클래스 신청 (동적 답변 사용)
+      - post:
+          url: "/api/mclasses/{{ mclassId }}/enrollments"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          json:
+            answers: "{{ dynamicAnswers }}"
+            idempotencyKey: "{{ $uuid }}"
+          expect:
+            - statusCode: [200, 201]
+            - contentType: json
+          afterResponse:
+            - "handleErrors"
+            - "analyzeResponseTime"
+            - "validateDataConsistency"
+
+      - think: 1
+
+after:
+  flow:
+    - function: "generateTestSummary"

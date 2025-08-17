@@ -31,7 +31,7 @@ export const authenticateToken = async (
     }
 
     try {
-      const decoded = TokenService.verifyAccessToken(token);
+      const decoded = await TokenService.verifyAccessTokenWithBlacklist(token);
       req.user = {
         userId: decoded.userId,
         email: decoded.email,

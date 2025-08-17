@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { jwtConfig } from '../../config/jwt.config.js';
 import { TokenError } from '../../common/exception/token/TokenError.js';
-import { redis } from '../../config/redis.config.js';
 import logger from '../../config/logger.config.js';
+import { TokenStorageService } from '../../services/redis/token-storage.service.js';
 
 // JWT 관련 타입 정의
 interface JWTDecodedPayload {
@@ -44,6 +44,27 @@ export class TokenService {
   }
 
   /**
+   * 액세스 토큰 생성 및 Redis 저장
+   */
+  static async generateAndStoreAccessToken(
+    payload: TokenPayload,
+    metadata: {
+      device?: string;
+      ip?: string;
+      userAgent?: string;
+    }
+  ): Promise<string> {
+    const token = this.generateAccessToken(payload);
+
+    await TokenStorageService.storeToken(payload.userId, token, {
+      ...metadata,
+      tokenType: 'access',
+    });
+
+    return token;
+  }
+
+  /**
    * 리프레시 토큰 생성
    */
   static generateRefreshToken(payload: TokenPayload): string {
@@ -55,6 +76,27 @@ export class TokenService {
       issuer: jwtConfig.issuer,
       audience: jwtConfig.audience,
     });
+  }
+
+  /**
+   * 리프레시 토큰 생성 및 Redis 저장
+   */
+  static async generateAndStoreRefreshToken(
+    payload: TokenPayload,
+    metadata: {
+      device?: string;
+      ip?: string;
+      userAgent?: string;
+    }
+  ): Promise<string> {
+    const token = this.generateRefreshToken(payload);
+
+    await TokenStorageService.storeToken(payload.userId, token, {
+      ...metadata,
+      tokenType: 'refresh',
+    });
+
+    return token;
   }
 
   /**
@@ -85,6 +127,23 @@ export class TokenService {
         throw TokenError.tokenVerificationFailed('토큰 검증에 실패했습니다');
       }
     }
+  }
+
+  /**
+   * 액세스 토큰 검증 (Redis 저장소 확인 포함)
+   */
+  static async verifyAccessTokenWithStorage(
+    token: string
+  ): Promise<TokenPayload> {
+    // 먼저 Redis 저장소에서 토큰 유효성 확인
+    const isValid = await TokenStorageService.isTokenValid(token);
+    if (!isValid) {
+      logger.warn(`[TokenService] Redis에서 토큰 무효 확인`);
+      throw TokenError.invalidToken('토큰이 무효화되었습니다');
+    }
+
+    // JWT 검증
+    return this.verifyAccessToken(token);
   }
 
   /**
@@ -227,19 +286,11 @@ export class TokenService {
    */
   static async invalidateToken(token: string): Promise<void> {
     try {
-      // 토큰의 만료 시간을 계산하여 그 시간까지 블랙리스트에 저장
-      const decoded = jwt.decode(token) as JWTDecodedPayload | null;
-      if (decoded && decoded.exp) {
-        const expirationTime = decoded.exp - Math.floor(Date.now() / 1000);
-        if (expirationTime > 0) {
-          await redis.setex(`blacklist:${token}`, expirationTime, '1');
-          logger.info(
-            `[TokenService] 토큰 블랙리스트 추가: 만료 시간 ${expirationTime}초`
-          );
-        }
-      }
+      // TokenStorageService를 사용하여 토큰 제거
+      await TokenStorageService.removeToken(token);
+      logger.info(`[TokenService] 토큰 무효화 완료`);
     } catch (error) {
-      logger.error(`[TokenService] 토큰 블랙리스트 추가 실패`, {
+      logger.error(`[TokenService] 토큰 무효화 실패`, {
         error: error instanceof Error ? error.message : error,
       });
     }
@@ -250,8 +301,9 @@ export class TokenService {
    */
   static async isTokenBlacklisted(token: string): Promise<boolean> {
     try {
-      const result = await redis.get(`blacklist:${token}`);
-      return result === '1';
+      // TokenStorageService를 사용하여 토큰 유효성 확인
+      const isValid = await TokenStorageService.isTokenValid(token);
+      return !isValid;
     } catch (error) {
       logger.error(`[TokenService] 토큰 블랙리스트 확인 실패`, {
         error: error instanceof Error ? error.message : error,
@@ -266,14 +318,7 @@ export class TokenService {
   static async verifyAccessTokenWithBlacklist(
     token: string
   ): Promise<TokenPayload> {
-    // 먼저 블랙리스트 확인
-    const isBlacklisted = await this.isTokenBlacklisted(token);
-    if (isBlacklisted) {
-      logger.warn(`[TokenService] 블랙리스트된 토큰 사용 시도`);
-      throw TokenError.invalidToken('토큰이 무효화되었습니다');
-    }
-
-    // 기존 검증 로직
-    return this.verifyAccessToken(token);
+    // TokenStorageService를 사용하여 토큰 검증
+    return this.verifyAccessTokenWithStorage(token);
   }
 }

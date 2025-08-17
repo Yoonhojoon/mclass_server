@@ -1,0 +1,146 @@
+  config:
+    target: 'http://localhost:3000'  # 프로덕션에선 ALB 엔드포인트로 교체
+    phases:
+      - duration: 20
+        arrivalRate: 5
+        name: "Warm up"
+      - duration: 30
+        arrivalRate: 10
+        name: "Peak 10 rps"
+      - duration: 20
+        arrivalRate: 5
+        name: "Sustain 5 rps"
+    variables:
+      mclassId: "b21c86a0-383a-4d46-9376-fcf246028d13"
+      capacity: 200
+      waitlistCapacity: 100
+    processor: "./load-test-processor.mjs"   # ✅ ESM 파일로 교체
+    http:
+      timeout: 30
+      pool: 50
+    plugins:
+      metrics-by-endpoint: {}
+      expect: {}
+
+  scenarios:
+    - name: "동시 신청 테스트"
+      weight: 100
+      flow:
+        # 0) 각 VU별 계정/비밀번호 생성
+        - function: "initUser"
+
+        # 1) 회원가입
+        - post:
+            url: "/api/auth/register"
+            json:
+              email: "{{ email }}"           # ✅ VU마다 고정
+              password: "{{ password }}"
+              name: "{{ displayName }}"
+            expect:
+              - statusCode: [200, 201]
+              - contentType: json
+            afterResponse:
+              - "handleErrors"
+              - "analyzeResponseTime"
+
+
+        # 3) 로그인 (동일 이메일/비밀번호로)
+        - post:
+            url: "/api/auth/login"
+            json:
+              email: "{{ email }}"           # ✅ 동일 계정 사용
+              password: "{{ password }}"
+            capture:
+              - json: "$.data.accessToken"
+                as: "tempToken"
+            expect:
+              - statusCode: 200
+              - contentType: json
+            afterResponse:
+              - "handleErrors"
+              - "analyzeResponseTime"
+
+        # 2) 약관 동의 -> 회원가입 완료
+        - post:
+            url: "/api/auth/complete-signup"
+            headers:
+              Authorization: "Bearer {{ tempToken }}"
+            json:
+              termIds: ["b10cdac2-5c46-4b6c-a355-127331901de4"]
+            capture:
+              - json: "$.data.accessToken"
+                as: "finalToken"
+            expect:
+              - statusCode: [200, 201]
+              - contentType: json
+            afterResponse:
+              - "handleErrors"
+              - "analyzeResponseTime"
+
+        # 3) 로그인 (동일 이메일/비밀번호로)
+        - post:
+            url: "/api/auth/login"
+            json:
+              email: "{{ email }}"           # ✅ 동일 계정 사용
+              password: "{{ password }}"
+            capture:
+              - json: "$.data.accessToken"
+                as: "loginToken"
+            expect:
+              - statusCode: 200
+              - contentType: json
+            afterResponse:
+              - "handleErrors"
+              - "analyzeResponseTime"
+
+        # 4) 클래스 조회
+        - get:
+            url: "/api/mclass/{{ mclassId }}"
+            headers:
+              Authorization: "Bearer {{ loginToken }}"
+            expect:
+              - statusCode: 200
+              - contentType: json
+            afterResponse:
+              - "handleErrors"
+              - "analyzeResponseTime"
+
+        # 5) 신청서 양식 조회
+        - get:
+            url: "/api/mclasses/{{ mclassId }}/enrollment-form"
+            headers:
+              Authorization: "Bearer {{ loginToken }}"
+            capture:
+              - json: "$.data.questions"
+                as: "enrollmentQuestions"
+            expect:
+              - statusCode: 200
+              - contentType: json
+            afterResponse:
+              - "handleErrors"
+              - "analyzeResponseTime"
+
+        # 6) 동적 답변 생성
+        - function: "generateAnswers"
+
+        # 7) 클래스 신청 (동적 답변 사용)
+        - post:
+            url: "/api/mclasses/{{ mclassId }}/enrollments"
+            headers:
+              Authorization: "Bearer {{ loginToken }}"
+            json:
+              answers: "{{ dynamicAnswers }}"
+              idempotencyKey: "{{ $uuid }}"
+            expect:
+              - statusCode: [200, 201]
+              - contentType: json
+            afterResponse:
+              - "handleErrors"
+              - "analyzeResponseTime"
+              - "validateDataConsistency"
+
+        - think: 2
+
+  after:
+    flow:
+      - function: "generateTestSummary"

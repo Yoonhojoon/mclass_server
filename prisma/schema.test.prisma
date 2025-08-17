@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -100,15 +100,15 @@ model Enrollment {
   reasonType       ReasonType?      @map("reason_type")
   updatedAt        DateTime         @updatedAt @map("updated_at")
   userId           String           @map("user_id")
-  decidedByAdmin   User?            @relation("AdminDecisions", fields: [decidedByAdminId], references: [id], onDelete: SetNull)
-  enrollmentForm   EnrollmentForm   @relation(fields: [enrollmentFormId], references: [id], onDelete: Cascade)
-  mclass           MClass           @relation(fields: [mclassId], references: [id], onDelete: Cascade)
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollmentForm   EnrollmentForm  @relation(fields: [enrollmentFormId], references: [id])
+  mclass           MClass          @relation(fields: [mclassId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
+  decidedByAdmin   User?           @relation("AdminDecisions", fields: [decidedByAdminId], references: [id])
 
-  @@unique([userId, mclassId])
-  @@index([mclassId, status])
+  @@index([mclassId])
   @@index([userId])
-  @@index([mclassId, status, appliedAt])
+  @@index([enrollmentFormId])
+  @@index([idempotencyKey])
   @@map("enrollments")
 }
 
@@ -121,7 +121,7 @@ model EnrollmentForm {
   isActive    Boolean      @default(true) @map("is_active")
   mclassId    String       @unique @map("mclass_id")
   updatedAt   DateTime     @updatedAt @map("updated_at")
-  mclass      MClass       @relation(fields: [mclassId], references: [id], onDelete: Cascade)
+  mclass      MClass       @relation(fields: [mclassId], references: [id])
   enrollments Enrollment[]
 
   @@map("enrollment_forms")
@@ -146,37 +146,13 @@ model EmailOutbox {
   @@map("email_outbox")
 }
 
-enum UserRole {
-  USER
-  ADMIN
-}
-
-enum Provider {
-  LOCAL
-  KAKAO
-  GOOGLE
-  NAVER
-}
-
-enum TermType {
-  SERVICE
-  PRIVACY
-  ENROLLMENT
-}
-
-enum Gender {
-  M
-  F
-}
-
-enum SelectionType {
-  FIRST_COME
-  REVIEW
-}
-
-enum Visibility {
-  PUBLIC
-  UNLISTED
+enum EmailType {
+  ENROLLMENT_APPLIED
+  ENROLLMENT_APPROVED
+  ENROLLMENT_REJECTED
+  ENROLLMENT_WAITLISTED
+  ENROLLMENT_CANCELED
+  WAITLIST_PROMOTED
 }
 
 enum EnrollmentStatus {
@@ -187,16 +163,37 @@ enum EnrollmentStatus {
   CANCELED
 }
 
+
+
 enum ReasonType {
   REJECT
   CANCEL
 }
 
-enum EmailType {
-  ENROLLMENT_APPLIED
-  ENROLLMENT_APPROVED
-  ENROLLMENT_REJECTED
-  ENROLLMENT_WAITLISTED
-  ENROLLMENT_CANCELED
-  WAITLIST_PROMOTED
+enum Provider {
+  LOCAL
+  GOOGLE
+  KAKAO
+  NAVER
+}
+
+enum SelectionType {
+  FIRST_COME
+  REVIEW
+}
+
+enum TermType {
+  SERVICE
+  PRIVACY
+  ENROLLMENT
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum Visibility {
+  PUBLIC
+  UNLISTED
 }

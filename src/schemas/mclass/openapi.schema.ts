@@ -59,7 +59,11 @@ export const mClassResponseSchema = z.object({
     .nullable()
     .openapi({ description: '수강료 (0이면 무료)' }),
   phase: mClassPhaseSchema,
-  createdBy: z.string().uuid().openapi({ description: '생성자 ID' }),
+  createdBy: z
+    .string()
+    .uuid()
+    .nullable()
+    .openapi({ description: '생성자 ID (삭제된 사용자의 경우 null)' }),
   createdAt: z.string().datetime().openapi({ description: '생성일시' }),
   updatedAt: z.string().datetime().openapi({ description: '수정일시' }),
 });

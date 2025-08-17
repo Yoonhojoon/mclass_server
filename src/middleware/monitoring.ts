@@ -79,6 +79,13 @@ export const prometheusMiddleware = (
         `[Monitoring] 에러 응답: ${req.method} ${route} - ${res.statusCode}`
       );
     }
+
+    // 성공적인 요청에 대해서도 로그 기록 (info 레벨)
+    if (res.statusCode < 400) {
+      logger.info(
+        `[Monitoring] 요청 처리 완료: ${req.method} ${route} - ${res.statusCode} (${duration}ms)`
+      );
+    }
   });
 
   next();

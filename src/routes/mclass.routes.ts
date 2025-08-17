@@ -241,7 +241,11 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
   });
 
   // 실제 라우트 정의
-  router.get('/mclass', controller.getMClasses.bind(controller));
+  router.get(
+    '/mclass',
+    authenticateToken,
+    controller.getMClasses.bind(controller)
+  );
   router.get(
     '/mclass/:id',
     validateParams(mClassIdParamSchema),

@@ -25,7 +25,7 @@ export interface MClassWithPhase {
   isOnline: boolean;
   location: string | null;
   fee: number | null;
-  creatorId: string;
+  creatorId: string | null;
   createdAt: string;
   updatedAt: string;
   creator?: {
