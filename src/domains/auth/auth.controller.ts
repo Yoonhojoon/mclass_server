@@ -3,6 +3,7 @@ import { AuthService } from './auth.service.js';
 import { AuthError } from '../../common/exception/auth/AuthError.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import { AuthSuccess } from '../../common/exception/auth/AuthSuccess.js';
+import { UserError } from '../../common/exception/user/UserError.js';
 import logger from '../../config/logger.config.js';
 import { PrismaClient } from '@prisma/client';
 import { LoginRequest, RegisterRequest } from '../../schemas/auth/index.js';
@@ -27,6 +28,30 @@ export class AuthController {
   async login(req: Request, res: Response): Promise<void> {
     try {
       const loginData: LoginRequest = req.body;
+
+      // 요청 데이터 검증
+      if (!loginData) {
+        logger.error('❌ 로그인 실패: 요청 본문이 없음', {
+          body: req.body,
+          headers: req.headers,
+        });
+        const error = ValidationError.badRequest('로그인 데이터가 필요합니다.');
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // 필수 필드 검증
+      if (!loginData.email || !loginData.password) {
+        logger.error('❌ 로그인 실패: 필수 필드 누락', {
+          hasEmail: !!loginData.email,
+          hasPassword: !!loginData.password,
+          body: req.body,
+        });
+        const error =
+          ValidationError.badRequest('이메일과 비밀번호는 필수입니다.');
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
 
       // 요청 정보 추출
       const device = this.extractDeviceInfo(req);
@@ -57,6 +82,9 @@ export class AuthController {
     } catch (error) {
       logger.error('❌ 로그인 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        body: req.body,
+        headers: req.headers,
       });
 
       if (error instanceof AuthError) {
@@ -76,6 +104,33 @@ export class AuthController {
   async register(req: Request, res: Response): Promise<void> {
     try {
       const registerData: RegisterRequest = req.body;
+
+      // 요청 데이터 검증
+      if (!registerData) {
+        logger.error('❌ 회원가입 실패: 요청 본문이 없음', {
+          body: req.body,
+          headers: req.headers,
+        });
+        const error =
+          ValidationError.badRequest('회원가입 데이터가 필요합니다.');
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // 필수 필드 검증
+      if (!registerData.email || !registerData.name || !registerData.password) {
+        logger.error('❌ 회원가입 실패: 필수 필드 누락', {
+          hasEmail: !!registerData.email,
+          hasName: !!registerData.name,
+          hasPassword: !!registerData.password,
+          body: req.body,
+        });
+        const error = ValidationError.badRequest(
+          '이메일, 이름, 비밀번호는 필수입니다.'
+        );
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
 
       // 요청 정보 추출
       const device = this.extractDeviceInfo(req);
@@ -107,9 +162,15 @@ export class AuthController {
     } catch (error) {
       logger.error('❌ 회원가입 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        body: req.body,
+        headers: req.headers,
       });
 
       if (error instanceof AuthError) {
+        res.status(error.statusCode).json(error.toResponse());
+      } else if (error instanceof UserError) {
+        // UserError를 그대로 클라이언트에게 전달
         res.status(error.statusCode).json(error.toResponse());
       } else {
         const authError = AuthError.internalError(
@@ -126,6 +187,31 @@ export class AuthController {
   async socialLogin(req: Request, res: Response): Promise<void> {
     try {
       const profile: SocialLoginDto = req.body;
+
+      // 요청 데이터 검증
+      if (!profile) {
+        logger.error('❌ 소셜 로그인 실패: 요청 본문이 없음', {
+          body: req.body,
+          headers: req.headers,
+        });
+        const error =
+          ValidationError.badRequest('소셜 로그인 데이터가 필요합니다.');
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // 필수 필드 검증
+      if (!profile.provider || !profile.email) {
+        logger.error('❌ 소셜 로그인 실패: 필수 필드 누락', {
+          hasProvider: !!profile.provider,
+          hasEmail: !!profile.email,
+          body: req.body,
+        });
+        const error =
+          ValidationError.badRequest('프로바이더와 이메일은 필수입니다.');
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
 
       // 요청 정보 추출
       const device = this.extractDeviceInfo(req);
@@ -157,6 +243,9 @@ export class AuthController {
     } catch (error) {
       logger.error('❌ 소셜 로그인 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        body: req.body,
+        headers: req.headers,
       });
 
       if (error instanceof AuthError) {
@@ -181,7 +270,25 @@ export class AuthController {
       const { termIds }: CompleteSignUpDto = req.body;
       const userId = req.user?.userId;
 
+      // 디버깅을 위한 상세 로그 추가
+      logger.info('🔍 회원가입 완료 요청 정보', {
+        hasUser: !!req.user,
+        userId: req.user?.userId,
+        userEmail: req.user?.email,
+        userRole: req.user?.role,
+        isSignUpCompleted: req.user?.signUpCompleted,
+        headers: {
+          authorization: req.headers.authorization ? 'Bearer ***' : '없음',
+          'user-agent': req.headers['user-agent'],
+        },
+        body: { termIds },
+      });
+
       if (!userId) {
+        logger.error('❌ 회원가입 완료 실패: 사용자 ID 없음', {
+          user: req.user,
+          headers: req.headers,
+        });
         const error = ValidationError.unauthorized();
         res.status(error.statusCode).json(error.toResponse());
         return;
@@ -202,6 +309,9 @@ export class AuthController {
     } catch (error) {
       logger.error('❌ 회원가입 완료 컨트롤러 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        user: req.user,
+        headers: req.headers,
       });
 
       if (error instanceof AuthError) {

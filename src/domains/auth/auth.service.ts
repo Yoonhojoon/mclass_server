@@ -196,8 +196,13 @@ export class AuthService {
       if (error instanceof AuthError) {
         throw error;
       }
+      if (error instanceof UserError) {
+        // UserError를 그대로 전파 (이미 등록된 이메일 등의 구체적인 오류)
+        throw error;
+      }
       logger.error('❌ 회원가입 처리 중 오류', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
       });
       throw AuthError.registrationFailed(
         '회원가입 처리 중 오류가 발생했습니다.'

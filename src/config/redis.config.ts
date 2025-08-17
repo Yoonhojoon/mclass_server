@@ -94,19 +94,33 @@ export const checkRedisConnection = async (): Promise<boolean> => {
     console.log('🔍 Redis 연결 상태 확인 중...');
 
     // 연결 상태 확인
-    if (redis.status !== 'ready') {
-      console.log('🔄 Redis 연결 중...');
-      await redis.connect();
-    }
-
-    // PING 명령으로 실제 연결 확인
-    const pong = await redis.ping();
-    if (pong === 'PONG') {
-      console.log('✅ Redis 연결 확인 완료 - PING 성공');
-      return true;
+    if (redis.status === 'ready') {
+      console.log('✅ Redis 이미 연결됨');
+      // PING 명령으로 실제 연결 확인
+      const pong = await redis.ping();
+      if (pong === 'PONG') {
+        console.log('✅ Redis 연결 확인 완료 - PING 성공');
+        return true;
+      } else {
+        console.error('❌ Redis PING 실패 - 예상: PONG, 실제:', pong);
+        return false;
+      }
     } else {
-      console.error('❌ Redis PING 실패 - 예상: PONG, 실제:', pong);
-      return false;
+      console.log('🔄 Redis 연결 시도...');
+      try {
+        await redis.connect();
+        const pong = await redis.ping();
+        if (pong === 'PONG') {
+          console.log('✅ Redis 연결 확인 완료 - PING 성공');
+          return true;
+        } else {
+          console.error('❌ Redis PING 실패 - 예상: PONG, 실제:', pong);
+          return false;
+        }
+      } catch (connectError) {
+        console.error('❌ Redis 연결 실패:', connectError);
+        return false;
+      }
     }
   } catch (error) {
     console.error('❌ Redis 연결 확인 실패:', error);

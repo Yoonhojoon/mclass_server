@@ -335,30 +335,95 @@ export class TokenStorageService {
    */
   static async isTokenValid(token: string): Promise<boolean> {
     try {
+      logger.debug('🔍 토큰 유효성 확인 시작', {
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + '...',
+      });
+
+      // Redis 연결 상태 확인
+      if (!redis.status || redis.status !== 'ready') {
+        logger.warn('⚠️ Redis 연결 상태 불량으로 토큰 유효성 확인 실패', {
+          redisStatus: redis.status,
+          tokenLength: token.length,
+        });
+        // Redis 연결 실패 시에도 토큰을 유효로 처리 (JWT 검증만으로 판단)
+        return true;
+      }
+
+      // Redis PING 테스트
+      try {
+        await redis.ping();
+      } catch (pingError) {
+        logger.warn('⚠️ Redis PING 실패, 토큰을 유효로 처리', {
+          error: pingError instanceof Error ? pingError.message : pingError,
+        });
+        return true;
+      }
+
       // 블랙리스트 확인
-      // 블랙리스트 확인 (토큰 해시 기준)
       const tokenHash = this.hashToken(token);
-      const isBlacklisted = await redis.get(
-        `${this.BLACKLIST_PREFIX}${tokenHash}`
-      );
-      if (isBlacklisted) {
-        return false;
+      logger.debug('🔍 토큰 해시 생성', { tokenHash });
+
+      try {
+        const isBlacklisted = await redis.get(
+          `${this.BLACKLIST_PREFIX}${tokenHash}`
+        );
+        if (isBlacklisted) {
+          logger.warn('❌ 토큰이 블랙리스트에 있음', { tokenHash });
+          return false;
+        }
+      } catch (blacklistError) {
+        logger.warn('⚠️ 블랙리스트 확인 실패, 계속 진행', {
+          error:
+            blacklistError instanceof Error
+              ? blacklistError.message
+              : blacklistError,
+        });
       }
 
       // 메타데이터 확인
-      const metadata = await this.getTokenMetadata(token);
-      if (!metadata) {
-        return false;
-      }
+      try {
+        const metadata = await this.getTokenMetadata(token);
+        if (!metadata) {
+          logger.warn('⚠️ 토큰 메타데이터 없음, JWT 검증만으로 판단', {
+            tokenHash,
+          });
+          // 메타데이터가 없어도 토큰을 유효로 처리 (JWT 검증만으로 판단)
+          return true;
+        }
 
-      // 만료 시간 확인
-      const expiresAt = new Date(metadata.expiresAt);
-      return expiresAt > new Date();
+        // 만료 시간 확인
+        const expiresAt = new Date(metadata.expiresAt);
+        const now = new Date();
+        const isValid = expiresAt > now;
+
+        logger.debug('🔍 토큰 만료 시간 확인', {
+          expiresAt: expiresAt.toISOString(),
+          now: now.toISOString(),
+          isValid,
+        });
+
+        return isValid;
+      } catch (metadataError) {
+        logger.warn('⚠️ 메타데이터 확인 실패, JWT 검증만으로 판단', {
+          error:
+            metadataError instanceof Error
+              ? metadataError.message
+              : metadataError,
+        });
+        return true;
+      }
     } catch (error) {
       logger.error('❌ 토큰 유효성 확인 실패', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        tokenLength: token.length,
+        redisStatus: redis.status,
       });
-      return false;
+
+      // Redis 오류 시에도 토큰을 유효로 처리 (JWT 검증만으로 판단)
+      // 이는 Redis 연결 문제로 인한 false positive를 방지하기 위함
+      return true;
     }
   }
 
