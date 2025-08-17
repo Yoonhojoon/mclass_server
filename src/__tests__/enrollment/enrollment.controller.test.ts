@@ -301,7 +301,7 @@ describe('EnrollmentController', () => {
         id: 'enrollment-1',
         userId: 'user-1',
         mclassId: 'mclass-1',
-        status: EnrollmentStatus.CANCELLED,
+        status: EnrollmentStatus.CANCELED,
         canceledAt: new Date(),
         reason: '개인 사정으로 취소합니다.',
       };
