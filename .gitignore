@@ -89,3 +89,4 @@ dev-debug.log
 .env.test
 
 docs/
+artillery/users.csv

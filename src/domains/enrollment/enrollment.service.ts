@@ -12,6 +12,7 @@ import {
   EnrollmentStats,
 } from './enrollment.schemas.js';
 import { EnrollmentError } from '../../common/exception/enrollment/EnrollmentError.js';
+
 import { MClassRepository } from '../mclass/mclass.repository.js';
 import { EnrollmentFormService } from '../enrollmentForm/enrollmentForm.service.js';
 import { UserService } from '../user/user.service.js';
@@ -139,7 +140,7 @@ export class EnrollmentService {
           where: { userId_mclassId: { userId, mclassId } },
         });
         if (existingEnrollment) {
-          throw new EnrollmentError('이미 신청한 클래스입니다.');
+          throw EnrollmentError.duplicateEnrollment();
         }
 
         // 6) 답변 검증 (기본 검증만, 상세 검증은 별도 메서드로)
@@ -168,7 +169,13 @@ export class EnrollmentService {
           });
           if (waitlistCount < mclass.waitlistCapacity) {
             status = 'WAITLISTED';
+          } else {
+            // 대기열도 가득 찬 경우
+            throw EnrollmentError.capacityExceeded();
           }
+        } else {
+          // 대기열이 없고 정원이 초과된 경우
+          throw EnrollmentError.capacityExceeded();
         }
 
         // 9) 신청 생성 (결정된 상태로 저장)
@@ -457,7 +464,7 @@ export class EnrollmentService {
               enrollment.status !== 'APPROVED' &&
               approvedCount >= (mclass.capacity || 0)
             ) {
-              throw new EnrollmentError('정원이 초과되었습니다.');
+              throw EnrollmentError.capacityExceeded();
             }
           }
 

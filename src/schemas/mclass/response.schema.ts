@@ -26,7 +26,7 @@ export const mClassResponseSchema = z.object({
   location: z.string().nullable(),
   fee: z.number().int().nullable(),
   phase: mClassPhaseSchema,
-  createdBy: z.string().uuid(),
+  createdBy: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

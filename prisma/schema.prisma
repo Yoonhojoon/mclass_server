@@ -38,7 +38,7 @@ model MClass {
   fee              Int?
   allowWaitlist    Boolean         @default(false) @map("allow_waitlist")
   createdAt        DateTime        @default(now()) @map("created_at")
-  createdBy        String          @map("created_by")
+  createdBy        String?         @map("created_by")
   endAt            DateTime        @map("end_at")
   isOnline         Boolean         @default(true) @map("is_online")
   recruitEndAt     DateTime        @map("recruit_end_at")
@@ -49,7 +49,7 @@ model MClass {
   waitlistCapacity Int?            @map("waitlist_capacity")
   enrollmentForm   EnrollmentForm?
   enrollments      Enrollment[]
-  creator          User            @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  creator          User?           @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@index([visibility, recruitStartAt, recruitEndAt])
   @@index([startAt])

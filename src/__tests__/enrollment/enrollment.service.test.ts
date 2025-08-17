@@ -10,9 +10,6 @@ import {
   EnrollmentQuery,
   AdminEnrollmentQuery,
 } from '../../domains/enrollment/enrollment.schemas.js';
-import { EnrollmentEmailService } from '../../services/email/enrollment.email.service.js';
-import { EmailOutboxWorker } from '../../services/email/email-outbox.worker.js';
-
 // Repository 모킹
 const mockRepository = {
   create: jest.fn(),
@@ -673,7 +670,8 @@ describe('EnrollmentService', () => {
           id: 'mclass-1',
           title: '테스트 클래스',
           capacity: 60,
-          allowWaitlist: false,
+          allowWaitlist: true,
+          waitlistCapacity: 20,
         },
         user: {
           id: 'user-1',
@@ -692,7 +690,10 @@ describe('EnrollmentService', () => {
       });
 
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
-      mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
+      // 정원 초과 상황 시뮬레이션
+      mockPrisma.enrollment.count
+        .mockResolvedValueOnce(60) // 승인된 신청이 60개 (정원 초과)
+        .mockResolvedValueOnce(0); // 대기열은 비어있음
       mockPrisma.enrollment.create.mockResolvedValue(mockEnrollment);
       mockRepository.findById.mockResolvedValue(mockEnrollment);
       mockUserService.findById.mockResolvedValue(mockEnrollment.user);
@@ -703,6 +704,8 @@ describe('EnrollmentService', () => {
         visibility: 'PUBLIC',
         recruitStartAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1일 전
         recruitEndAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1일 후
+        allowWaitlist: true,
+        waitlistCapacity: 20,
         enrollmentForm: {
           id: 'form-1',
           isActive: true,
