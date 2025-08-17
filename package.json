@@ -28,7 +28,9 @@
     "prepare": "husky",
     "load-test:local": "powershell -ExecutionPolicy Bypass -File scripts/run-local-load-test.ps1",
     "load-test:signup": "artillery run scripts/artillery-signup-test-local.yml",
-    "load-test:enrollment": "artillery run scripts/artillery-enrollment-test-local.yml"
+    "load-test:enrollment": "artillery run scripts/artillery-enrollment-test-local.yml",
+    "deploy:precheck": "node scripts/deployment-precheck.js",
+    "deploy:redis-test": "node scripts/redis-connection-test.js"
   },
   "repository": {
     "type": "git",
