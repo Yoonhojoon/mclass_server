@@ -338,7 +338,9 @@ export class TokenStorageService {
       // 블랙리스트 확인
       // 블랙리스트 확인 (토큰 해시 기준)
       const tokenHash = this.hashToken(token);
-      const isBlacklisted = await redis.get(`${this.BLACKLIST_PREFIX}${tokenHash}`);
+      const isBlacklisted = await redis.get(
+        `${this.BLACKLIST_PREFIX}${tokenHash}`
+      );
       if (isBlacklisted) {
         return false;
       }
@@ -347,7 +349,6 @@ export class TokenStorageService {
       const metadata = await this.getTokenMetadata(token);
       if (!metadata) {
         return false;
-      }
       }
 
       // 만료 시간 확인
