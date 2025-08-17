@@ -99,10 +99,10 @@ model Enrollment {
   mclassId         String           @map("mclass_id")
   reasonType       ReasonType?      @map("reason_type")
   updatedAt        DateTime         @updatedAt @map("updated_at")
+  userId           String           @map("user_id")
   enrollmentForm   EnrollmentForm  @relation(fields: [enrollmentFormId], references: [id])
   mclass           MClass          @relation(fields: [mclassId], references: [id])
   user             User            @relation(fields: [userId], references: [id])
-  userId           String          @map("user_id")
   decidedByAdmin   User?           @relation("AdminDecisions", fields: [decidedByAdminId], references: [id])
 
   @@index([mclassId])
@@ -118,8 +118,10 @@ model EnrollmentForm {
   description String?
   questions   Json
   createdAt   DateTime     @default(now()) @map("created_at")
+  isActive    Boolean      @default(true) @map("is_active")
+  mclassId    String       @unique @map("mclass_id")
   updatedAt   DateTime     @updatedAt @map("updated_at")
-  mclass      MClass?
+  mclass      MClass       @relation(fields: [mclassId], references: [id])
   enrollments Enrollment[]
 
   @@map("enrollment_forms")

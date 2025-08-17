@@ -48,7 +48,7 @@ jobs:
           EOF
 
       - name: Run database migrations
-        run: npx prisma migrate deploy --schema=./prisma/schema.test.prisma
+        run: npx prisma db push --schema=./prisma/schema.test.prisma
         env:
           DATABASE_URL: file:./test.db
 
