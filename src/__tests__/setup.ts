@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 
 // 테스트 환경에서 .env 파일 로드 (로그 억제)
-config({ path: '.env.test', debug: false });
+config({ path: '.env', debug: false });
 
 // 테스트 환경 변수 설정
 process.env.NODE_ENV = 'test';
@@ -25,19 +25,8 @@ jest.setTimeout(30000);
 // 테스트 실행 전 로그 레벨 조정
 process.env.LOG_LEVEL = 'error';
 
-// 테스트 환경에서 console.log 억제
-const originalConsoleLog = console.log;
-const originalConsoleError = console.error;
-const originalConsoleWarn = console.warn;
-
 // Jest가 이 파일을 테스트로 인식하지 않도록 설정
 if (typeof jest !== 'undefined') {
-  beforeAll(() => {
-    console.log = jest.fn();
-    console.error = jest.fn();
-    console.warn = jest.fn();
-  });
-
   afterAll(async () => {
     // Redis 연결 정리
     if ((globalThis as any).redis) {
@@ -47,11 +36,6 @@ if (typeof jest !== 'undefined') {
         // 무시
       }
     }
-
-    // 원래 console 함수들 복원
-    console.log = originalConsoleLog;
-    console.error = originalConsoleError;
-    console.warn = originalConsoleWarn;
 
     // 모든 타이머 정리
     jest.clearAllTimers();
