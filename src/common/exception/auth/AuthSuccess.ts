@@ -20,6 +20,15 @@ export class AuthSuccess<T = unknown> extends BaseSuccess<T> {
     return new AuthSuccess<T>(message, 200, 'LOGIN_SUCCESS', data);
   }
 
+  static registerSuccess<T = unknown>(
+    userId: string,
+    role: string,
+    data?: T
+  ): AuthSuccess<T> {
+    const message = `회원가입이 성공적으로 완료되었습니다. (사용자 ID: ${userId}, 역할: ${role})`;
+    return new AuthSuccess<T>(message, 201, 'REGISTER_SUCCESS', data);
+  }
+
   static logoutSuccess(): AuthSuccess<null> {
     return new AuthSuccess<null>(
       '로그아웃이 성공적으로 완료되었습니다.',

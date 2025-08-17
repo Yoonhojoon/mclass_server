@@ -32,6 +32,7 @@ import bcrypt from 'bcrypt';
 import { ServiceContainer } from './services/email/index.js';
 import { EmailOutboxWorker } from './services/email/email-outbox.worker.js';
 import { EmailOutboxCron } from './cron/email-outbox.cron.js';
+import { startTokenCleanupJob } from './cron/token-cleanup.cron.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -285,7 +286,13 @@ const startServer = async (): Promise<void> => {
     logger.info(
       `  - JWT_SECRET: ${process.env.JWT_SECRET ? '설정됨' : 'not set'}`
     );
-    logger.info(`  - REDIS_URL: ${process.env.REDIS_URL || 'not set'}`);
+    logger.info(
+      `  - REDIS_HOST: ${process.env.REDIS_HOST || 'localhost (default)'}`
+    );
+    logger.info(
+      `  - REDIS_PORT: ${process.env.REDIS_PORT || '6379 (default)'}`
+    );
+    logger.info(`  - REDIS_DB: ${process.env.REDIS_DB || '0 (default)'}`);
     logger.info(
       `  - INITIAL_ADMIN_EMAIL: ${process.env.INITIAL_ADMIN_EMAIL || 'not set'}`
     );
@@ -339,6 +346,10 @@ const startServer = async (): Promise<void> => {
     logger.info('📧 이메일 아웃박스 워커 시작 중...');
     const emailCron = new EmailOutboxCron(emailOutboxWorker, logger);
     emailCron.start();
+
+    // 토큰 정리 크론 작업 시작
+    logger.info('🧹 토큰 정리 크론 작업 시작 중...');
+    startTokenCleanupJob();
 
     logger.info('🌐 HTTP 서버 시작 중...');
     app.listen(PORT, (): void => {

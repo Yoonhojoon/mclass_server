@@ -182,17 +182,6 @@ describe('EnrollmentFormRepository', () => {
 
   describe('deleteByMClassId', () => {
     it('MClass ID로 지원서 양식을 성공적으로 삭제한다', async () => {
-      const mockExistingForm = {
-        id: 'form-1',
-        mclassId: 'mclass-1',
-        title: '삭제할 양식',
-        description: '삭제할 설명',
-        questions: [],
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
       mockPrisma.$transaction.mockResolvedValue(undefined);
 
       await repository.deleteByMClassId('mclass-1');

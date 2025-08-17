@@ -19,12 +19,18 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:clean": "rm -f test.db",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
     "check": "npm run lint && npm run test",
     "pre-commit": "npm run lint && npm run format",
-    "prepare": "husky"
+    "prepare": "husky",
+    "load-test:local": "powershell -ExecutionPolicy Bypass -File scripts/run-local-load-test.ps1",
+    "load-test:signup": "artillery run scripts/artillery-signup-test-local.yml",
+    "load-test:enrollment": "artillery run scripts/artillery-enrollment-test-local.yml",
+    "deploy:precheck": "node scripts/deployment-precheck.js",
+    "deploy:redis-test": "node scripts/redis-connection-test.js"
   },
   "repository": {
     "type": "git",
@@ -88,6 +94,7 @@
     "zod": "^4.0.17"
   },
   "devDependencies": {
+    "@artilleryio/playwright-reporter": "^1.1.3",
     "@eslint/js": "^9.32.0",
     "@types/express": "^5.0.3",
     "@types/express-session": "^1.18.2",

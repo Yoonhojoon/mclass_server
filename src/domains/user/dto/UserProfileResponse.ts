@@ -13,7 +13,7 @@ interface EnrollmentMclass {
   creator: {
     name: string | null;
     email: string;
-  };
+  } | null;
 }
 
 interface EnrollmentData {

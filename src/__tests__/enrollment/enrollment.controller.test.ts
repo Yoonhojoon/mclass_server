@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { EnrollmentController } from '../../domains/enrollment/enrollment.controller.js';
 import { EnrollmentStatus } from '@prisma/client';
 
@@ -29,11 +29,8 @@ describe('EnrollmentController', () => {
   let controller: EnrollmentController;
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let mockNext: NextFunction;
-
   beforeEach(() => {
     controller = new EnrollmentController(mockService);
-    mockNext = jest.fn();
   });
 
   describe('enrollToClass', () => {

@@ -178,6 +178,123 @@ export class EnrollmentRepository {
     return result.length > 0 ? result[0] : null;
   }
 
+  /**
+   * 클래스 정보를 FOR UPDATE로 잠그고 조회
+   */
+  async findMclassWithLock(
+    mclassId: string,
+    client: PrismaClient | Prisma.TransactionClient = this.prisma
+  ): Promise<{
+    id: string;
+    title: string;
+    capacity: number | null;
+    selectionType: string;
+    recruitStartAt: Date;
+    recruitEndAt: Date;
+    visibility: string;
+    allowWaitlist: boolean;
+    waitlistCapacity: number | null;
+    enrollmentForm: {
+      id: string;
+      isActive: boolean;
+      questions: unknown;
+    } | null;
+  } | null> {
+    const result = await client.$queryRaw<
+      Array<{
+        id: string;
+        title: string;
+        capacity: number | null;
+        selection_type: string;
+        recruit_start_at: Date;
+        recruit_end_at: Date;
+        visibility: string;
+        allow_waitlist: boolean;
+        waitlist_capacity: number | null;
+        enrollment_form_id: string | null;
+        enrollment_form_is_active: boolean | null;
+        enrollment_form_questions: unknown;
+      }>
+    >`
+      SELECT 
+        m.id,
+        m.title,
+        m.capacity,
+        m.selection_type,
+        m.recruit_start_at,
+        m.recruit_end_at,
+        m.visibility,
+        m.allow_waitlist,
+        m.waitlist_capacity,
+        ef.id as enrollment_form_id,
+        ef.is_active as enrollment_form_is_active,
+        ef.questions as enrollment_form_questions
+      FROM mclasses m
+      LEFT JOIN enrollment_forms ef ON ef.mclass_id = m.id
+      WHERE m.id = ${mclassId}
+      FOR UPDATE OF m
+    `;
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    const row = result[0];
+    return {
+      id: row.id,
+      title: row.title,
+      capacity: row.capacity,
+      selectionType: row.selection_type,
+      recruitStartAt: row.recruit_start_at,
+      recruitEndAt: row.recruit_end_at,
+      visibility: row.visibility,
+      allowWaitlist: row.allow_waitlist,
+      waitlistCapacity: row.waitlist_capacity,
+      enrollmentForm: row.enrollment_form_id
+        ? {
+            id: row.enrollment_form_id,
+            isActive: row.enrollment_form_is_active || false,
+            questions: row.enrollment_form_questions,
+          }
+        : null,
+    };
+  }
+
+  /**
+   * 클래스 정보만 잠그고 조회 (상태 변경용)
+   */
+  async findMclassBasicWithLock(
+    mclassId: string,
+    client: PrismaClient | Prisma.TransactionClient = this.prisma
+  ): Promise<{
+    id: string;
+    capacity: number | null;
+    allowWaitlist: boolean;
+  } | null> {
+    const result = await client.$queryRaw<
+      Array<{
+        id: string;
+        capacity: number | null;
+        allow_waitlist: boolean;
+      }>
+    >`
+      SELECT id, capacity, allow_waitlist
+      FROM mclasses m
+      WHERE m.id = ${mclassId}
+      FOR UPDATE OF m
+    `;
+    if (result.length === 0) {
+      return null;
+    }
+
+    const row = result[0];
+    return {
+      id: row.id,
+      capacity: row.capacity,
+      allowWaitlist: row.allow_waitlist,
+    };
+  }
+
   async delete(id: string): Promise<Enrollment> {
     return this.prisma.enrollment.delete({
       where: { id },

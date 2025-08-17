@@ -10,9 +10,6 @@ import {
   EnrollmentQuery,
   AdminEnrollmentQuery,
 } from '../../domains/enrollment/enrollment.schemas.js';
-import { EnrollmentEmailService } from '../../services/email/enrollment.email.service.js';
-import { EmailOutboxWorker } from '../../services/email/email-outbox.worker.js';
-
 // Repository 모킹
 const mockRepository = {
   create: jest.fn(),
@@ -29,6 +26,8 @@ const mockRepository = {
   findByUserAndMclassWithForm: jest.fn(),
   getEnrollmentStats: jest.fn(),
   findOldestWaitlist: jest.fn(),
+  findMclassWithLock: jest.fn(),
+  findMclassBasicWithLock: jest.fn(),
 } as any;
 
 // MClass Repository 모킹
@@ -185,7 +184,7 @@ describe('EnrollmentService', () => {
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
       mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
       mockPrisma.enrollment.create.mockResolvedValue(mockEnrollment);
-      mockPrisma.mClass.findUnique.mockResolvedValue(mockMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
       mockEnrollmentFormService.findByMClassId.mockResolvedValue(
         mockEnrollmentForm
       );
@@ -254,7 +253,7 @@ describe('EnrollmentService', () => {
 
       mockPrisma.enrollment.findFirst.mockResolvedValue(null);
       mockPrisma.enrollment.findUnique.mockResolvedValue(existingEnrollment);
-      mockPrisma.mClass.findUnique.mockResolvedValue(mockMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
 
       await expect(
         service.enrollToClass('mclass-1', mockEnrollmentData, 'user-1')
@@ -273,7 +272,7 @@ describe('EnrollmentService', () => {
 
       mockPrisma.enrollment.findFirst.mockResolvedValue(null);
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
-      mockPrisma.mClass.findUnique.mockResolvedValue(expiredMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(expiredMClass);
 
       await expect(
         service.enrollToClass('mclass-1', mockEnrollmentData, 'user-1')
@@ -300,7 +299,7 @@ describe('EnrollmentService', () => {
         .mockResolvedValueOnce(60) // APPROVED count (정원 초과)
         .mockResolvedValueOnce(15); // WAITLISTED count (대기자 명단 여유)
       mockPrisma.enrollment.create.mockResolvedValue(waitlistedEnrollment);
-      mockPrisma.mClass.findUnique.mockResolvedValue(mockMClass);
+      mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
       mockEnrollmentFormService.findByMClassId.mockResolvedValue(
         mockEnrollmentForm
       );
@@ -595,6 +594,11 @@ describe('EnrollmentService', () => {
       mockPrisma.enrollment.findUnique.mockResolvedValue(mockEnrollment);
       mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
       mockPrisma.enrollment.update.mockResolvedValue(updatedEnrollment);
+      mockRepository.findMclassBasicWithLock.mockResolvedValue({
+        id: 'mclass-1',
+        capacity: 60,
+        allowWaitlist: false,
+      });
 
       const result = await service.updateEnrollmentStatus(
         'enrollment-1',
@@ -666,7 +670,8 @@ describe('EnrollmentService', () => {
           id: 'mclass-1',
           title: '테스트 클래스',
           capacity: 60,
-          allowWaitlist: false,
+          allowWaitlist: true,
+          waitlistCapacity: 20,
         },
         user: {
           id: 'user-1',
@@ -685,17 +690,22 @@ describe('EnrollmentService', () => {
       });
 
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
-      mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
+      // 정원 초과 상황 시뮬레이션
+      mockPrisma.enrollment.count
+        .mockResolvedValueOnce(60) // 승인된 신청이 60개 (정원 초과)
+        .mockResolvedValueOnce(0); // 대기열은 비어있음
       mockPrisma.enrollment.create.mockResolvedValue(mockEnrollment);
       mockRepository.findById.mockResolvedValue(mockEnrollment);
       mockUserService.findById.mockResolvedValue(mockEnrollment.user);
       mockMClassRepository.findById.mockResolvedValue(mockEnrollment.mclass);
 
-      mockPrisma.mClass.findUnique.mockResolvedValue({
+      mockRepository.findMclassWithLock.mockResolvedValue({
         ...mockEnrollment.mclass,
         visibility: 'PUBLIC',
         recruitStartAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1일 전
         recruitEndAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1일 후
+        allowWaitlist: true,
+        waitlistCapacity: 20,
         enrollmentForm: {
           id: 'form-1',
           isActive: true,
