@@ -32,4 +32,8 @@ export default {
   clearMocks: true,
   resetMocks: true,
   restoreMocks: true,
+  // 메모리 누수 방지 설정 (필요시 활성화)
+  // detectOpenHandles: true,
+  // 테스트 후 정리
+  globalTeardown: '<rootDir>/src/__tests__/teardown.ts',
 }; 

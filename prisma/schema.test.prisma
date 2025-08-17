@@ -127,11 +127,41 @@ model EnrollmentForm {
   @@map("enrollment_forms")
 }
 
+model EmailOutbox {
+  id          String    @id @default(uuid())
+  type        EmailType
+  to          String
+  subject     String?
+  payload     Json
+  template    String
+  attempts    Int       @default(0)
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("email_outbox")
+}
+
+enum EmailType {
+  ENROLLMENT_CONFIRMATION
+  ENROLLMENT_REJECTION
+  ENROLLMENT_CANCELLATION
+  ENROLLMENT_WAITLIST
+  ENROLLMENT_APPROVAL
+  ENROLLMENT_REMINDER
+  ENROLLMENT_DEADLINE
+  ENROLLMENT_CAPACITY_FULL
+  ENROLLMENT_DEADLINE_PASSED
+  ENROLLMENT_NOT_ELIGIBLE
+  ENROLLMENT_DUPLICATE
+  ENROLLMENT_OTHER
+}
+
 enum EnrollmentStatus {
   APPLIED
   APPROVED
   REJECTED
-  CANCELLED
+  CANCELED
   WAITLISTED
 }
 
