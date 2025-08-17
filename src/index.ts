@@ -154,7 +154,7 @@ app.get(
 
       res.json({
         status: 'connected',
-        database: process.env.DATABASE_NAME || 'mclass_db',
+        database: process.env.DB_NAME || 'mclass_db',
         tableCount: (tableCount as Array<{ count: string }>)[0].count,
         timestamp: new Date().toISOString(),
       });
@@ -286,18 +286,32 @@ const startServer = async (): Promise<void> => {
     logger.info(
       `  - JWT_SECRET: ${process.env.JWT_SECRET ? '설정됨' : 'not set'}`
     );
-    logger.info(
-      `  - REDIS_HOST: ${process.env.REDIS_HOST || 'localhost (default)'}`
-    );
-    logger.info(
-      `  - REDIS_PORT: ${process.env.REDIS_PORT || '6379 (default)'}`
-    );
-    logger.info(`  - REDIS_DB: ${process.env.REDIS_DB || '0 (default)'}`);
+
+    // Redis 설정 확인
+    if (process.env.REDIS_URL) {
+      logger.info(`  - REDIS_URL: 설정됨`);
+      logger.info('  - Redis 개별 설정: REDIS_URL 사용으로 무시됨');
+    } else {
+      logger.info(`  - REDIS_URL: not set (개별 설정 사용)`);
+      logger.info(
+        `  - REDIS_HOST: ${process.env.REDIS_HOST || 'localhost (default)'}`
+      );
+      logger.info(
+        `  - REDIS_PORT: ${process.env.REDIS_PORT || '6379 (default)'}`
+      );
+      logger.info(
+        `  - REDIS_PASSWORD: ${process.env.REDIS_PASSWORD ? '설정됨' : 'not set'}`
+      );
+      logger.info(`  - REDIS_DB: ${process.env.REDIS_DB || '0 (default)'}`);
+    }
     logger.info(
       `  - INITIAL_ADMIN_EMAIL: ${process.env.INITIAL_ADMIN_EMAIL || 'not set'}`
     );
     logger.info(
       `  - INITIAL_ADMIN_PASSWORD: ${process.env.INITIAL_ADMIN_PASSWORD ? '설정됨' : 'not set'}`
+    );
+    logger.info(
+      `  - INITIAL_ADMIN_NAME: ${process.env.INITIAL_ADMIN_NAME || 'not set'}`
     );
     logger.info(
       `  - INITIAL_ADMIN_NAME: ${process.env.INITIAL_ADMIN_NAME || 'not set'}`
@@ -311,6 +325,20 @@ const startServer = async (): Promise<void> => {
     // 초기 관리자 계정 생성
     logger.info('👑 초기 관리자 계정 확인 중...');
     await createInitialAdmin();
+
+    // Redis 연결 확인
+    logger.info('🔴 Redis 연결 확인 중...');
+    try {
+      await redis.ping();
+      logger.info('✅ Redis 연결 확인 완료');
+    } catch (error) {
+      logger.error('❌ Redis 연결 실패:', error);
+      logger.error('🔧 해결 방법:');
+      logger.error('  1. Redis 서버가 실행 중인지 확인');
+      logger.error('  2. REDIS_URL 또는 개별 설정 확인');
+      logger.error('  3. 방화벽/네트워크 설정 확인');
+      logger.warn('⚠️ 세션 저장소와 캐시 기능이 제한될 수 있습니다');
+    }
 
     // 이메일 서비스 초기화
     logger.info('📧 이메일 서비스 초기화 중...');

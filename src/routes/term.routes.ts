@@ -19,7 +19,11 @@ import {
 import { registry } from '../config/swagger-zod.js';
 import {
   SuccessResponseSchema,
-  ErrorResponseSchema,
+  BadRequestErrorSchema,
+  UnauthorizedErrorSchema,
+  ForbiddenErrorSchema,
+  NotFoundErrorSchema,
+  InternalServerErrorSchema,
 } from '../config/swagger-zod.js';
 
 /**
@@ -51,7 +55,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '서버 오류',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: InternalServerErrorSchema,
           },
         },
       },
@@ -86,7 +90,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 ID 형식',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -94,7 +98,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '약관을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -102,7 +106,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '서버 오류',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: InternalServerErrorSchema,
           },
         },
       },
@@ -138,7 +142,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -146,7 +150,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -154,7 +158,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '권한 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ForbiddenErrorSchema,
           },
         },
       },
@@ -199,7 +203,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -207,7 +211,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -215,7 +219,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '권한 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ForbiddenErrorSchema,
           },
         },
       },
@@ -223,7 +227,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '약관을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -259,7 +263,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -267,7 +271,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '권한 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ForbiddenErrorSchema,
           },
         },
       },
@@ -275,7 +279,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '약관을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -320,7 +324,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -328,7 +332,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -336,7 +340,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '약관을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -372,7 +376,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -380,7 +384,7 @@ export const createTermRoutes = (prisma: PrismaClient): Router => {
         description: '약관을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },

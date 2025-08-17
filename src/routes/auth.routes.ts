@@ -15,7 +15,9 @@ import { PrismaClient } from '@prisma/client';
 import { registry } from '../config/swagger-zod.js';
 import {
   SuccessResponseSchema,
-  ErrorResponseSchema,
+  BadRequestErrorSchema,
+  UnauthorizedErrorSchema,
+  ConflictErrorSchema,
 } from '../config/swagger-zod.js';
 
 /**
@@ -55,7 +57,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -63,7 +65,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -98,7 +100,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -106,7 +108,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '이미 존재하는 사용자',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ConflictErrorSchema,
           },
         },
       },
@@ -115,10 +117,10 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
 
   registry.registerPath({
     method: 'post',
-    path: '/api/auth/social/login',
+    path: '/api/auth/social-login',
     tags: ['인증'],
     summary: '소셜 로그인',
-    description: '소셜 로그인 제공자의 액세스 토큰을 사용하여 로그인합니다.',
+    description: '소셜 로그인을 통해 인증합니다.',
     request: {
       body: {
         content: {
@@ -141,7 +143,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -149,7 +151,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -161,7 +163,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
     path: '/api/auth/complete-signup',
     tags: ['인증'],
     summary: '회원가입 완료',
-    description: '소셜 로그인 사용자의 회원가입을 완료합니다.',
+    description: '소셜 로그인 후 추가 정보를 입력하여 회원가입을 완료합니다.',
     security: [{ bearerAuth: [] }],
     request: {
       body: {
@@ -185,7 +187,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -193,7 +195,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -228,7 +230,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -236,34 +238,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
-          },
-        },
-      },
-    },
-  });
-
-  registry.registerPath({
-    method: 'post',
-    path: '/api/auth/logout',
-    tags: ['인증'],
-    summary: '로그아웃',
-    description: '사용자 로그아웃을 수행합니다.',
-    security: [{ bearerAuth: [] }],
-    responses: {
-      200: {
-        description: '로그아웃 성공',
-        content: {
-          'application/json': {
-            schema: SuccessResponseSchema,
-          },
-        },
-      },
-      401: {
-        description: '인증 실패',
-        content: {
-          'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -275,7 +250,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
     path: '/api/auth/change-password',
     tags: ['인증'],
     summary: '비밀번호 변경',
-    description: '현재 비밀번호를 확인하고 새 비밀번호로 변경합니다.',
+    description: '현재 로그인한 사용자의 비밀번호를 변경합니다.',
     security: [{ bearerAuth: [] }],
     request: {
       body: {
@@ -299,7 +274,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -307,35 +282,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
-          },
-        },
-      },
-    },
-  });
-
-  // 세션 관리 라우트들
-  registry.registerPath({
-    method: 'get',
-    path: '/api/auth/sessions',
-    tags: ['인증'],
-    summary: '사용자 세션 조회',
-    description: '현재 사용자의 모든 활성 세션을 조회합니다.',
-    security: [{ bearerAuth: [] }],
-    responses: {
-      200: {
-        description: '세션 조회 성공',
-        content: {
-          'application/json': {
-            schema: SuccessResponseSchema,
-          },
-        },
-      },
-      401: {
-        description: '인증 실패',
-        content: {
-          'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -344,67 +291,14 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
 
   registry.registerPath({
     method: 'post',
-    path: '/api/auth/logout-device',
+    path: '/api/auth/logout',
     tags: ['인증'],
-    summary: '특정 기기 로그아웃',
-    description: '특정 기기에서만 로그아웃합니다.',
-    security: [{ bearerAuth: [] }],
-    request: {
-      body: {
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: {
-                token: {
-                  type: 'string',
-                  description: '로그아웃할 토큰',
-                },
-              },
-              required: ['token'],
-            },
-          },
-        },
-      },
-    },
-    responses: {
-      200: {
-        description: '특정 기기 로그아웃 성공',
-        content: {
-          'application/json': {
-            schema: SuccessResponseSchema,
-          },
-        },
-      },
-      400: {
-        description: '잘못된 요청',
-        content: {
-          'application/json': {
-            schema: ErrorResponseSchema,
-          },
-        },
-      },
-      401: {
-        description: '인증 실패',
-        content: {
-          'application/json': {
-            schema: ErrorResponseSchema,
-          },
-        },
-      },
-    },
-  });
-
-  registry.registerPath({
-    method: 'post',
-    path: '/api/auth/logout-all-devices',
-    tags: ['인증'],
-    summary: '모든 기기 로그아웃',
-    description: '모든 기기에서 로그아웃합니다.',
+    summary: '로그아웃',
+    description: '현재 로그인한 사용자를 로그아웃합니다.',
     security: [{ bearerAuth: [] }],
     responses: {
       200: {
-        description: '모든 기기 로그아웃 성공',
+        description: '로그아웃 성공',
         content: {
           'application/json': {
             schema: SuccessResponseSchema,
@@ -415,34 +309,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
-          },
-        },
-      },
-    },
-  });
-
-  registry.registerPath({
-    method: 'get',
-    path: '/api/auth/active-session-count',
-    tags: ['인증'],
-    summary: '활성 세션 수 조회',
-    description: '현재 사용자의 활성 세션 수를 조회합니다.',
-    security: [{ bearerAuth: [] }],
-    responses: {
-      200: {
-        description: '활성 세션 수 조회 성공',
-        content: {
-          'application/json': {
-            schema: SuccessResponseSchema,
-          },
-        },
-      },
-      401: {
-        description: '인증 실패',
-        content: {
-          'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -451,28 +318,32 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
 
   // 실제 라우트 정의
   router.post('/login', validateBody(loginSchema), authController.login);
+
   router.post(
     '/register',
     validateBody(registerSchema),
     authController.register
   );
+
   router.post(
-    '/social/login',
+    '/social-login',
     validateBody(socialLoginSchema),
     authController.socialLogin
   );
+
   router.post(
     '/complete-signup',
     authenticateToken,
     validateBody(completeSignUpSchema),
     authController.completeSignUp
   );
+
   router.post(
     '/refresh',
     validateBody(refreshTokenSchema),
     authController.refreshToken
   );
-  router.post('/logout', authenticateToken, authController.logout);
+
   router.post(
     '/change-password',
     authenticateToken,
@@ -480,19 +351,7 @@ export const createAuthRoutes = (prisma: PrismaClient): Router => {
     authController.changePassword
   );
 
-  // 세션 관리 라우트들
-  router.get('/sessions', authenticateToken, authController.getUserSessions);
-  router.post('/logout-device', authenticateToken, authController.logoutDevice);
-  router.post(
-    '/logout-all-devices',
-    authenticateToken,
-    authController.logoutAllDevices
-  );
-  router.get(
-    '/active-session-count',
-    authenticateToken,
-    authController.getActiveSessionCount
-  );
+  router.post('/logout', authenticateToken, authController.logout);
 
   return router;
 };

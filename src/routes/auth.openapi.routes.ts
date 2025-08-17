@@ -1,24 +1,25 @@
 import { Router } from 'express';
+
+import {
+  registry,
+  SuccessResponseSchema,
+  BadRequestErrorSchema,
+  UnauthorizedErrorSchema,
+  ConflictErrorSchema,
+} from '../config/swagger-zod.js';
 import { AuthController } from '../domains/auth/auth.controller.js';
-import { authenticateToken } from '../middleware/auth.middleware.js';
-import { validateBody } from '../middleware/validate.middleware.js';
+import { PrismaClient } from '@prisma/client';
 import {
   loginSchema,
+  loginResponseSchema,
   socialLoginSchema,
   completeSignUpSchema,
   refreshTokenSchema,
   changePasswordSchema,
-  loginResponseSchema,
-  logoutResponseSchema,
   registerResponseSchema,
+  logoutResponseSchema,
 } from '../schemas/auth/openapi.schema.js';
 import { registerSchema } from '../schemas/auth/register.schema.js';
-import { registry } from '../config/swagger-zod.js';
-import {
-  SuccessResponseSchema,
-  ErrorResponseSchema,
-} from '../config/swagger-zod.js';
-import { PrismaClient } from '@prisma/client';
 
 /**
  * 인증 라우트 팩토리 함수 (OpenAPI 통합)
@@ -59,7 +60,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -67,7 +68,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -104,7 +105,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -112,7 +113,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '이미 존재하는 사용자',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ConflictErrorSchema,
           },
         },
       },
@@ -149,7 +150,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -157,7 +158,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -186,7 +187,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         content: {
           'application/json': {
             schema: SuccessResponseSchema.extend({
-              data: registerResponseSchema,
+              data: completeSignUpSchema,
             }),
           },
         },
@@ -195,7 +196,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -203,7 +204,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -231,7 +232,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         content: {
           'application/json': {
             schema: SuccessResponseSchema.extend({
-              data: loginResponseSchema,
+              data: refreshTokenSchema,
             }),
           },
         },
@@ -240,7 +241,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -248,7 +249,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -277,7 +278,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -305,7 +306,9 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '비밀번호 변경 성공',
         content: {
           'application/json': {
-            schema: SuccessResponseSchema,
+            schema: SuccessResponseSchema.extend({
+              data: changePasswordSchema,
+            }),
           },
         },
       },
@@ -313,7 +316,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -321,7 +324,7 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -329,41 +332,17 @@ export const createAuthOpenApiRoutes = (prisma: PrismaClient): Router => {
   });
 
   // 라우트 정의
-  router.post(
-    '/login',
-    validateBody(loginSchema),
-    authController.login.bind(authController)
-  );
-  router.post(
-    '/register',
-    validateBody(registerSchema),
-    authController.register.bind(authController)
-  );
-  router.post(
-    '/social/login',
-    validateBody(socialLoginSchema),
-    authController.socialLogin.bind(authController)
-  );
+  router.post('/login', authController.login.bind(authController));
+  router.post('/register', authController.register.bind(authController));
+  router.post('/social/login', authController.socialLogin.bind(authController));
   router.post(
     '/complete-signup',
-    authenticateToken,
-    validateBody(completeSignUpSchema),
     authController.completeSignUp.bind(authController)
   );
-  router.post(
-    '/refresh',
-    validateBody(refreshTokenSchema),
-    authController.refreshToken.bind(authController)
-  );
-  router.post(
-    '/logout',
-    authenticateToken,
-    authController.logout.bind(authController)
-  );
+  router.post('/refresh', authController.refreshToken.bind(authController));
+  router.post('/logout', authController.logout.bind(authController));
   router.post(
     '/change-password',
-    authenticateToken,
-    validateBody(changePasswordSchema),
     authController.changePassword.bind(authController)
   );
 

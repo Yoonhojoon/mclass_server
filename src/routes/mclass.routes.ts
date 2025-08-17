@@ -19,7 +19,9 @@ import {
 import { registry } from '../config/swagger-zod.js';
 import {
   SuccessResponseSchema,
-  ErrorResponseSchema,
+  BadRequestErrorSchema,
+  UnauthorizedErrorSchema,
+  NotFoundErrorSchema,
 } from '../config/swagger-zod.js';
 
 export const createMClassRoutes = (prisma: PrismaClient): Router => {
@@ -49,7 +51,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -84,7 +86,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: 'MClass를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -120,7 +122,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -128,7 +130,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -173,7 +175,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -181,7 +183,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -189,7 +191,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: 'MClass를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -225,7 +227,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -233,7 +235,7 @@ export const createMClassRoutes = (prisma: PrismaClient): Router => {
         description: 'MClass를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },

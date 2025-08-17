@@ -19,7 +19,10 @@ import {
 import { registry } from '../config/swagger-zod.js';
 import {
   SuccessResponseSchema,
-  ErrorResponseSchema,
+  BadRequestErrorSchema,
+  UnauthorizedErrorSchema,
+  ForbiddenErrorSchema,
+  NotFoundErrorSchema,
 } from '../config/swagger-zod.js';
 
 export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
@@ -57,7 +60,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '지원서 양식을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -102,7 +105,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -110,7 +113,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -118,7 +121,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '권한 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ForbiddenErrorSchema,
           },
         },
       },
@@ -126,7 +129,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: 'MClass를 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -171,7 +174,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '잘못된 요청',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: BadRequestErrorSchema,
           },
         },
       },
@@ -179,7 +182,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -187,7 +190,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '권한 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ForbiddenErrorSchema,
           },
         },
       },
@@ -195,7 +198,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '지원서 양식을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
@@ -231,7 +234,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '인증 실패',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: UnauthorizedErrorSchema,
           },
         },
       },
@@ -239,7 +242,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '권한 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: ForbiddenErrorSchema,
           },
         },
       },
@@ -247,7 +250,7 @@ export const createEnrollmentFormRoutes = (prisma: PrismaClient): Router => {
         description: '지원서 양식을 찾을 수 없음',
         content: {
           'application/json': {
-            schema: ErrorResponseSchema,
+            schema: NotFoundErrorSchema,
           },
         },
       },
