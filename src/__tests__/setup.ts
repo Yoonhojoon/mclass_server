@@ -1,3 +1,6 @@
+// ioredis를 ioredis-mock으로 모킹 (다른 import보다 먼저 실행)
+jest.mock('ioredis', () => require('ioredis-mock'));
+
 import { config } from 'dotenv';
 
 // 테스트 환경에서 .env 파일 로드
