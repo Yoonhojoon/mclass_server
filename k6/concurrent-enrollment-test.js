@@ -77,10 +77,11 @@ function generateAnswers(questions) {
       case 'boolean':
         answers[questionId] = Math.random() > 0.5;
         break;
-      case 'select':
+      case 'select': {
         const options = question.options || ['옵션1', '옵션2', '옵션3'];
         answers[questionId] = options[Math.floor(Math.random() * options.length)];
         break;
+      }
       default:
         answers[questionId] = `기본 답변 ${Math.floor(Math.random() * 1000)}`;
     }
