@@ -34,13 +34,4 @@ export default {
   restoreMocks: true,
   // 메모리 누수 방지 설정 활성화
   detectOpenHandles: true,
-  // 테스트 후 정리
-  globalTeardown: '<rootDir>/src/__tests__/teardown.ts',
-  // 테스트 환경 변수 설정
-  setupFiles: ['<rootDir>/src/__tests__/setup.ts'],
-  // 테스트용 Prisma 스키마 사용
-  testEnvironmentOptions: {
-    DATABASE_URL: 'file:./test.db',
-    TEST_DATABASE_URL: 'file:./test.db',
-  },
 }; 
