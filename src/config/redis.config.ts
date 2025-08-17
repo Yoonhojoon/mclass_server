@@ -1,5 +1,14 @@
 import Redis from 'ioredis';
 
+// 환경 변수 디버깅
+console.log('🔍 Redis 환경 변수 확인:');
+console.log(
+  '  - REDIS_URL:',
+  process.env.REDIS_URL ? '설정됨' : '설정되지 않음'
+);
+console.log('  - REDIS_HOST:', process.env.REDIS_HOST || '기본값: localhost');
+console.log('  - REDIS_PORT:', process.env.REDIS_PORT || '기본값: 6379');
+
 // REDIS_URL이 있으면 URL을 사용하고, 없으면 개별 설정을 사용
 const redisConfig = process.env.REDIS_URL
   ? {
@@ -24,6 +33,8 @@ const redisConfig = process.env.REDIS_URL
       commandTimeout: 5000,
     };
 
+console.log('🔧 Redis 설정:', JSON.stringify(redisConfig, null, 2));
+
 // Redis 클라이언트 인스턴스
 const redis = new Redis(redisConfig);
 
@@ -33,7 +44,13 @@ redis.on('connect', () => {
 });
 
 redis.on('error', error => {
-  console.error('❌ Redis 연결 오류:', error);
+  console.error('❌ Redis 연결 오류:', error.message);
+  console.error('🔍 Redis 설정 정보:');
+  console.error('  - REDIS_URL:', process.env.REDIS_URL || '설정되지 않음');
+  console.error(
+    '  - 연결 시도 주소:',
+    error.message.includes('127.0.0.1') ? 'localhost (기본값)' : 'ElastiCache'
+  );
 });
 
 redis.on('close', () => {
