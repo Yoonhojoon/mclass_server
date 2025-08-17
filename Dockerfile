@@ -25,8 +25,8 @@ RUN npm run build
 # 프로덕션 스테이지
 FROM node:18-alpine AS production
 
-# curl과 postgresql-client 설치 (헬스체크용)
-RUN apk add --no-cache curl postgresql-client
+# curl, postgresql-client, redis 클라이언트 설치 (헬스체크 및 디버깅용)
+RUN apk add --no-cache curl postgresql-client redis
 
 # 보안을 위해 non-root 사용자 생성
 RUN addgroup -g 1001 -S nodejs
