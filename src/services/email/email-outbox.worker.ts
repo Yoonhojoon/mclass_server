@@ -1,7 +1,7 @@
 import { Logger } from 'winston';
 import { prisma } from '../../config/prisma.config.js';
 import { EmailService } from './email.service.js';
-import { EmailOutbox } from '@prisma/client';
+import { EmailOutbox, EmailType } from '@prisma/client';
 
 export class EmailOutboxWorker {
   constructor(
@@ -63,9 +63,9 @@ export class EmailOutboxWorker {
   async addToOutbox(options: {
     to: string;
     template: string;
-    payload: Record<string, any>;
+    payload: Record<string, unknown>;
     subject?: string;
-    type?: string;
+    type: EmailType;
   }): Promise<void> {
     try {
       await prisma.emailOutbox.create({
@@ -74,7 +74,7 @@ export class EmailOutboxWorker {
           template: options.template,
           payload: options.payload as any,
           subject: options.subject,
-          type: options.type as any,
+          type: options.type,
           attempts: 0,
           processedAt: null,
           nextTryAt: null,
@@ -104,7 +104,10 @@ export class EmailOutboxWorker {
     await this.emailService.sendTemplateEmail({
       to: emailOutbox.to,
       template: emailOutbox.template,
-      data: emailOutbox.payload as Record<string, any>,
+      data: emailOutbox.payload as Record<
+        string,
+        string | number | boolean | null | undefined
+      >,
     });
   }
 

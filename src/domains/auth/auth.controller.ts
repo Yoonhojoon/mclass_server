@@ -4,6 +4,7 @@ import { AuthError } from '../../common/exception/auth/AuthError.js';
 import { ValidationError } from '../../common/exception/ValidationError.js';
 import { AuthSuccess } from '../../common/exception/auth/AuthSuccess.js';
 import { UserError } from '../../common/exception/user/UserError.js';
+import { BaseError } from '../../common/exception/BaseError.js';
 import logger from '../../config/logger.config.js';
 import { PrismaClient } from '@prisma/client';
 import { LoginRequest, RegisterRequest } from '../../schemas/auth/index.js';
@@ -18,8 +19,8 @@ import { userResponseSchema } from '../../schemas/auth/response.schema.js';
 export class AuthController {
   private authService: AuthService;
 
-  constructor(prisma: PrismaClient) {
-    this.authService = new AuthService(prisma);
+  constructor(prisma: PrismaClient, authService?: AuthService) {
+    this.authService = authService || new AuthService(prisma);
   }
 
   /**
@@ -263,33 +264,31 @@ export class AuthController {
    * 회원가입 완료
    */
   async completeSignUp(
-    req: Request & { body: CompleteSignUpDto },
+    req: Request & { body: CompleteSignUpDto; user?: any },
     res: Response
   ): Promise<void> {
     try {
       const { termIds }: CompleteSignUpDto = req.body;
+
+      // (1) body.termIds 유효성 검증
+      if (!termIds || !Array.isArray(termIds) || termIds.length === 0) {
+        logger.error('❌ 회원가입 완료 실패: 약관 ID 목록이 유효하지 않음', {
+          termIds,
+          body: req.body,
+        });
+        const error = ValidationError.invalidTermIds();
+        res.status(error.statusCode).json(error.toResponse());
+        return;
+      }
+
+      // (2) 인증 확인
       const userId = req.user?.userId;
-
-      // 디버깅을 위한 상세 로그 추가
-      logger.info('🔍 회원가입 완료 요청 정보', {
-        hasUser: !!req.user,
-        userId: req.user?.userId,
-        userEmail: req.user?.email,
-        userRole: req.user?.role,
-        isSignUpCompleted: req.user?.signUpCompleted,
-        headers: {
-          authorization: req.headers.authorization ? 'Bearer ***' : '없음',
-          'user-agent': req.headers['user-agent'],
-        },
-        body: { termIds },
-      });
-
       if (!userId) {
         logger.error('❌ 회원가입 완료 실패: 사용자 ID 없음', {
           user: req.user,
           headers: req.headers,
         });
-        const error = ValidationError.unauthorized();
+        const error = AuthError.authenticationFailed('인증이 필요합니다.');
         res.status(error.statusCode).json(error.toResponse());
         return;
       }
@@ -299,8 +298,10 @@ export class AuthController {
         termIds,
       });
 
+      // (3) authService.completeSignUp 호출
       const result = await this.authService.completeSignUp(userId, termIds);
 
+      // (4) 200 성공 응답 반환
       return AuthSuccess.loginSuccess(
         result.user.userId,
         result.user.role,
@@ -314,8 +315,11 @@ export class AuthController {
         headers: req.headers,
       });
 
-      if (error instanceof AuthError) {
-        res.status(error.statusCode).json(error.toResponse());
+      // (5) catch 블록에서 AuthError/BaseError는 고유 status, 그 외는 500으로 매핑
+      if (error instanceof AuthError || error instanceof BaseError) {
+        res
+          .status((error as AuthError | BaseError).statusCode)
+          .json((error as AuthError | BaseError).toResponse());
       } else {
         const authError = AuthError.internalError(
           '회원가입 완료 처리 중 오류가 발생했습니다.'

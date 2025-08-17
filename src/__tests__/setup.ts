@@ -18,6 +18,9 @@ process.env.EMAIL_USER = 'dummy';
 process.env.EMAIL_PASS = 'dummy';
 process.env.EMAIL_FROM = 'test@example.com';
 
+// 테스트 환경에서 크론 작업 비활성화
+process.env.DISABLE_CRON_JOBS = 'true';
+
 // 글로벌 테스트 타임아웃 설정
 jest.setTimeout(30000);
 
@@ -26,3 +29,6 @@ process.env.LOG_LEVEL = 'error';
 
 // Prisma 스키마 경로 설정 (테스트용 스키마 사용)
 process.env.PRISMA_SCHEMA_PATH = './prisma/schema.test.prisma';
+
+// 테스트 환경임을 명시적으로 설정
+process.env.NODE_ENV = 'test';

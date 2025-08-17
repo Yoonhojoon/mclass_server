@@ -46,7 +46,7 @@ export const corsOptions = {
   origin: (
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void
-  ) => {
+  ): void => {
     if (isAllowed(origin)) {
       return callback(null, true);
     }
