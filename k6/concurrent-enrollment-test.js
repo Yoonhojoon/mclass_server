@@ -12,8 +12,15 @@ const formResponseTime = new Trend('form_response_time');
 
 // CSV 데이터 로드
 const users = new SharedArray('users', function () {
-  return open('../artillery/users.csv').split('\n').slice(1).map(line => {
-    const [email, password, accessToken] = line.split(',');
+  const rows = open('../artillery/users.csv')
+    .split('\n')
+    .slice(1)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  return rows.map((line) => {
+    const [email, password, accessToken] = line
+      .split(',')
+      .map((s) => s.trim().replace(/\r$/, ''));
     return { email, password, accessToken };
   });
 });
