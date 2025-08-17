@@ -157,10 +157,9 @@ export default function () {
   enrollmentResponseTime.add(enrollmentDuration);
 
   const enrollmentCheck = check(enrollmentResponse, {
-    '신청 성공 (201)': (r) => r.status === 201,
-    '중복 신청 처리 (409)': (r) => r.status === 409,
+    '상태 코드 허용(201 또는 409)': (r) => r.status === 201 || r.status === 409,
     '신청 응답 시간 < 500ms': (r) => r.timings.duration < 500,
-    '응답이 JSON 형식': (r) => r.headers['Content-Type']?.includes('application/json'),
+    '응답이 JSON 형식': (r) => String(r.headers['Content-Type'] || '').includes('application/json'),
   });
 
   if (!enrollmentCheck) {
