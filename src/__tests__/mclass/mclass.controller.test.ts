@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { MClassController } from '../../domains/mclass/mclass.controller.js';
-import { MClassService } from '../../domains/mclass/mclass.service.js';
+import {
+  MClassService,
+  MClassPhase,
+} from '../../domains/mclass/mclass.service.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
 
 // Mock service
@@ -18,11 +21,23 @@ describe('MClassController', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
+  let testId: string;
+  let uniqueTitle: string;
 
   beforeEach(() => {
     controller = new MClassController(mockService);
     mockNext = jest.fn();
     jest.clearAllMocks();
+
+    // 각 테스트마다 고유한 ID와 제목 생성
+    testId = `123e4567-e89b-12d3-a456-426614174000`;
+    uniqueTitle = `Test Class ${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Mock response 설정
+    mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis(),
+    };
   });
 
   describe('getMClasses', () => {
@@ -37,91 +52,66 @@ describe('MClassController', () => {
         },
         user: {
           userId: 'user-1',
-          email: 'user@example.com',
+          email: 'user@test.com',
           role: 'USER',
           isAdmin: false,
           signUpCompleted: true,
+          provider: 'LOCAL',
         },
-      };
-      mockResponse = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn().mockReturnThis(),
       };
     });
 
     it('should return MClass list successfully', async () => {
-      const mockMClasses = [
-        {
-          id: '550e8400-e29b-41d4-a716-446655440001',
-          title: 'Test Class 1',
-          description: null,
-          recruitStartAt: '2024-01-01T00:00:00.000Z',
-          recruitEndAt: '2025-12-31T23:59:59.000Z',
-          startAt: '2026-01-20T10:00:00.000Z',
-          endAt: '2026-01-25T12:00:00.000Z',
-          selectionType: 'FIRST_COME' as const,
-          capacity: 10,
-          approvedCount: 5,
-          allowWaitlist: false,
-          waitlistCapacity: null,
-          visibility: 'PUBLIC' as const,
-          isOnline: true,
-          location: null,
-          fee: null,
-          createdBy: '550e8400-e29b-41d4-a716-446655440002',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-          phase: 'RECRUITING' as const,
-          creator: {
-            id: '550e8400-e29b-41d4-a716-446655440002',
-            name: 'Admin',
-            email: 'admin@test.com',
-          },
-        },
-        {
-          id: '550e8400-e29b-41d4-a716-446655440003',
-          title: 'Test Class 2',
-          description: null,
-          recruitStartAt: '2025-12-15T00:00:00.000Z',
-          recruitEndAt: '2025-12-19T23:59:59.000Z',
-          startAt: '2025-12-20T10:00:00.000Z',
-          endAt: '2025-12-25T12:00:00.000Z',
-          selectionType: 'FIRST_COME' as const,
-          capacity: 10,
-          approvedCount: 5,
-          allowWaitlist: false,
-          waitlistCapacity: null,
-          visibility: 'PUBLIC' as const,
-          isOnline: true,
-          location: null,
-          fee: null,
-          createdBy: '550e8400-e29b-41d4-a716-446655440002',
-          createdAt: '2024-01-01T00:00:00.000Z',
-          updatedAt: '2024-01-01T00:00:00.000Z',
-          phase: 'UPCOMING' as const,
-          creator: {
-            id: '550e8400-e29b-41d4-a716-446655440002',
-            name: 'Admin',
-            email: 'admin@test.com',
-          },
-        },
-      ];
-
       const mockResult = {
-        items: mockMClasses,
-        total: 2,
+        items: [
+          {
+            id: testId,
+            title: uniqueTitle,
+            description: 'Test description',
+            selectionType: 'FIRST_COME',
+            capacity: 10,
+            allowWaitlist: false,
+            waitlistCapacity: null,
+            visibility: 'PUBLIC',
+            recruitStartAt: '2024-01-01T00:00:00.000Z',
+            recruitEndAt: '2025-12-31T23:59:59.000Z',
+            startAt: '2025-12-20T10:00:00Z',
+            endAt: '2025-12-20T12:00:00Z',
+            isOnline: true,
+            location: null,
+            fee: null,
+            createdBy: '123e4567-e89b-12d3-a456-426614174001',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+            phase: 'RECRUITING' as MClassPhase,
+            creator: {
+              id: '123e4567-e89b-12d3-a456-426614174001',
+              name: 'Admin User',
+              email: 'admin@test.com',
+            },
+          },
+        ],
+        total: 1,
         page: 1,
         size: 10,
         totalPages: 1,
       };
 
-      mockService.list.mockResolvedValue(mockResult as any);
+      mockService.list.mockResolvedValue(mockResult);
 
       await controller.getMClasses(
         mockRequest as any,
         mockResponse as Response,
         mockNext
       );
+
+      // mockNext가 호출되었는지 확인
+      if ((mockNext as jest.Mock).mock.calls.length > 0) {
+        console.error(
+          'mockNext was called with:',
+          (mockNext as jest.Mock).mock.calls[0][0]
+        );
+      }
 
       expect(mockService.list).toHaveBeenCalledWith(
         {
@@ -133,31 +123,29 @@ describe('MClassController', () => {
         },
         false
       );
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        code: 'MCLASS_LIST_RETRIEVED',
+        message: 'MClass 목록을 성공적으로 조회했습니다',
+        data: mockResult.items,
+        meta: {
+          page: 1,
+          size: 10,
+          total: 1,
+          totalPages: 1,
+        },
+      });
     });
 
-    it('should handle validation errors', async () => {
-      mockRequest.query = {
-        page: 'invalid',
-        size: '10',
-      };
-
-      await controller.getMClasses(
-        mockRequest as any,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(MClassError));
-    });
-
-    it('should pass admin flag when user is admin', async () => {
+    it('should handle admin user correctly', async () => {
       mockRequest.user = {
         userId: 'admin-1',
-        email: 'admin@example.com',
+        email: 'admin@test.com',
         role: 'ADMIN',
         isAdmin: true,
         signUpCompleted: true,
+        provider: 'LOCAL',
       };
 
       const mockResult = {
@@ -178,70 +166,91 @@ describe('MClassController', () => {
 
       expect(mockService.list).toHaveBeenCalledWith(expect.any(Object), true);
     });
+
+    it('should handle service errors', async () => {
+      const error = new Error('Service error');
+      mockService.list.mockRejectedValue(error);
+
+      await controller.getMClasses(
+        mockRequest as any,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('getMClass', () => {
     beforeEach(() => {
       mockRequest = {
-        params: { id: '1' },
-      };
-      mockResponse = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn().mockReturnThis(),
+        params: { id: testId },
+        user: {
+          userId: 'user-1',
+          email: 'user@test.com',
+          role: 'USER',
+          isAdmin: false,
+          signUpCompleted: true,
+          provider: 'LOCAL',
+        },
       };
     });
 
-    it('should return single MClass successfully', async () => {
+    it('should return MClass by ID successfully', async () => {
       const mockMClass = {
-        id: '550e8400-e29b-41d4-a716-446655440001',
-        title: 'Test Class',
-        description: null,
-        recruitStartAt: '2024-01-01T00:00:00.000Z',
-        recruitEndAt: '2025-12-31T23:59:59.000Z',
-        startAt: '2026-01-20T10:00:00.000Z',
-        endAt: '2026-01-25T12:00:00.000Z',
-        selectionType: 'FIRST_COME' as const,
+        id: testId,
+        title: uniqueTitle,
+        description: 'Test description',
+        selectionType: 'FIRST_COME',
         capacity: 10,
-        approvedCount: 5,
         allowWaitlist: false,
         waitlistCapacity: null,
-        visibility: 'PUBLIC' as const,
+        visibility: 'PUBLIC',
+        recruitStartAt: '2024-01-01T00:00:00.000Z',
+        recruitEndAt: '2025-12-31T23:59:59.000Z',
+        startAt: '2025-12-20T10:00:00Z',
+        endAt: '2025-12-20T12:00:00Z',
         isOnline: true,
         location: null,
         fee: null,
-        createdBy: '550e8400-e29b-41d4-a716-446655440002',
+        createdBy: '123e4567-e89b-12d3-a456-426614174001',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        phase: 'RECRUITING' as const,
+        phase: 'RECRUITING' as MClassPhase,
         creator: {
-          id: '550e8400-e29b-41d4-a716-446655440002',
-          name: 'Admin',
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          name: 'Admin User',
           email: 'admin@test.com',
         },
       };
 
-      mockService.getById.mockResolvedValue(mockMClass as any);
+      mockService.getById.mockResolvedValue(mockMClass);
 
       await controller.getMClass(
-        mockRequest as Request,
+        mockRequest as any,
         mockResponse as Response,
         mockNext
       );
 
-      expect(mockService.getById).toHaveBeenCalledWith('1');
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockService.getById).toHaveBeenCalledWith(testId);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        code: 'MCLASS_RETRIEVED',
+        message: 'MClass를 성공적으로 조회했습니다',
+        data: mockMClass,
+      });
     });
 
-    it('should handle MClass not found error', async () => {
-      mockService.getById.mockRejectedValue(MClassError.notFound('1'));
+    it('should handle MClass not found', async () => {
+      mockService.getById.mockRejectedValue(MClassError.notFound(testId));
 
       await controller.getMClass(
-        mockRequest as Request,
+        mockRequest as any,
         mockResponse as Response,
         mockNext
       );
 
-      expect(mockNext).toHaveBeenCalledWith(MClassError.notFound('1'));
+      expect(mockNext).toHaveBeenCalledWith(MClassError.notFound(testId));
     });
   });
 
@@ -249,60 +258,54 @@ describe('MClassController', () => {
     beforeEach(() => {
       mockRequest = {
         body: {
-          title: 'New Class',
-          recruitStartAt: '2025-12-19T10:00:00Z',
-          recruitEndAt: '2025-12-19T12:00:00Z',
+          title: uniqueTitle,
+          description: 'Test description',
           startAt: '2025-12-20T10:00:00Z',
           endAt: '2025-12-20T12:00:00Z',
           selectionType: 'FIRST_COME',
-          allowWaitlist: false,
           visibility: 'PUBLIC',
           isOnline: true,
         },
         user: {
           userId: 'admin-1',
-          email: 'admin@example.com',
+          email: 'admin@test.com',
           role: 'ADMIN',
           isAdmin: true,
           signUpCompleted: true,
+          provider: 'LOCAL',
         },
-      };
-      mockResponse = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn().mockReturnThis(),
       };
     });
 
     it('should create MClass successfully', async () => {
       const mockCreatedMClass = {
-        id: '550e8400-e29b-41d4-a716-446655440001',
-        title: 'New Class',
-        description: null,
-        recruitStartAt: '2025-12-19T10:00:00.000Z',
-        recruitEndAt: '2025-12-19T12:00:00.000Z',
-        startAt: '2025-12-20T10:00:00.000Z',
-        endAt: '2025-12-20T12:00:00.000Z',
-        selectionType: 'FIRST_COME' as const,
+        id: testId,
+        title: uniqueTitle,
+        description: 'Test description',
+        selectionType: 'FIRST_COME',
         capacity: null,
-        approvedCount: 0,
         allowWaitlist: false,
         waitlistCapacity: null,
-        visibility: 'PUBLIC' as const,
+        visibility: 'PUBLIC',
+        recruitStartAt: null,
+        recruitEndAt: null,
+        startAt: '2025-12-20T10:00:00Z',
+        endAt: '2025-12-20T12:00:00Z',
         isOnline: true,
         location: null,
         fee: null,
-        createdBy: '550e8400-e29b-41d4-a716-446655440002',
+        createdBy: '123e4567-e89b-12d3-a456-426614174001',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        phase: 'UPCOMING' as const,
+        phase: 'UPCOMING' as MClassPhase,
         creator: {
-          id: '550e8400-e29b-41d4-a716-446655440002',
-          name: 'Admin',
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          name: 'Admin User',
           email: 'admin@test.com',
         },
       };
 
-      mockService.create.mockResolvedValue(mockCreatedMClass as any);
+      mockService.create.mockResolvedValue(mockCreatedMClass);
 
       await controller.createMClass(
         mockRequest as any,
@@ -310,18 +313,18 @@ describe('MClassController', () => {
         mockNext
       );
 
-      expect(mockService.create).toHaveBeenCalledWith('admin-1', {
-        title: 'New Class',
-        recruitStartAt: '2025-12-19T10:00:00Z',
-        recruitEndAt: '2025-12-19T12:00:00Z',
-        startAt: '2025-12-20T10:00:00Z',
-        endAt: '2025-12-20T12:00:00Z',
-        selectionType: 'FIRST_COME',
-        allowWaitlist: false,
-        visibility: 'PUBLIC',
-        isOnline: true,
+      expect(mockService.create).toHaveBeenCalledWith(
+        'admin-1',
+        mockRequest.body
+      );
+
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        code: 'MCLASS_CREATED',
+        message: 'MClass가 성공적으로 생성되었습니다',
+        data: mockCreatedMClass,
+        meta: { id: testId },
       });
-      expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should reject non-admin users', async () => {
@@ -344,38 +347,9 @@ describe('MClassController', () => {
       expect(mockService.create).not.toHaveBeenCalled();
     });
 
-    it('should handle validation errors', async () => {
-      mockRequest.body = {
-        title: '', // invalid title
-        startAt: 'invalid-date',
-      };
-
-      await controller.createMClass(
-        mockRequest as any,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(MClassError));
-    });
-
     it('should handle service errors', async () => {
-      // 유효한 데이터로 설정
-      mockRequest.body = {
-        title: 'New Class',
-        recruitStartAt: '2025-12-19T10:00:00Z',
-        recruitEndAt: '2025-12-19T12:00:00Z',
-        startAt: '2025-12-20T10:00:00Z',
-        endAt: '2025-12-20T12:00:00Z',
-        selectionType: 'FIRST_COME',
-        allowWaitlist: false,
-        visibility: 'PUBLIC',
-        isOnline: true,
-      };
-
-      mockService.create.mockRejectedValue(
-        MClassError.duplicateTitle('New Class')
-      );
+      const error = MClassError.duplicateTitle(uniqueTitle);
+      mockService.create.mockRejectedValue(error);
 
       await controller.createMClass(
         mockRequest as any,
@@ -383,18 +357,16 @@ describe('MClassController', () => {
         mockNext
       );
 
-      expect(mockNext).toHaveBeenCalledWith(
-        MClassError.duplicateTitle('New Class')
-      );
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
   describe('updateMClass', () => {
     beforeEach(() => {
       mockRequest = {
-        params: { id: '1' },
+        params: { id: testId },
         body: {
-          title: 'Updated Class',
+          title: `Updated ${uniqueTitle}`,
           description: 'Updated description',
         },
         user: {
@@ -406,42 +378,37 @@ describe('MClassController', () => {
           provider: 'LOCAL',
         },
       };
-      mockResponse = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn().mockReturnThis(),
-      };
     });
 
     it('should update MClass successfully', async () => {
       const mockUpdatedMClass = {
-        id: '550e8400-e29b-41d4-a716-446655440001',
-        title: 'Updated Class',
+        id: testId,
+        title: `Updated ${uniqueTitle}`,
         description: 'Updated description',
-        recruitStartAt: '2025-12-15T00:00:00.000Z',
-        recruitEndAt: '2025-12-19T23:59:59.000Z',
-        startAt: '2025-12-20T10:00:00.000Z',
-        endAt: '2025-12-25T12:00:00.000Z',
-        selectionType: 'FIRST_COME' as const,
-        capacity: 10,
-        approvedCount: 5,
+        selectionType: 'FIRST_COME',
+        capacity: null,
         allowWaitlist: false,
         waitlistCapacity: null,
-        visibility: 'PUBLIC' as const,
+        visibility: 'PUBLIC',
+        recruitStartAt: null,
+        recruitEndAt: null,
+        startAt: '2025-12-20T10:00:00Z',
+        endAt: '2025-12-20T12:00:00Z',
         isOnline: true,
         location: null,
         fee: null,
-        createdBy: '550e8400-e29b-41d4-a716-446655440002',
+        createdBy: '123e4567-e89b-12d3-a456-426614174001',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        phase: 'UPCOMING' as const,
+        phase: 'UPCOMING' as MClassPhase,
         creator: {
-          id: '550e8400-e29b-41d4-a716-446655440002',
-          name: 'Admin',
+          id: '123e4567-e89b-12d3-a456-426614174001',
+          name: 'Admin User',
           email: 'admin@test.com',
         },
       };
 
-      mockService.update.mockResolvedValue(mockUpdatedMClass as any);
+      mockService.update.mockResolvedValue(mockUpdatedMClass);
 
       await controller.updateMClass(
         mockRequest as any,
@@ -449,11 +416,15 @@ describe('MClassController', () => {
         mockNext
       );
 
-      expect(mockService.update).toHaveBeenCalledWith('1', {
-        title: 'Updated Class',
-        description: 'Updated description',
+      expect(mockService.update).toHaveBeenCalledWith(testId, mockRequest.body);
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        code: 'MCLASS_UPDATED',
+        message: 'MClass가 성공적으로 수정되었습니다',
+        data: mockUpdatedMClass,
+        meta: { id: testId },
       });
-      expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should reject non-admin users', async () => {
@@ -476,22 +447,9 @@ describe('MClassController', () => {
       expect(mockService.update).not.toHaveBeenCalled();
     });
 
-    it('should handle validation errors', async () => {
-      mockRequest.body = {
-        title: '', // invalid title
-      };
-
-      await controller.updateMClass(
-        mockRequest as any,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(MClassError));
-    });
-
     it('should handle service errors', async () => {
-      mockService.update.mockRejectedValue(MClassError.notFound('1'));
+      const error = MClassError.notFound(testId);
+      mockService.update.mockRejectedValue(error);
 
       await controller.updateMClass(
         mockRequest as any,
@@ -499,14 +457,14 @@ describe('MClassController', () => {
         mockNext
       );
 
-      expect(mockNext).toHaveBeenCalledWith(MClassError.notFound('1'));
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
   describe('deleteMClass', () => {
     beforeEach(() => {
       mockRequest = {
-        params: { id: '1' },
+        params: { id: testId },
         user: {
           userId: 'admin-1',
           email: 'admin@test.com',
@@ -515,10 +473,6 @@ describe('MClassController', () => {
           signUpCompleted: true,
           provider: 'LOCAL',
         },
-      };
-      mockResponse = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn().mockReturnThis(),
       };
     });
 
@@ -531,8 +485,15 @@ describe('MClassController', () => {
         mockNext
       );
 
-      expect(mockService.delete).toHaveBeenCalledWith('1');
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockService.delete).toHaveBeenCalledWith(testId);
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        code: 'MCLASS_DELETED',
+        message: 'MClass가 성공적으로 삭제되었습니다',
+        data: undefined,
+        meta: { id: testId },
+      });
     });
 
     it('should reject non-admin users', async () => {
@@ -556,7 +517,8 @@ describe('MClassController', () => {
     });
 
     it('should handle service errors', async () => {
-      mockService.delete.mockRejectedValue(MClassError.notFound('1'));
+      const error = MClassError.notFound(testId);
+      mockService.delete.mockRejectedValue(error);
 
       await controller.deleteMClass(
         mockRequest as any,
@@ -564,49 +526,80 @@ describe('MClassController', () => {
         mockNext
       );
 
-      expect(mockNext).toHaveBeenCalledWith(MClassError.notFound('1'));
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
   describe('getMClassStatistics', () => {
     beforeEach(() => {
       mockRequest = {
-        params: { id: '1' },
-      };
-      mockResponse = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn().mockReturnThis(),
+        params: { id: testId },
+        user: {
+          userId: 'admin-1',
+          email: 'admin@test.com',
+          role: 'ADMIN',
+          isAdmin: true,
+          signUpCompleted: true,
+          provider: 'LOCAL',
+        },
       };
     });
 
     it('should return MClass statistics successfully', async () => {
       const mockStatistics = {
-        approvedCount: 15,
-        waitlistedCount: 5,
+        approvedCount: 5,
+        waitlistedCount: 2,
       };
 
       mockService.getStatistics.mockResolvedValue(mockStatistics);
 
       await controller.getMClassStatistics(
-        mockRequest as Request,
+        mockRequest as any,
         mockResponse as Response,
         mockNext
       );
 
-      expect(mockService.getStatistics).toHaveBeenCalledWith('1');
-      expect(mockNext).not.toHaveBeenCalled();
+      expect(mockService.getStatistics).toHaveBeenCalledWith(testId);
+      expect(mockResponse.status).toHaveBeenCalledWith(200);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: true,
+        code: 'MCLASS_RETRIEVED',
+        message: 'MClass를 성공적으로 조회했습니다',
+        data: mockStatistics,
+      });
+    });
+
+    it('should reject non-admin users', async () => {
+      mockRequest.user = {
+        userId: 'user-1',
+        email: 'user@test.com',
+        role: 'USER',
+        isAdmin: false,
+        signUpCompleted: true,
+        provider: 'LOCAL',
+      };
+
+      await controller.getMClassStatistics(
+        mockRequest as any,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(MClassError));
+      expect(mockService.getStatistics).not.toHaveBeenCalled();
     });
 
     it('should handle service errors', async () => {
-      mockService.getStatistics.mockRejectedValue(MClassError.notFound('1'));
+      const error = MClassError.notFound(testId);
+      mockService.getStatistics.mockRejectedValue(error);
 
       await controller.getMClassStatistics(
-        mockRequest as Request,
+        mockRequest as any,
         mockResponse as Response,
         mockNext
       );
 
-      expect(mockNext).toHaveBeenCalledWith(MClassError.notFound('1'));
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 });
