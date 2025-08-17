@@ -739,6 +739,11 @@ export class AuthService {
    */
   async logoutDevice(userId: string, token: string): Promise<boolean> {
     try {
+      const meta = await TokenStorageService.getTokenMetadata(token);
+      if (!meta || meta.userId !== userId) {
+        logger.warn('⚠️ 타 사용자 토큰 로그아웃 시도 차단', { userId });
+        throw AuthError.permissionDenied('세션', '로그아웃');
+      }
       const success = await TokenStorageService.removeToken(token);
       if (success) {
         logger.info('✅ 특정 기기 로그아웃 완료', { userId });
