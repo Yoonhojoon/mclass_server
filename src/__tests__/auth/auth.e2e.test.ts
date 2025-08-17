@@ -1,7 +1,5 @@
 import request from 'supertest';
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { createAuthRoutes } from '../../routes/auth.routes';
 import jwt from 'jsonwebtoken';
 
 // Mock external dependencies only
@@ -49,10 +47,51 @@ jest.mock('passport-naver', () => ({
   Strategy: jest.fn(),
 }));
 
+// Mock Prisma Client
+const mockPrisma = {
+  user: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+    count: jest.fn(),
+  },
+  term: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  userTermAgreement: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  $connect: jest.fn(),
+  $disconnect: jest.fn(),
+  $on: jest.fn(),
+  $use: jest.fn(),
+  $executeRaw: jest.fn(),
+  $executeRawUnsafe: jest.fn(),
+  $queryRaw: jest.fn(),
+  $queryRawUnsafe: jest.fn(),
+  $transaction: jest.fn(),
+  $runCommandRaw: jest.fn(),
+} as any;
+
+jest.mock('@prisma/client', () => ({
+  PrismaClient: jest.fn(() => mockPrisma),
+}));
+
 describe('Auth E2E Tests', () => {
   let app: express.Application;
-  let prisma: PrismaClient;
-  let dbConnected = false;
 
   const testUser = {
     email: 'e2e-test@example.com',
@@ -73,78 +112,37 @@ describe('Auth E2E Tests', () => {
     app = express();
     app.use(express.json());
 
-    // Setup Prisma with test schema
-    try {
-      // 테스트용 스키마로 Prisma 클라이언트 생성
-      const { PrismaClient } = await import('@prisma/client');
-      prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: 'file:./test.db',
-          },
-        },
-      });
+    // Mock Prisma 연결
+    mockPrisma.$connect.mockResolvedValue(undefined);
+    mockPrisma.user.deleteMany.mockResolvedValue({ count: 0 });
+    mockPrisma.term.deleteMany.mockResolvedValue({ count: 0 });
+    mockPrisma.userTermAgreement.deleteMany.mockResolvedValue({ count: 0 });
 
-      app.use('/api/auth', createAuthRoutes(prisma));
-
-      // Test database connection
-      await prisma.$connect();
-      await prisma.userTermAgreement.deleteMany();
-      await prisma.user.deleteMany();
-      await prisma.term.deleteMany();
-      dbConnected = true;
-    } catch (error) {
-      console.log('데이터베이스 연결 실패, E2E 테스트를 스킵합니다:', error);
-      dbConnected = false;
-    }
+    // Auth routes 설정
+    const { createAuthRoutes } = await import('../../routes/auth.routes');
+    app.use('/api/auth', createAuthRoutes(mockPrisma));
   });
 
   afterAll(async () => {
-    if (dbConnected) {
-      await prisma.$disconnect();
-    }
+    mockPrisma.$disconnect.mockResolvedValue(undefined);
   });
 
   beforeEach(async () => {
-    if (!dbConnected) {
-      return;
-    }
+    // Mock 데이터 초기화
+    jest.clearAllMocks();
 
-    // Clean up before each test
-    await prisma.userTermAgreement.deleteMany();
-    await prisma.user.deleteMany();
-    await prisma.term.deleteMany();
-
-    // Create test terms
-    await prisma.term.createMany({
-      data: [
-        {
-          id: 'term-1',
-          type: 'PRIVACY',
-          title: '이용약관',
-          content: '이용약관 내용',
-          version: '1.0',
-          isRequired: true,
-        },
-        {
-          id: 'term-2',
-          type: 'SERVICE',
-          title: '개인정보처리방침',
-          content: '개인정보처리방침 내용',
-          version: '1.0',
-          isRequired: true,
-        },
-      ],
+    // 기본 Mock 응답 설정
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockPrisma.user.create.mockResolvedValue({
+      id: 'test-user-id',
+      email: testUser.email,
+      name: testUser.name,
+      role: testUser.role,
     });
   });
 
   describe('회원가입 및 로그인 플로우', () => {
     it('✅ 전체 회원가입 및 로그인 플로우가 성공해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 1. 회원가입
       const registerResponse = await request(app)
         .post('/api/auth/register')
@@ -232,11 +230,6 @@ describe('Auth E2E Tests', () => {
 
   describe('에러 케이스 테스트', () => {
     it('❌ 이미 존재하는 이메일로 회원가입 시 실패해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 첫 번째 회원가입
       await request(app).post('/api/auth/register').send(testUser).expect(200);
 
@@ -251,11 +244,6 @@ describe('Auth E2E Tests', () => {
     });
 
     it('❌ 잘못된 비밀번호로 로그인 시 실패해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 회원가입
       await request(app).post('/api/auth/register').send(testUser).expect(200);
 
@@ -273,11 +261,6 @@ describe('Auth E2E Tests', () => {
     });
 
     it('❌ 인증 없이 보호된 엔드포인트 접근 시 실패해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       const response = await request(app)
         .post('/api/auth/complete-signup')
         .send({ termIds: ['term-1'] })
@@ -288,11 +271,6 @@ describe('Auth E2E Tests', () => {
     });
 
     it('❌ 회원가입 미완료 사용자가 비밀번호 변경 시 실패해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 회원가입 (약관 동의 없음)
       const registerResponse = await request(app)
         .post('/api/auth/register')
@@ -318,11 +296,6 @@ describe('Auth E2E Tests', () => {
 
   describe('소셜 로그인 테스트', () => {
     it('✅ 소셜 로그인 플로우가 성공해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       const socialProfile = {
         id: 'social-123',
         email: 'social@example.com',
@@ -344,11 +317,6 @@ describe('Auth E2E Tests', () => {
     });
 
     it('✅ 기존 소셜 사용자 로그인 시 성공해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       const socialProfile = {
         id: 'social-456',
         email: 'existing-social@example.com',
@@ -378,11 +346,6 @@ describe('Auth E2E Tests', () => {
     let refreshToken: string;
 
     beforeEach(async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 회원가입 및 로그인
       const registerResponse = await request(app)
         .post('/api/auth/register')
@@ -401,11 +364,6 @@ describe('Auth E2E Tests', () => {
     });
 
     it('✅ 유효한 토큰으로 보호된 엔드포인트 접근 시 성공해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       const response = await request(app)
         .put('/api/auth/change-password')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -419,11 +377,6 @@ describe('Auth E2E Tests', () => {
     });
 
     it('❌ 만료된 토큰으로 접근 시 실패해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 만료된 토큰 생성 (실제로는 시간 기반이지만 테스트에서는 다른 방법 사용)
       const expiredToken = jwt.sign(
         { userId: testUser.email, exp: Math.floor(Date.now() / 1000) - 60 },
@@ -444,11 +397,6 @@ describe('Auth E2E Tests', () => {
     });
 
     it('✅ 토큰 갱신이 성공해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       const refreshResponse = await request(app)
         .post('/api/auth/refresh')
         .send({ refreshToken })
@@ -475,11 +423,6 @@ describe('Auth E2E Tests', () => {
 
   describe('관리자 기능 테스트', () => {
     it('✅ 관리자 계정 생성 및 로그인이 성공해야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 관리자 회원가입
       const registerResponse = await request(app)
         .post('/api/auth/register')
@@ -505,11 +448,6 @@ describe('Auth E2E Tests', () => {
 
   describe('데이터베이스 상태 검증', () => {
     it('✅ 회원가입 완료 후 데이터베이스에 올바른 데이터가 저장되어야 함', async () => {
-      if (!dbConnected) {
-        console.log('데이터베이스 연결 없음, 테스트 스킵');
-        return;
-      }
-
       // 회원가입
       const registerResponse = await request(app)
         .post('/api/auth/register')
@@ -519,7 +457,7 @@ describe('Auth E2E Tests', () => {
       const userId = registerResponse.body.data.user.id;
 
       // 데이터베이스에서 사용자 조회
-      const dbUser = await prisma.user.findUnique({
+      const dbUser = await mockPrisma.user.findUnique({
         where: { id: userId },
         include: { userTermAgreements: true },
       });
@@ -538,7 +476,7 @@ describe('Auth E2E Tests', () => {
         .expect(200);
 
       // 데이터베이스 상태 재확인
-      const updatedUser = await prisma.user.findUnique({
+      const updatedUser = await mockPrisma.user.findUnique({
         where: { id: userId },
         include: { userTermAgreements: true },
       });
