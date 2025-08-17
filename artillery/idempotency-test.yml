@@ -13,7 +13,7 @@ config:
   plugins:
     metrics-by-endpoint: {}
     expect: {}
-
+  processor: "./load-test-processor.mjs"
 scenarios:
   - name: "동일한 idempotencyKey로 반복 요청"
     weight: 100
