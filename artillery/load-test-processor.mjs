@@ -71,17 +71,18 @@ export function validateConcurrency(requestParams, response, context, ee, next) 
 /** 데이터 정합성 검증 */
 export function validateDataConsistency(requestParams, response, context, ee, next) {
   try {
-    const data = JSON.parse(response.body ?? '{}');
-    if (data.status) {
-      const valid = ['APPLIED', 'APPROVED', 'WAITLISTED', 'REJECTED', 'CANCELED'];
-      if (!valid.includes(data.status)) {
-        console.error(`❌ 잘못된 상태값: ${data.status}`);
-      }
+    const parsed = JSON.parse(response.body ?? '{}');
+    // 우리 API는 { data: {...} } 형태를 주로 사용하므로 안전하게 보정
+    const payload = parsed?.data ?? parsed;
+    const status = payload?.status;
+    const valid = ['APPLIED', 'APPROVED', 'WAITLISTED', 'REJECTED', 'CANCELED'];
+    if (status && !valid.includes(status)) {
+      console.error(`❌ 잘못된 상태값: ${status}`);
     }
-    if (data.id && data.mclassId && data.userId) {
+    if (payload?.id && payload?.mclassId && payload?.userId) {
       // 필요 시 마지막 신청 ID를 멱등성 검증용으로 저장
-      context.vars.enrollmentId1 ??= data.id;
-      console.log(`✅ 정합성 OK: ${data.id}`);
+      context.vars.enrollmentId1 ??= payload.id;
+      console.log(`✅ 정합성 OK: ${payload.id}`);
     } else {
       console.error('❌ 필수 필드 누락');
     }
