@@ -2,17 +2,12 @@ import cors from 'cors';
 import express from 'express';
 import logger from '../config/logger.config.js';
 
-// 기본 허용 origin 목록
+// 기본 허용 origin 목록 (스킴+호스트+포트만)
 const defaultOrigins = new Set<string>([
   'http://localhost:3000',
   'https://localhost:3000',
   'http://127.0.0.1:3000',
   'https://127.0.0.1:3000',
-  // Swagger UI 관련 origin들
-  'http://localhost:3000/api-docs',
-  'https://localhost:3000/api-docs',
-  'http://127.0.0.1:3000/api-docs',
-  'https://127.0.0.1:3000/api-docs',
 ]);
 
 // 환경별 기본 origin 추가
@@ -20,9 +15,6 @@ if (process.env.NODE_ENV === 'production') {
   const productionOrigins = [
     'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
     'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
-    // Swagger UI용
-    'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
-    'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
   ];
   productionOrigins.forEach(origin => defaultOrigins.add(origin));
 }
@@ -31,9 +23,6 @@ if (process.env.NODE_ENV === 'staging') {
   const stagingOrigins = [
     'https://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
     'http://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
-    // Swagger UI용
-    'https://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
-    'http://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
   ];
   stagingOrigins.forEach(origin => defaultOrigins.add(origin));
 }
@@ -63,12 +52,6 @@ const isAllowed = (origin?: string | null): boolean => {
   if (!origin) {
     logger.debug('🔍 CORS: Origin이 없음 (서버-서버 요청) - 허용');
     return true; // 서버-서버/모바일 클라이언트 허용
-  }
-
-  // Swagger UI 관련 요청은 항상 허용
-  if (origin.includes('/api-docs') || origin.includes('swagger-ui')) {
-    logger.debug(`🔍 CORS: Swagger UI 요청 - 허용: ${origin}`);
-    return true;
   }
 
   if (allowedOrigins.has(origin)) {
@@ -109,7 +92,6 @@ export const corsOptions = {
     'X-Forwarded-For',
     'X-Forwarded-Proto',
     'X-Forwarded-Host',
-    // Swagger UI 관련 헤더
     'Accept',
     'Cache-Control',
     'Pragma',
@@ -120,29 +102,15 @@ export const corsOptions = {
   maxAge: 86400, // 24시간
 };
 
-// CORS 미들웨어 생성 (Express 5.x 호환)
+// CORS 미들웨어 생성
 export const corsMiddleware = cors(corsOptions);
 
-// OPTIONS 프리플라이트 처리용 미들웨어 (Express 5.x 호환)
-export const corsPreflightMiddleware = (
+// Vary 헤더를 추가하는 미들웨어
+export const varyOriginMiddleware = (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ): void => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header(
-      'Access-Control-Allow-Methods',
-      'GET, POST, PUT, DELETE, OPTIONS, PATCH'
-    );
-    res.header(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, X-Request-Id, X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host, Accept, Cache-Control, Pragma'
-    );
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Max-Age', '86400');
-    res.status(204).end();
-  } else {
-    next();
-  }
+  res.header('Vary', 'Origin');
+  next();
 };

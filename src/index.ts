@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import 'reflect-metadata';
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
 
 import session from 'express-session';
@@ -27,7 +27,7 @@ import {
   authenticateToken as authenticate,
   requireAdmin as authorizeAdmin,
 } from './middleware/auth.middleware.js';
-import { corsMiddleware, corsPreflightMiddleware } from './middleware/cors.js';
+import { corsMiddleware, varyOriginMiddleware } from './middleware/cors.js';
 import bcrypt from 'bcrypt';
 import { ServiceContainer } from './services/email/index.js';
 import { EmailOutboxWorker } from './services/email/email-outbox.worker.js';
@@ -47,15 +47,8 @@ const redisStore = new RedisStore({
 });
 
 // CORS 미들웨어 적용 (모든 라우트보다 먼저)
+app.use(varyOriginMiddleware);
 app.use(corsMiddleware);
-
-// OPTIONS 프리플라이트 처리 (Express 5.x 호환성을 위해 미들웨어로 처리)
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    return corsPreflightMiddleware(req, res, next);
-  }
-  next();
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -100,20 +93,6 @@ const openApiSpec = generateOpenApiDocument();
 // Swagger UI 설정
 app.use(
   '/api-docs',
-  (req: Request, res: Response, next: NextFunction) => {
-    // Swagger UI에 대한 CORS 헤더 설정
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header(
-      'Access-Control-Allow-Methods',
-      'GET, POST, PUT, DELETE, OPTIONS'
-    );
-    res.header(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Requested-With'
-    );
-    res.header('Access-Control-Allow-Credentials', 'true');
-    next();
-  },
   swaggerUi.serve,
   swaggerUi.setup(openApiSpec, {
     swaggerOptions: {
@@ -125,7 +104,7 @@ app.use(
       showCommonExtensions: true,
       // CORS 관련 설정 추가
       tryItOutEnabled: true,
-      requestInterceptor: (req: any) => {
+      requestInterceptor: (req: { headers?: Record<string, string> }) => {
         // Swagger UI에서 보내는 요청에 CORS 헤더 추가
         req.headers = req.headers || {};
         req.headers['Content-Type'] = 'application/json';
@@ -139,12 +118,6 @@ app.use(
 
 // Swagger JSON 스키마 엔드포인트
 app.get('/api-docs.json', (req: Request, res: Response) => {
-  // CORS 헤더 설정
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-
   res.setHeader('Content-Type', 'application/json');
   res.json(openApiSpec);
 });

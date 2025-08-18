@@ -16,51 +16,58 @@ const getServerUrls = (): Array<{ url: string; description: string }> => {
 
   // 프로덕션 환경
   if (process.env.NODE_ENV === 'production') {
-    // API_BASE_URL이 설정되어 있으면 사용
+    // API_BASE_URL이 설정되어 있으면 절대 경로 사용
     if (process.env.API_BASE_URL) {
       servers.push({
         url: process.env.API_BASE_URL,
         description: '프로덕션 서버',
       });
-    }
-    // ALB DNS 이름이 환경 변수로 설정되어 있으면 사용
-    else if (process.env.ALB_DNS_NAME) {
+    } else {
+      // API_BASE_URL이 없으면 상대 경로 사용
       servers.push({
-        url: `http://${process.env.ALB_DNS_NAME}`,
-        description: '프로덕션 서버 (ALB)',
+        url: '/api',
+        description: '프로덕션 서버 (상대 경로)',
       });
     }
   }
 
   // 스테이징 환경
-  if (process.env.NODE_ENV === 'staging') {
-    servers.push({
-      url:
-        process.env.API_BASE_URL ||
-        process.env.STAGING_URL ||
-        'http://localhost:3000',
-      description: '스테이징 서버',
-    });
+  else if (process.env.NODE_ENV === 'staging') {
+    if (process.env.API_BASE_URL) {
+      servers.push({
+        url: process.env.API_BASE_URL,
+        description: '스테이징 서버',
+      });
+    } else if (process.env.STAGING_URL) {
+      servers.push({
+        url: process.env.STAGING_URL,
+        description: '스테이징 서버',
+      });
+    } else {
+      servers.push({
+        url: '/api',
+        description: '스테이징 서버 (상대 경로)',
+      });
+    }
   }
 
   // 로컬 개발 환경
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    process.env.NODE_ENV !== 'staging'
-  ) {
+  else {
     servers.push({
       url: process.env.LOCAL_URL || 'http://localhost:3000',
       description: '로컬 개발 서버',
     });
   }
 
-  // 기본값 (모든 환경에서 사용)
-  if (servers.length === 0) {
-    servers.push({
-      url: 'http://localhost:3000',
-      description: '로컬 개발 서버',
-    });
-  }
+  // 디버깅을 위한 로그
+  console.log(`🔧 Swagger 서버 URL 설정:`);
+  console.log(`  - NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+  console.log(`  - API_BASE_URL: ${process.env.API_BASE_URL || 'not set'}`);
+  console.log(`  - ALB_DNS_NAME: ${process.env.ALB_DNS_NAME || 'not set'}`);
+  console.log(
+    `  - 설정된 서버들:`,
+    servers.map(s => `${s.url} (${s.description})`)
+  );
 
   return servers;
 };
@@ -247,7 +254,11 @@ export const PaginationMetaSchema = z.object({
 // 페이지네이션 응답 스키마
 export const PaginatedResponseSchema = <T extends z.ZodTypeAny>(
   dataSchema: T
-): z.ZodObject<any> =>
+): z.ZodObject<{
+  success: z.ZodBoolean;
+  data: z.ZodArray<T>;
+  meta: typeof PaginationMetaSchema;
+}> =>
   z.object({
     success: z.boolean().openapi({ example: true }),
     data: z.array(dataSchema),
