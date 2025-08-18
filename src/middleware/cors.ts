@@ -8,19 +8,34 @@ const defaultOrigins = new Set<string>([
   'https://localhost:3000',
   'http://127.0.0.1:3000',
   'https://127.0.0.1:3000',
+  // Swagger UI 관련 origin들
+  'http://localhost:3000/api-docs',
+  'https://localhost:3000/api-docs',
+  'http://127.0.0.1:3000/api-docs',
+  'https://127.0.0.1:3000/api-docs',
 ]);
 
 // 환경별 기본 origin 추가
 if (process.env.NODE_ENV === 'production') {
-  defaultOrigins.add(
-    'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com'
-  );
+  const productionOrigins = [
+    'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+    'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+    // Swagger UI용
+    'https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
+    'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
+  ];
+  productionOrigins.forEach(origin => defaultOrigins.add(origin));
 }
 
 if (process.env.NODE_ENV === 'staging') {
-  defaultOrigins.add(
-    'https://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com'
-  );
+  const stagingOrigins = [
+    'https://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+    'http://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+    // Swagger UI용
+    'https://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
+    'http://staging.mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com/api-docs',
+  ];
+  stagingOrigins.forEach(origin => defaultOrigins.add(origin));
 }
 
 // 환경변수에서 추가 origin 로드
@@ -33,12 +48,42 @@ if (process.env.ALLOWED_ORIGINS) {
 }
 
 // 패턴 허용 (예: 배포 도메인 서브도메인)
-const allowedPatterns = [/^https?:\/\/([a-z0-9-]+\.)*mclass\.com(:\d+)?$/i];
+const allowedPatterns = [
+  /^https?:\/\/([a-z0-9-]+\.)*mclass\.com(:\d+)?$/i,
+  /^https?:\/\/([a-z0-9-]+\.)*mclass-alb-616483239\.ap-northeast-2\.elb\.amazonaws\.com(:\d+)?$/i,
+];
+
+// CORS 설정 로깅
+logger.info(`🔧 CORS 설정 초기화:`);
+logger.info(`  - NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+logger.info(`  - 허용된 origins: ${Array.from(allowedOrigins).join(', ')}`);
+logger.info(`  - 패턴: ${allowedPatterns.map(p => p.source).join(', ')}`);
 
 const isAllowed = (origin?: string | null): boolean => {
-  if (!origin) return true; // 서버-서버/모바일 클라이언트 허용
-  if (allowedOrigins.has(origin)) return true;
-  return allowedPatterns.some(re => re.test(origin));
+  if (!origin) {
+    logger.debug('🔍 CORS: Origin이 없음 (서버-서버 요청) - 허용');
+    return true; // 서버-서버/모바일 클라이언트 허용
+  }
+
+  // Swagger UI 관련 요청은 항상 허용
+  if (origin.includes('/api-docs') || origin.includes('swagger-ui')) {
+    logger.debug(`🔍 CORS: Swagger UI 요청 - 허용: ${origin}`);
+    return true;
+  }
+
+  if (allowedOrigins.has(origin)) {
+    logger.debug(`🔍 CORS: 허용된 origin - 허용: ${origin}`);
+    return true;
+  }
+
+  const patternMatch = allowedPatterns.some(re => re.test(origin));
+  if (patternMatch) {
+    logger.debug(`🔍 CORS: 패턴 매치 - 허용: ${origin}`);
+    return true;
+  }
+
+  logger.warn(`🚫 CORS: 차단된 origin: ${origin}`);
+  return false;
 };
 
 // CORS 설정
@@ -64,6 +109,10 @@ export const corsOptions = {
     'X-Forwarded-For',
     'X-Forwarded-Proto',
     'X-Forwarded-Host',
+    // Swagger UI 관련 헤더
+    'Accept',
+    'Cache-Control',
+    'Pragma',
   ],
   exposedHeaders: ['X-Request-Id'],
   optionsSuccessStatus: 204,
@@ -88,7 +137,7 @@ export const corsPreflightMiddleware = (
     );
     res.header(
       'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, X-Request-Id, X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host'
+      'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, X-Request-Id, X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Host, Accept, Cache-Control, Pragma'
     );
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '86400');

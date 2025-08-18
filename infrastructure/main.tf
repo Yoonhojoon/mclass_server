@@ -365,6 +365,10 @@ resource "aws_ecs_task_definition" "main" {
         {
           name  = "PORT"
           value = "3000"
+        },
+        {
+          name  = "ALLOWED_ORIGINS"
+          value = "https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com,http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com,https://mclass.com,http://mclass.com"
         }
       ]
       secrets = [
