@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import 'reflect-metadata';
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import swaggerUi from 'swagger-ui-express';
 
 import session from 'express-session';
@@ -100,7 +100,7 @@ const openApiSpec = generateOpenApiDocument();
 // Swagger UI 설정
 app.use(
   '/api-docs',
-  (req, res, next) => {
+  (req: Request, res: Response, next: NextFunction) => {
     // Swagger UI에 대한 CORS 헤더 설정
     res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.header(
