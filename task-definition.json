@@ -35,6 +35,10 @@
         {
           "name": "ALB_DNS_NAME",
           "value": "mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com"
+        },
+        {
+          "name": "ALLOWED_ORIGINS",
+          "value": "https://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com,http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com,https://mclass.com,http://mclass.com"
         }
       ],
       "secrets": [

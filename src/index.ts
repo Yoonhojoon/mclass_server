@@ -100,6 +100,20 @@ const openApiSpec = generateOpenApiDocument();
 // Swagger UI 설정
 app.use(
   '/api-docs',
+  (req, res, next) => {
+    // Swagger UI에 대한 CORS 헤더 설정
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header(
+      'Access-Control-Allow-Methods',
+      'GET, POST, PUT, DELETE, OPTIONS'
+    );
+    res.header(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization, X-Requested-With'
+    );
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+  },
   swaggerUi.serve,
   swaggerUi.setup(openApiSpec, {
     swaggerOptions: {
@@ -109,6 +123,14 @@ app.use(
       filter: true,
       showExtensions: true,
       showCommonExtensions: true,
+      // CORS 관련 설정 추가
+      tryItOutEnabled: true,
+      requestInterceptor: (req: any) => {
+        // Swagger UI에서 보내는 요청에 CORS 헤더 추가
+        req.headers = req.headers || {};
+        req.headers['Content-Type'] = 'application/json';
+        return req;
+      },
     },
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'MClass API Documentation',
@@ -117,6 +139,12 @@ app.use(
 
 // Swagger JSON 스키마 엔드포인트
 app.get('/api-docs.json', (req: Request, res: Response) => {
+  // CORS 헤더 설정
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
   res.setHeader('Content-Type', 'application/json');
   res.json(openApiSpec);
 });
