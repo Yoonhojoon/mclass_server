@@ -23,10 +23,10 @@ const getServerUrls = (): Array<{ url: string; description: string }> => {
         description: '프로덕션 서버',
       });
     } else {
-      // API_BASE_URL이 없으면 상대 경로 사용
+      // API_BASE_URL이 없으면 루트 경로 사용
       servers.push({
-        url: '/api',
-        description: '프로덕션 서버 (상대 경로)',
+        url: '/',
+        description: '프로덕션 서버 (루트 경로)',
       });
     }
   }
@@ -45,8 +45,8 @@ const getServerUrls = (): Array<{ url: string; description: string }> => {
       });
     } else {
       servers.push({
-        url: '/api',
-        description: '스테이징 서버 (상대 경로)',
+        url: '/',
+        description: '스테이징 서버 (루트 경로)',
       });
     }
   }
