@@ -29,14 +29,14 @@ const users = new SharedArray('users', function () {
 // 테스트 설정
 export const options = {
   stages: [
-    { duration: '5s', target: 10 },   // 빠른 워밍업
-    { duration: '20s', target: 50 },  // 높은 부하
-    { duration: '30s', target: 50 },  // 지속 부하
+    { duration: '5s', target: 50 },   // 빠른 워밍업
+    { duration: '30s', target: 200 }, // 높은 부하 (동시 신청)
+    { duration: '20s', target: 200 }, // 지속 부하
     { duration: '10s', target: 0 },   // 빠른 감소
   ],
   thresholds: {
     http_req_duration: ['p(95)<2000'], // 95% 요청이 2초 이내 완료
-    http_req_failed: ['rate<0.15'],    // 에러율 15% 미만 (409 포함)
+    http_req_failed: ['rate<0.15'],    // 에러율 15% 미만 (409 제외)
     'enrollment_success': ['rate>0.70'], // 수강 신청 성공율 70% 이상
     'enrollment_response_time': ['p(95)<1500'],
     'form_response_time': ['p(95)<500'],
@@ -45,8 +45,8 @@ export const options = {
 };
 
 // 테스트 변수
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
-const MCLASS_ID = '11468f1b-c4ef-4fd2-9493-c7a48706c708';
+const BASE_URL = __ENV.BASE_URL || 'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com';
+const MCLASS_ID = '0ad687e8-57c4-4f27-b189-c730790b32de';
 
 // 유틸리티 함수
 function generateUUID() {
@@ -98,7 +98,10 @@ function generateAnswers(questions) {
 
 // 메인 테스트 함수
 export default function () {
-  const user = users[Math.floor(Math.random() * users.length)];
+  // 각 VU(가상 사용자)가 고정된 사용자를 사용하도록 수정
+  const userIndex = __VU % users.length;
+  const user = users[userIndex];
+
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${user.accessToken}`,
@@ -131,7 +134,7 @@ export default function () {
       additionalProp3: `테스트 답변 3 - ${Math.floor(Math.random() * 1000)}`
     },
     // 고유한 멱등성 키 생성 (사용자별로 고유)
-    idempotencyKey: `${user.email}-${MCLASS_ID}-${__VU}-${__ITER}`
+    idempotencyKey: `${user.email}-${MCLASS_ID}-${__VU}`
   };
 
   const enrollmentResponse = http.post(
@@ -144,6 +147,13 @@ export default function () {
     '수강 신청 성공': (r) => r.status === 201 || r.status === 409, // 409는 이미 신청된 경우
     '신청 응답 시간 < 1500ms': (r) => r.timings.duration < 1500,
   });
+
+  // 409 상태는 정상적인 비즈니스 로직이므로 에러로 카운트하지 않음
+  if (enrollmentResponse.status !== 409) {
+    check(enrollmentResponse, {
+      'HTTP 요청 성공': (r) => r.status < 400,
+    });
+  }
 
   if (enrollmentResponse.status === 201) {
     enrollmentSuccessRate.add(1);
