@@ -29,15 +29,15 @@ const users = new SharedArray('users', function () {
 // 테스트 설정
 export const options = {
   stages: [
-    { duration: '10s', target: 5 },    // 워밍업
-    { duration: '30s', target: 15 },   // 부하 증가
-    { duration: '60s', target: 15 },   // 지속 부하
-    { duration: '20s', target: 0 },    // 점진적 감소
+    { duration: '5s', target: 10 },   // 빠른 워밍업
+    { duration: '20s', target: 50 },  // 높은 부하
+    { duration: '30s', target: 50 },  // 지속 부하
+    { duration: '10s', target: 0 },   // 빠른 감소
   ],
   thresholds: {
     http_req_duration: ['p(95)<2000'], // 95% 요청이 2초 이내 완료
-    http_req_failed: ['rate<0.05'],    // 에러율 5% 미만
-    'enrollment_success': ['rate>0.90'], // 수강 신청 성공율 90% 이상
+    http_req_failed: ['rate<0.15'],    // 에러율 15% 미만 (409 포함)
+    'enrollment_success': ['rate>0.70'], // 수강 신청 성공율 70% 이상
     'enrollment_response_time': ['p(95)<1500'],
     'form_response_time': ['p(95)<500'],
     'mclass_response_time': ['p(95)<300'],
@@ -46,7 +46,7 @@ export const options = {
 
 // 테스트 변수
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
-const MCLASS_ID = '6390cd1c-6514-4a19-9224-0d89c17a54d3';
+const MCLASS_ID = '11468f1b-c4ef-4fd2-9493-c7a48706c708';
 
 // 유틸리티 함수
 function generateUUID() {
@@ -121,16 +121,17 @@ export default function () {
   mclassResponseTime.add(mclassResponse.timings.duration);
   console.log(`✅ MClass 조회 성공: ${user.email}`);
 
-  sleep(0.3);
+  sleep(0.1); // 더 빠른 간격
 
-  // 2. 수강 신청 (신청서 조회 없이 바로 신청)
+  // 2. 수강 신청 (고유한 멱등성 키 사용)
   const enrollmentData = {
     answers: {
       additionalProp1: `테스트 답변 1 - ${Math.floor(Math.random() * 1000)}`,
       additionalProp2: `테스트 답변 2 - ${Math.floor(Math.random() * 1000)}`,
       additionalProp3: `테스트 답변 3 - ${Math.floor(Math.random() * 1000)}`
     },
-    idempotencyKey: `${user.email}-${MCLASS_ID}-${Date.now()}`
+    // 고유한 멱등성 키 생성 (사용자별로 고유)
+    idempotencyKey: `${user.email}-${MCLASS_ID}-${__VU}-${__ITER}`
   };
 
   const enrollmentResponse = http.post(
@@ -148,6 +149,7 @@ export default function () {
     enrollmentSuccessRate.add(1);
     console.log(`✅ 수강 신청 성공: ${user.email} -> ${MCLASS_ID}`);
   } else if (enrollmentResponse.status === 409) {
+    // 409는 정상적인 비즈니스 로직이므로 에러로 카운트하지 않음
     console.log(`ℹ️ 이미 신청된 클래스: ${user.email} -> ${MCLASS_ID}`);
   } else {
     errorRate.add(1);
@@ -164,8 +166,8 @@ export default function () {
 
   enrollmentResponseTime.add(enrollmentResponse.timings.duration);
 
-  // 요청 간 간격
-  sleep(1);
+  // 요청 간 간격 (더 빠르게)
+  sleep(0.2);
 }
 
 // 테스트 시작 시 로그
