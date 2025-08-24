@@ -105,7 +105,7 @@ async function completeUserRegistration(email, password, name) {
     };
 
     const completeData = {
-      termIds: ["57d7b9cd-21d2-40dc-b64f-991c11852955"] // 약관 ID
+      termIds: ["a2774319-cd65-4e59-a0bf-b9f4b145af06"] // 약관 ID
     };
 
     const completeResponse = await makeRequest(completeOptions, completeData);

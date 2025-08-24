@@ -12,6 +12,11 @@ export const prisma =
         ? ['query', 'error', 'warn']
         : ['error'],
     errorFormat: 'pretty',
+    // 트랜잭션 타임아웃 설정 추가
+    transactionOptions: {
+      timeout: 10000, // 10초
+      maxWait: 5000, // 최대 대기 시간
+    },
   });
 
 if (process.env.NODE_ENV !== 'production') {
