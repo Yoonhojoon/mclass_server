@@ -9,7 +9,7 @@ const prisma = new PrismaClient({
 });
 
 async function checkEnrollments() {
-  const mclassId = "b21c86a0-383a-4d46-9376-fcf246028d13";
+  const mclassId = "0ad687e8-57c4-4f27-b189-c730790b32de";
 
   try {
     // 클래스 정보 조회
