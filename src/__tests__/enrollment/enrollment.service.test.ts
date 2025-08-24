@@ -67,6 +67,7 @@ const mockPrisma = {
     count: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    groupBy: jest.fn(),
   },
   mClass: {
     findUnique: jest.fn(),
@@ -184,6 +185,11 @@ describe('EnrollmentService', () => {
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
       mockPrisma.enrollment.count.mockResolvedValue(30); // 정원 내
       mockPrisma.enrollment.create.mockResolvedValue(mockEnrollment);
+      mockPrisma.enrollment.groupBy.mockResolvedValue([
+        { status: 'APPROVED', _count: { status: 30 } },
+        { status: 'WAITLISTED', _count: { status: 5 } },
+      ]);
+      mockMClassRepository.findById.mockResolvedValue(mockMClass);
       mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
       mockEnrollmentFormService.findByMClassId.mockResolvedValue(
         mockEnrollmentForm
@@ -207,9 +213,29 @@ describe('EnrollmentService', () => {
           status: 'APPROVED', // 선착순 방식에서 정원 내면 즉시 승인
         },
         include: {
-          mclass: true,
-          enrollmentForm: true,
-          user: true,
+          enrollmentForm: {
+            select: {
+              id: true,
+              isActive: true,
+              questions: true,
+            },
+          },
+          mclass: {
+            select: {
+              id: true,
+              title: true,
+              capacity: true,
+              selectionType: true,
+              visibility: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
         },
       });
       expect(result).toEqual(mockEnrollment);
@@ -227,7 +253,12 @@ describe('EnrollmentService', () => {
         return await callback(mockPrisma);
       });
 
+      mockMClassRepository.findById.mockResolvedValue(mockMClass);
       mockPrisma.enrollment.findFirst.mockResolvedValue(existingEnrollment);
+      mockPrisma.enrollment.groupBy.mockResolvedValue([
+        { status: 'APPROVED', _count: { status: 30 } },
+        { status: 'WAITLISTED', _count: { status: 5 } },
+      ]);
 
       const result = await service.enrollToClass(
         'mclass-1',
@@ -247,16 +278,31 @@ describe('EnrollmentService', () => {
         status: EnrollmentStatus.APPLIED,
       };
 
+      // idempotencyKey가 없는 테스트 데이터 사용
+      const testEnrollmentData = {
+        answers: mockEnrollmentData.answers,
+        // idempotencyKey를 명시적으로 undefined로 설정
+      };
+
+      // 트랜잭션 내부에서 사용되는 enrollment.findFirst를 모킹
+      // 첫 번째 호출 (기존 신청 체크)에서는 existingEnrollment 반환
+      mockPrisma.enrollment.findFirst.mockResolvedValue(existingEnrollment);
+
+      // enrollment.groupBy도 모킹
+      mockPrisma.enrollment.groupBy.mockResolvedValue([
+        { status: 'APPROVED', _count: { status: 30 } },
+        { status: 'WAITLISTED', _count: { status: 5 } },
+      ]);
+
       mockPrisma.$transaction.mockImplementation(async (callback: any) => {
         return await callback(mockPrisma);
       });
 
-      mockPrisma.enrollment.findFirst.mockResolvedValue(null);
-      mockPrisma.enrollment.findUnique.mockResolvedValue(existingEnrollment);
+      mockMClassRepository.findById.mockResolvedValue(mockMClass);
       mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
 
       await expect(
-        service.enrollToClass('mclass-1', mockEnrollmentData, 'user-1')
+        service.enrollToClass('mclass-1', testEnrollmentData, 'user-1')
       ).rejects.toThrow(EnrollmentError);
     });
 
@@ -270,8 +316,13 @@ describe('EnrollmentService', () => {
         return await callback(mockPrisma);
       });
 
+      mockMClassRepository.findById.mockResolvedValue(expiredMClass);
       mockPrisma.enrollment.findFirst.mockResolvedValue(null);
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
+      mockPrisma.enrollment.groupBy.mockResolvedValue([
+        { status: 'APPROVED', _count: { status: 30 } },
+        { status: 'WAITLISTED', _count: { status: 5 } },
+      ]);
       mockRepository.findMclassWithLock.mockResolvedValue(expiredMClass);
 
       await expect(
@@ -293,12 +344,17 @@ describe('EnrollmentService', () => {
         return await callback(mockPrisma);
       });
 
+      mockMClassRepository.findById.mockResolvedValue(mockMClass);
       mockPrisma.enrollment.findFirst.mockResolvedValue(null);
       mockPrisma.enrollment.findUnique.mockResolvedValue(null);
       mockPrisma.enrollment.count
         .mockResolvedValueOnce(60) // APPROVED count (정원 초과)
         .mockResolvedValueOnce(15); // WAITLISTED count (대기자 명단 여유)
       mockPrisma.enrollment.create.mockResolvedValue(waitlistedEnrollment);
+      mockPrisma.enrollment.groupBy.mockResolvedValue([
+        { status: 'APPROVED', _count: { status: 60 } },
+        { status: 'WAITLISTED', _count: { status: 15 } },
+      ]);
       mockRepository.findMclassWithLock.mockResolvedValue(mockMClass);
       mockEnrollmentFormService.findByMClassId.mockResolvedValue(
         mockEnrollmentForm
@@ -695,10 +751,30 @@ describe('EnrollmentService', () => {
         .mockResolvedValueOnce(60) // 승인된 신청이 60개 (정원 초과)
         .mockResolvedValueOnce(0); // 대기열은 비어있음
       mockPrisma.enrollment.create.mockResolvedValue(mockEnrollment);
+      mockPrisma.enrollment.groupBy.mockResolvedValue([
+        { status: 'APPROVED', _count: { status: 60 } },
+        { status: 'WAITLISTED', _count: { status: 0 } },
+      ]);
       mockRepository.findById.mockResolvedValue(mockEnrollment);
       mockUserService.findById.mockResolvedValue(mockEnrollment.user);
       mockMClassRepository.findById.mockResolvedValue(mockEnrollment.mclass);
 
+      mockMClassRepository.findById.mockResolvedValue({
+        ...mockEnrollment.mclass,
+        visibility: 'PUBLIC',
+        recruitStartAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1일 전
+        recruitEndAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 1일 후
+        allowWaitlist: true,
+        waitlistCapacity: 20,
+        enrollmentForm: {
+          id: 'form-1',
+          isActive: true,
+          questions: {
+            q1_name: { type: 'text', required: true },
+            q2_email: { type: 'email', required: true },
+          },
+        },
+      });
       mockRepository.findMclassWithLock.mockResolvedValue({
         ...mockEnrollment.mclass,
         visibility: 'PUBLIC',
