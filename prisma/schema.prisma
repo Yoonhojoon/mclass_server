@@ -47,6 +47,9 @@ model MClass {
   startAt          DateTime        @map("start_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
   waitlistCapacity Int?            @map("waitlist_capacity")
+  // 인원 수 필드 추가
+  approvedCount    Int             @default(0) @map("approved_count")
+  waitlistedCount  Int             @default(0) @map("waitlisted_count")
   enrollmentForm   EnrollmentForm?
   enrollments      Enrollment[]
   creator          User?           @relation(fields: [createdBy], references: [id], onDelete: SetNull)
