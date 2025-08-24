@@ -89,7 +89,7 @@ dev-debug.log
 .env.test
 
 docs/
-artillery/users.csv
+artillery/
 
 # k6 test results and reports
 k6/k6-results.json
