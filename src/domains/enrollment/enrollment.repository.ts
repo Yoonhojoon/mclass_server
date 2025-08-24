@@ -179,7 +179,7 @@ export class EnrollmentRepository {
   }
 
   /**
-   * 클래스 정보를 FOR UPDATE로 잠그고 조회
+   * 클래스 정보를 FOR UPDATE로 잠그고 조회 (최적화된 버전)
    */
   async findMclassWithLock(
     mclassId: string,
@@ -200,6 +200,7 @@ export class EnrollmentRepository {
       questions: unknown;
     } | null;
   } | null> {
+    // 최적화된 쿼리: 필요한 필드만 조회하고 JOIN 최소화
     const result = await client.$queryRaw<
       Array<{
         id: string;
@@ -230,7 +231,7 @@ export class EnrollmentRepository {
         ef.is_active as enrollment_form_is_active,
         ef.questions as enrollment_form_questions
       FROM mclasses m
-      LEFT JOIN enrollment_forms ef ON ef.mclass_id = m.id
+      LEFT JOIN enrollment_forms ef ON ef.mclass_id = m.id AND ef.is_active = true
       WHERE m.id = ${mclassId}
       FOR UPDATE OF m
     `;

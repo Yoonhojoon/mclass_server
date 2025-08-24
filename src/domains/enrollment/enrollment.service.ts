@@ -24,6 +24,7 @@ import { UserService } from '../user/user.service.js';
 import { EnrollmentEmailService } from '../../services/email/enrollment.email.service.js';
 import { EmailOutboxWorker } from '../../services/email/email-outbox.worker.js';
 import logger from '../../config/logger.config.js';
+import { redis } from '../../config/redis.config.js';
 
 export class EnrollmentService {
   constructor(
@@ -35,6 +36,57 @@ export class EnrollmentService {
     private enrollmentEmailService: EnrollmentEmailService,
     private emailOutboxWorker: EmailOutboxWorker
   ) {}
+
+  /**
+   * MClass 정보 캐싱 (Redis)
+   */
+  private async getCachedMclass(mclassId: string): Promise<any | null> {
+    try {
+      const cacheKey = `mclass:${mclassId}`;
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+      return null;
+    } catch (error) {
+      logger.warn('MClass 캐시 조회 실패', {
+        mclassId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * MClass 정보 캐시 저장
+   */
+  private async cacheMclass(mclassId: string, mclassData: any): Promise<void> {
+    try {
+      const cacheKey = `mclass:${mclassId}`;
+      // 5분간 캐시 (신청 기간 중에는 자주 변경되지 않음)
+      await redis.setex(cacheKey, 300, JSON.stringify(mclassData));
+    } catch (error) {
+      logger.warn('MClass 캐시 저장 실패', {
+        mclassId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * MClass 정보 캐시 무효화
+   */
+  private async invalidateMclassCache(mclassId: string): Promise<void> {
+    try {
+      const cacheKey = `mclass:${mclassId}`;
+      await redis.del(cacheKey);
+    } catch (error) {
+      logger.warn('MClass 캐시 무효화 실패', {
+        mclassId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   /**
    * 재시도 정책을 위한 헬퍼 메서드
@@ -91,7 +143,7 @@ export class EnrollmentService {
    *
    * 신청 처리 흐름:
    * 1. 멱등성 체크 (중복 신청 방지)
-   * 2. 클래스 정보 조회 및 검증
+   * 2. 클래스 정보 조회 및 검증 (캐싱 활용)
    * 3. 기존 신청 확인 (중복 신청 방지)
    * 4. 모집 기간 및 정원 체크
    * 5. 답변 검증
@@ -109,6 +161,7 @@ export class EnrollmentService {
         if (data.idempotencyKey) {
           const existing = await tx.enrollment.findFirst({
             where: { idempotencyKey: data.idempotencyKey },
+            select: { id: true, status: true, appliedAt: true },
           });
           if (existing) {
             logger.info('멱등성 키로 인한 중복 요청 감지', {
@@ -118,8 +171,24 @@ export class EnrollmentService {
           }
         }
 
-        // 2) 클래스 정보 조회 및 검증 (FOR UPDATE로 잠금)
-        const mclass = await this.repository.findMclassWithLock(mclassId);
+        // 2) 캐시에서 MClass 정보 조회 시도
+        let mclass = await this.getCachedMclass(mclassId);
+
+        if (!mclass) {
+          // 캐시에 없으면 DB에서 조회하고 캐시에 저장
+          mclass = await this.repository.findMclassWithLock(mclassId);
+          if (mclass) {
+            // 비동기로 캐시 저장 (트랜잭션 외부에서)
+            this.cacheMclass(mclassId, mclass).catch(error => {
+              logger.warn('MClass 캐시 저장 실패', {
+                mclassId,
+                error: error instanceof Error ? error.message : String(error),
+              });
+            });
+          }
+        } else {
+          logger.info('MClass 캐시 히트', { mclassId });
+        }
 
         if (!mclass) {
           throw new EnrollmentError('존재하지 않는 클래스입니다.');
@@ -143,7 +212,9 @@ export class EnrollmentService {
         // 5) 중복 신청 체크
         const existingEnrollment = await tx.enrollment.findUnique({
           where: { userId_mclassId: { userId, mclassId } },
+          select: { id: true, status: true },
         });
+
         if (existingEnrollment) {
           throw EnrollmentError.duplicateEnrollment();
         }
@@ -154,10 +225,19 @@ export class EnrollmentService {
           mclass.enrollmentForm.questions as unknown as Record<string, unknown>
         );
 
-        // 7) 현재 승인 수 집계
-        const approvedCount = await tx.enrollment.count({
-          where: { mclassId, status: 'APPROVED' },
+        // 7) 현재 신청 통계 조회 (최적화된 쿼리)
+        const enrollmentStats = await tx.enrollment.groupBy({
+          by: ['status'],
+          where: { mclassId },
+          _count: { status: true },
         });
+
+        const approvedCount =
+          enrollmentStats.find(s => s.status === 'APPROVED')?._count.status ||
+          0;
+        const waitlistCount =
+          enrollmentStats.find(s => s.status === 'WAITLISTED')?._count.status ||
+          0;
 
         // 8) 상태 결정 (선착순 또는 대기열)
         let status: EnrollmentStatus = 'APPLIED';
@@ -169,9 +249,6 @@ export class EnrollmentService {
           status = 'APPROVED';
         } else if (mclass.allowWaitlist && mclass.waitlistCapacity) {
           // 대기열: 대기열 정원 내면 대기 상태
-          const waitlistCount = await tx.enrollment.count({
-            where: { mclassId, status: 'WAITLISTED' },
-          });
           if (waitlistCount < mclass.waitlistCapacity) {
             status = 'WAITLISTED';
           } else {
@@ -194,9 +271,29 @@ export class EnrollmentService {
             status, // 결정된 상태를 명시적으로 저장
           },
           include: {
-            mclass: true,
-            enrollmentForm: true,
-            user: true,
+            mclass: {
+              select: {
+                id: true,
+                title: true,
+                capacity: true,
+                selectionType: true,
+                visibility: true,
+              },
+            },
+            enrollmentForm: {
+              select: {
+                id: true,
+                isActive: true,
+                questions: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
           },
         });
 
@@ -210,9 +307,13 @@ export class EnrollmentService {
         return enrollment as unknown as EnrollmentResponse;
       });
 
-      // 트랜잭션 성공 후 이메일 발송
-      this.sendEnrollmentConfirmationEmail(enrollment.id).catch(error => {
-        logger.error('신청 완료 이메일 발송 실패', {
+      // 트랜잭션 성공 후 캐시 무효화 및 이메일 발송 (비동기 처리)
+      Promise.all([
+        this.invalidateMclassCache(mclassId),
+        this.sendEnrollmentConfirmationEmail(enrollment.id),
+      ]).catch(error => {
+        logger.error('트랜잭션 후 처리 실패', {
+          mclassId,
           enrollmentId: enrollment.id,
           error: error instanceof Error ? error.message : String(error),
         });
