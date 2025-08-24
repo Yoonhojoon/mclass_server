@@ -320,6 +320,21 @@ export class EnrollmentService {
             mclassId,
           });
 
+          // MClass 인원 수 업데이트 (트랜잭션 내부에서)
+          if (status === 'APPROVED') {
+            await tx.$executeRaw`
+              UPDATE mclasses 
+              SET approved_count = approved_count + 1 
+              WHERE id = ${mclassId}
+            `;
+          } else if (status === 'WAITLISTED') {
+            await tx.$executeRaw`
+              UPDATE mclasses 
+              SET waitlisted_count = waitlisted_count + 1 
+              WHERE id = ${mclassId}
+            `;
+          }
+
           return enrollment;
         },
         { timeout: 5000 }
@@ -482,6 +497,21 @@ export class EnrollmentService {
         // (승인 건이 줄어드는 전이: APPROVED → CANCELED)
         if (previousStatus === 'APPROVED' && enrollment.mclass.allowWaitlist) {
           await this.promoteWaitlistInTransaction(tx, enrollment.mclassId);
+        }
+
+        // MClass 인원 수 업데이트 (취소 시 감소)
+        if (previousStatus === 'APPROVED') {
+          await tx.$executeRaw`
+            UPDATE mclasses 
+            SET approved_count = GREATEST(approved_count - 1, 0) 
+            WHERE id = ${enrollment.mclassId}
+          `;
+        } else if (previousStatus === 'WAITLISTED') {
+          await tx.$executeRaw`
+            UPDATE mclasses 
+            SET waitlisted_count = GREATEST(waitlisted_count - 1, 0) 
+            WHERE id = ${enrollment.mclassId}
+          `;
         }
 
         logger.info('Enrollment 취소 완료', {
@@ -822,6 +852,15 @@ export class EnrollmentService {
         enrollmentId: oldestWaitlist.id,
         mclassId,
       });
+
+      // MClass 인원 수 업데이트 (대기자 → 승인)
+      await tx.$executeRaw`
+        UPDATE mclasses 
+        SET 
+          waitlisted_count = GREATEST(waitlisted_count - 1, 0),
+          approved_count = approved_count + 1
+        WHERE id = ${mclassId}
+      `;
 
       // 대기자 승인 이메일 발송
       await this.sendWaitlistApprovalEmail(oldestWaitlist.id);

@@ -6,6 +6,7 @@ import {
 } from '../../schemas/mclass/index.js';
 import { MClassError } from '../../common/exception/mclass/MClassError.js';
 import logger from '../../config/logger.config.js';
+import { redis } from '../../config/redis.config.js';
 
 export type MClassPhase = 'UPCOMING' | 'RECRUITING' | 'IN_PROGRESS' | 'ENDED';
 
@@ -40,9 +41,9 @@ export class MClassService {
   constructor(private repository: MClassRepository) {}
 
   /**
-   * Phase 계산 로직 (실시간 approvedCount 사용)
+   * Phase 계산 로직 (이미 조회된 approvedCount 사용)
    */
-  private async calculatePhase(mclass: any): Promise<MClassPhase> {
+  private calculatePhase(mclass: any): MClassPhase {
     const now = new Date();
     const {
       recruitStartAt,
@@ -51,6 +52,7 @@ export class MClassService {
       endAt,
       visibility,
       capacity,
+      approvedCount = 0, // 기본값 0
     } = mclass;
 
     // 종료됨 (가장 우선 체크)
@@ -68,7 +70,7 @@ export class MClassService {
       return 'UPCOMING';
     }
 
-    // RECRUITING: 모집 중 (실시간 approvedCount 계산)
+    // RECRUITING: 모집 중 (이미 조회된 approvedCount 사용)
     if (
       recruitStartAt &&
       recruitEndAt &&
@@ -76,7 +78,6 @@ export class MClassService {
       now < recruitEndAt &&
       visibility === 'PUBLIC'
     ) {
-      const approvedCount = await this.repository.getApprovedCount(mclass.id);
       if (capacity === null || approvedCount < capacity) {
         return 'RECRUITING';
       }
@@ -95,7 +96,7 @@ export class MClassService {
    * MClass 데이터에 phase 추가 및 Date를 문자열로 변환
    */
   private async addPhaseToMClass(mclass: any): Promise<MClassWithPhase> {
-    const phase = await this.calculatePhase(mclass);
+    const phase = this.calculatePhase(mclass);
     return {
       ...mclass,
       phase,
@@ -183,6 +184,13 @@ export class MClassService {
     logger.info(`[MClassService] MClass 단일 조회 시작: ${id}`);
 
     try {
+      const cachedMClass = await redis.get(`mclass:${id}`);
+      if (cachedMClass) {
+        const mclass = JSON.parse(cachedMClass);
+        logger.info(`[MClassService] MClass 캐시에서 조회: ${id}`);
+        return this.addPhaseToMClass(mclass);
+      }
+
       const mclass = await this.repository.findById(id);
       if (!mclass) {
         logger.warn(`[MClassService] MClass를 찾을 수 없음: ${id}`);
@@ -190,6 +198,20 @@ export class MClassService {
       }
 
       const result = await this.addPhaseToMClass(mclass);
+
+      // 캐시에 저장 (5분간)
+      try {
+        await redis.setex(`mclass:${id}`, 300, JSON.stringify(mclass));
+        logger.info(`[MClassService] MClass 캐시에 저장: ${id}`);
+      } catch (cacheError) {
+        logger.warn(`[MClassService] MClass 캐시 저장 실패: ${id}`, {
+          error:
+            cacheError instanceof Error
+              ? cacheError.message
+              : String(cacheError),
+        });
+      }
+
       logger.info(
         `[MClassService] MClass 단일 조회 성공: ${id}, Phase: ${result.phase}`
       );
@@ -267,7 +289,7 @@ export class MClassService {
       }
 
       // 모집 중인 클래스 수정 제한 체크
-      const currentPhase = await this.calculatePhase(existingMClass);
+      const currentPhase = this.calculatePhase(existingMClass);
       if (currentPhase === 'RECRUITING') {
         logger.warn(
           `[MClassService] 모집 중인 MClass 수정 시도: ${id}, Phase: ${currentPhase}`
@@ -304,7 +326,7 @@ export class MClassService {
       }
 
       // 진행 중인 클래스 삭제 제한 체크
-      const currentPhase = await this.calculatePhase(existingMClass);
+      const currentPhase = this.calculatePhase(existingMClass);
       if (currentPhase === 'IN_PROGRESS') {
         logger.warn(
           `[MClassService] 진행 중인 MClass 삭제 시도: ${id}, Phase: ${currentPhase}`

@@ -46,7 +46,7 @@ export const options = {
 
 // 테스트 변수
 const BASE_URL = __ENV.BASE_URL || 'http://mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com';
-const MCLASS_ID = '1615d720-e902-43a9-82e4-7ab895916683';
+const MCLASS_ID = '482ba975-afda-4e60-aa12-b816dceab40a';
 
 // 유틸리티 함수
 function generateUUID() {
