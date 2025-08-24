@@ -212,31 +212,13 @@ describe('EnrollmentService', () => {
           idempotencyKey: 'test-key-123',
           status: 'APPROVED', // 선착순 방식에서 정원 내면 즉시 승인
         },
-        include: {
-          enrollmentForm: {
-            select: {
-              id: true,
-              isActive: true,
-              questions: true,
-            },
-          },
-          mclass: {
-            select: {
-              id: true,
-              title: true,
-              capacity: true,
-              selectionType: true,
-              visibility: true,
-            },
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
+        select: {
+          id: true,
+          status: true,
+          appliedAt: true,
+          mclassId: true,
+          userId: true,
+        }, // 최소한만 선택
       });
       expect(result).toEqual(mockEnrollment);
     });
@@ -805,6 +787,9 @@ describe('EnrollmentService', () => {
       };
 
       await service.enrollToClass('mclass-1', enrollmentData, 'user-1');
+
+      // 비동기 후처리를 기다리기 위해 process.nextTick 사용
+      await new Promise(resolve => process.nextTick(resolve));
 
       // sendEnrollmentConfirmationEmail 메서드가 호출되었는지 확인
       expect(service['sendEnrollmentConfirmationEmail']).toHaveBeenCalledWith(

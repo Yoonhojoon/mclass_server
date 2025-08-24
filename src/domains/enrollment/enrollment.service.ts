@@ -16,6 +16,7 @@ import {
   EnrollmentResponse,
   EnrollmentStats,
 } from './enrollment.schemas.js';
+
 import { EnrollmentError } from '../../common/exception/enrollment/EnrollmentError.js';
 
 import { MClassRepository } from '../mclass/mclass.repository.js';
@@ -40,7 +41,9 @@ export class EnrollmentService {
   /**
    * MClass 정보 캐싱 (Redis)
    */
-  private async getCachedMclass(mclassId: string): Promise<any | null> {
+  private async getCachedMclass(
+    mclassId: string
+  ): Promise<Record<string, unknown> | null> {
     try {
       const cacheKey = `mclass:${mclassId}`;
       const cached = await redis.get(cacheKey);
@@ -60,7 +63,10 @@ export class EnrollmentService {
   /**
    * MClass 정보 캐시 저장
    */
-  private async cacheMclass(mclassId: string, mclassData: any): Promise<void> {
+  private async cacheMclass(
+    mclassId: string,
+    mclassData: Record<string, unknown>
+  ): Promise<void> {
     try {
       const cacheKey = `mclass:${mclassId}`;
       // 5분간 캐시 (신청 기간 중에는 자주 변경되지 않음)
@@ -139,16 +145,15 @@ export class EnrollmentService {
   }
 
   /**
-   * 클래스 신청 (동시성 처리 포함)
-   *
-   * 신청 처리 흐름:
-   * 1. 멱등성 체크 (중복 신청 방지)
-   * 2. 클래스 정보 조회 및 검증 (캐싱 활용)
-   * 3. 기존 신청 확인 (중복 신청 방지)
-   * 4. 모집 기간 및 정원 체크
-   * 5. 답변 검증
-   * 6. 상태 결정 (APPLIED/APPROVED/WAITLISTED)
-   * 7. 신청 생성
+   * 수강 신청 (트랜잭션 최적화 버전)
+   * 1. 캐시에서 MClass 정보 조회
+   * 2. 멱등성 체크
+   * 3. 중복 신청 확인
+   * 4. 신청 기간 체크
+   * 5. 신청서 존재 여부 체크
+   * 6. 답변 검증
+   * 7. 상태 결정 (APPLIED/APPROVED/WAITLISTED)
+   * 8. 신청 생성 (최소한의 select)
    */
   async enrollToClass(
     mclassId: string,
@@ -183,168 +188,160 @@ export class EnrollmentService {
         throw new EnrollmentError('신청할 수 없는 클래스입니다.');
       }
 
-      const enrollment = await this.prisma.$transaction(async tx => {
-        // 1) 멱등성 체크 (중복 신청 방지)
-        if (data.idempotencyKey) {
-          const existing = await tx.enrollment.findFirst({
-            where: { idempotencyKey: data.idempotencyKey },
-            select: { id: true, status: true, appliedAt: true },
-          });
-          if (existing) {
-            logger.info('멱등성 키로 인한 중복 요청 감지', {
-              idempotencyKey: data.idempotencyKey,
-            });
-            return existing as unknown as EnrollmentResponse;
-          }
-        }
-
-        // 2) 트랜잭션 내부에서는 락을 사용한 최신 정보 조회
-        const lockedMclass = await this.repository.findMclassWithLock(
-          mclassId,
-          tx
-        );
-        if (!lockedMclass) {
-          throw new EnrollmentError('존재하지 않는 클래스입니다.');
-        }
-
-        // 3) 기존 신청 확인 (중복 신청 방지)
-        const existingEnrollment = await tx.enrollment.findFirst({
-          where: {
-            mclassId,
-            userId,
-            status: { in: ['APPLIED', 'APPROVED', 'WAITLISTED'] },
-          },
+      // 1단계: 멱등성 체크 (트랜잭션 없음)
+      if (data.idempotencyKey) {
+        const existing = await this.prisma.enrollment.findFirst({
+          where: { idempotencyKey: data.idempotencyKey },
           select: { id: true, status: true, appliedAt: true },
         });
-
-        if (existingEnrollment) {
-          throw new EnrollmentError('이미 신청된 클래스입니다.');
+        if (existing) {
+          logger.info('멱등성 키로 인한 중복 요청 감지', {
+            idempotencyKey: data.idempotencyKey,
+          });
+          return existing as unknown as EnrollmentResponse;
         }
+      }
 
-        // 4) 신청 기간 체크
-        const now = new Date();
-        if (
-          now < lockedMclass.recruitStartAt ||
-          now > lockedMclass.recruitEndAt
-        ) {
-          throw new EnrollmentError('신청 기간이 아닙니다.');
-        }
+      // 2단계: 중복 신청 확인 (짧은 트랜잭션)
+      const isDuplicate = await this.prisma.$transaction(
+        async tx => {
+          const existingEnrollment = await tx.enrollment.findFirst({
+            where: {
+              mclassId,
+              userId,
+              status: { in: ['APPLIED', 'APPROVED', 'WAITLISTED'] },
+            },
+            select: { id: true },
+          });
+          return !!existingEnrollment;
+        },
+        { timeout: 2000 }
+      ); // 2초 타임아웃
 
-        // 5) 신청서 존재 여부 체크
-        if (
-          !lockedMclass.enrollmentForm ||
-          !lockedMclass.enrollmentForm.isActive
-        ) {
-          throw new EnrollmentError('신청서가 준비되지 않았습니다.');
-        }
+      if (isDuplicate) {
+        throw new EnrollmentError('이미 신청된 클래스입니다.');
+      }
 
-        // 6) 답변 검증 (기본 검증만, 상세 검증은 별도 메서드로)
-        this.validateAnswers(
-          data.answers,
-          lockedMclass.enrollmentForm.questions as unknown as Record<
-            string,
-            unknown
-          >
-        );
+      // 3단계: 신청 생성 (최소한의 트랜잭션)
+      const enrollment = await this.prisma.$transaction(
+        async tx => {
+          // 락을 사용한 최신 정보 조회
+          const lockedMclass = await this.repository.findMclassWithLock(
+            mclassId,
+            tx
+          );
+          if (!lockedMclass) {
+            throw new EnrollmentError('존재하지 않는 클래스입니다.');
+          }
 
-        // 7) 현재 신청 통계 조회 (최적화된 쿼리)
-        const enrollmentStats = await tx.enrollment.groupBy({
-          by: ['status'],
-          where: { mclassId },
-          _count: { status: true },
-        });
+          // 신청 기간 체크
+          const now = new Date();
+          if (
+            now < lockedMclass.recruitStartAt ||
+            now > lockedMclass.recruitEndAt
+          ) {
+            throw new EnrollmentError('신청 기간이 아닙니다.');
+          }
 
-        const approvedCount =
-          enrollmentStats.find(s => s.status === 'APPROVED')?._count.status ||
-          0;
-        const waitlistCount =
-          enrollmentStats.find(s => s.status === 'WAITLISTED')?._count.status ||
-          0;
+          // 신청서 존재 여부 체크
+          if (
+            !lockedMclass.enrollmentForm ||
+            !lockedMclass.enrollmentForm.isActive
+          ) {
+            throw new EnrollmentError('신청서가 준비되지 않았습니다.');
+          }
 
-        // 8) 상태 결정 (선착순 또는 대기열)
-        let status: EnrollmentStatus = 'APPLIED';
-        if (
-          lockedMclass.selectionType === 'FIRST_COME' &&
-          approvedCount < (lockedMclass.capacity || 0)
-        ) {
-          // 선착순: 정원 내면 즉시 승인
-          status = 'APPROVED';
-        } else if (
-          lockedMclass.allowWaitlist &&
-          lockedMclass.waitlistCapacity
-        ) {
-          // 대기열: 대기열 정원 내면 대기 상태
-          if (waitlistCount < lockedMclass.waitlistCapacity) {
-            status = 'WAITLISTED';
+          // 답변 검증
+          this.validateAnswers(
+            data.answers,
+            lockedMclass.enrollmentForm.questions as unknown as Record<
+              string,
+              unknown
+            >
+          );
+
+          // 현재 신청 통계 조회 (최적화된 쿼리)
+          const enrollmentStats = await tx.enrollment.groupBy({
+            by: ['status'],
+            where: { mclassId },
+            _count: { status: true },
+          });
+
+          const approvedCount =
+            enrollmentStats.find(s => s.status === 'APPROVED')?._count.status ||
+            0;
+          const waitlistCount =
+            enrollmentStats.find(s => s.status === 'WAITLISTED')?._count
+              .status || 0;
+
+          // 상태 결정 (선착순 또는 대기열)
+          let status: EnrollmentStatus = 'APPLIED';
+          if (
+            lockedMclass.selectionType === 'FIRST_COME' &&
+            approvedCount < (lockedMclass.capacity || 0)
+          ) {
+            status = 'APPROVED';
+          } else if (
+            lockedMclass.allowWaitlist &&
+            lockedMclass.waitlistCapacity
+          ) {
+            if (waitlistCount < lockedMclass.waitlistCapacity) {
+              status = 'WAITLISTED';
+            } else {
+              throw EnrollmentError.capacityExceeded();
+            }
           } else {
-            // 대기열도 가득 찬 경우
             throw EnrollmentError.capacityExceeded();
           }
-        } else {
-          // 대기열이 없고 정원이 초과된 경우
-          throw EnrollmentError.capacityExceeded();
-        }
 
-        // 9) 신청 생성 (결정된 상태로 저장)
-        const enrollment = await tx.enrollment.create({
-          data: {
+          // 신청 생성 (최소한의 select)
+          const enrollment = await tx.enrollment.create({
+            data: {
+              userId,
+              mclassId,
+              enrollmentFormId: lockedMclass.enrollmentForm.id,
+              answers: data.answers,
+              idempotencyKey: data.idempotencyKey,
+              status,
+            },
+            select: {
+              id: true,
+              status: true,
+              appliedAt: true,
+              mclassId: true,
+              userId: true,
+            }, // 최소한만 선택
+          });
+
+          logger.info('Enrollment 생성 완료', {
+            enrollmentId: enrollment.id,
+            status,
             userId,
             mclassId,
-            enrollmentFormId: lockedMclass.enrollmentForm.id,
-            answers: data.answers,
-            idempotencyKey: data.idempotencyKey,
-            status, // 결정된 상태를 명시적으로 저장
-          },
-          include: {
-            mclass: {
-              select: {
-                id: true,
-                title: true,
-                capacity: true,
-                selectionType: true,
-                visibility: true,
-              },
-            },
-            enrollmentForm: {
-              select: {
-                id: true,
-                isActive: true,
-                questions: true,
-              },
-            },
-            user: {
-              select: {
-                id: true,
-                email: true,
-                name: true,
-              },
-            },
-          },
-        });
+          });
 
-        logger.info('Enrollment 생성 완료', {
-          enrollmentId: enrollment.id,
-          status,
-          userId,
-          mclassId,
-        });
+          return enrollment;
+        },
+        { timeout: 5000 }
+      ); // 5초 타임아웃
 
-        return enrollment as unknown as EnrollmentResponse;
+      // 4단계: 비동기 후처리 (트랜잭션 외부)
+      process.nextTick(async () => {
+        try {
+          await Promise.all([
+            this.invalidateMclassCache(mclassId),
+            this.sendEnrollmentConfirmationEmail(enrollment.id),
+          ]);
+        } catch (error) {
+          logger.error('비동기 후처리 실패', {
+            mclassId,
+            enrollmentId: enrollment.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       });
 
-      // 트랜잭션 성공 후 캐시 무효화 및 이메일 발송 (비동기 처리)
-      Promise.all([
-        this.invalidateMclassCache(mclassId),
-        this.sendEnrollmentConfirmationEmail(enrollment.id),
-      ]).catch(error => {
-        logger.error('트랜잭션 후 처리 실패', {
-          mclassId,
-          enrollmentId: enrollment.id,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
-
-      return enrollment;
+      return enrollment as unknown as EnrollmentResponse;
     });
   }
 
