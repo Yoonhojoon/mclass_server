@@ -47,8 +47,8 @@ async function completeUserRegistration(email, password, name) {
   try {
     // 1단계: 회원가입
     const registerOptions = {
-      hostname: 'localhost',
-      port: 3000,
+      hostname: 'mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+      port: 80,
       path: '/api/auth/register',
       method: 'POST',
       headers: {
@@ -70,8 +70,8 @@ async function completeUserRegistration(email, password, name) {
 
     // 2단계: 로그인하여 임시 토큰 획득
     const loginOptions = {
-      hostname: 'localhost',
-      port: 3000,
+      hostname: 'mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+      port: 80,
       path: '/api/auth/login',
       method: 'POST',
       headers: {
@@ -94,8 +94,8 @@ async function completeUserRegistration(email, password, name) {
 
     // 3단계: 회원가입 완료 (약관 동의)
     const completeOptions = {
-      hostname: 'localhost',
-      port: 3000,
+      hostname: 'mclass-alb-616483239.ap-northeast-2.elb.amazonaws.com',
+      port: 80,
       path: '/api/auth/complete-signup',
       method: 'POST',
       headers: {
@@ -105,7 +105,7 @@ async function completeUserRegistration(email, password, name) {
     };
 
     const completeData = {
-      termIds: ["b10cdac2-5c46-4b6c-a355-127331901de4"] // 약관 ID
+      termIds: ["128100ce-e074-4c53-8ad2-263f26f95973"] // 약관 ID
     };
 
     const completeResponse = await makeRequest(completeOptions, completeData);

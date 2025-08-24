@@ -109,6 +109,11 @@ model Enrollment {
   @@index([mclassId, status])
   @@index([userId])
   @@index([mclassId, status, appliedAt])
+  // 성능 최적화를 위한 추가 인덱스
+  @@index([idempotencyKey]) // 멱등성 키 조회 최적화
+  @@index([status, appliedAt]) // 대기열 승격 처리 최적화
+  @@index([mclassId, status, appliedAt, id]) // 복합 조회 최적화
+  @@index([userId, status]) // 사용자별 신청 상태 조회 최적화
   @@map("enrollments")
 }
 
